@@ -1,0 +1,57 @@
+# DojOps Documentation
+
+Welcome to the **DojOps — AI DevOps Automation Engine** documentation. DojOps is an enterprise-grade AI DevOps automation system that generates, validates, and executes infrastructure and CI/CD configurations using LLM providers — with structured output enforcement, sandboxed execution, approval workflows, and hash-chained audit trails.
+
+---
+
+## Quick Links
+
+- **[Getting Started](/getting-started/quickstart)** — Installation, setup, and your first generation
+- **[CLI Reference](/usage/cli)** — Complete command reference with examples
+- **[API Reference](/usage/api)** — All 19 REST endpoints with schemas and curl examples
+
+---
+
+## Documentation Index
+
+### Core Guides
+
+| Document                                      | Description                                                          |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| [Getting Started](/getting-started/quickstart)         | Prerequisites, installation, provider setup, first run               |
+| [Provider Management](/getting-started/providers) | Add, remove, switch, and list LLM providers                          |
+| [Configuration](/getting-started/configuration)             | Providers, models, env vars, profiles, precedence                    |
+| [CLI Reference](/usage/cli)             | All commands, flags, exit codes, examples                            |
+| [API Reference](/usage/api)             | REST endpoints, request/response schemas, curl examples              |
+| [Web Dashboard](/usage/dashboard)                 | 5-tab metrics dashboard — Overview, Security, Audit, Agents, History |
+
+### Architecture & Design
+
+| Document                            | Description                                                 |
+| ----------------------------------- | ----------------------------------------------------------- |
+| [Architecture](/architecture/overview)     | System design, package layers, dependency flow, data flow   |
+| [Security Model](/architecture/security-model) | Defense-in-depth layers, trust boundary, concurrency safety |
+
+### Components
+
+| Document                                  | Description                                                                                                |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| [Specialist Agents](/components/agents)            | 16 built-in + custom agents — routing, domains, keywords, confidence scoring, custom agent creation        |
+| [DevOps Tools](/components/tools)                  | All 12 built-in tools + custom tool system — schemas, detectors, verifiers, auto-detection, tool manifests |
+| [Tool Specification v1](/components/tool-spec-v1)  | Frozen v1 custom tool contract — manifest schema, discovery, security, compatibility promise               |
+| [Security Scanning](/components/security-scanning) | 9 scanners, scan types, remediation, SBOM, scan comparison, dashboard integration                          |
+| [Execution Engine](/components/execution-engine)   | SafeExecutor, policies, approval workflows, sandboxed fs, audit trail                                      |
+| [Task Planner](/components/planner)                | Goal decomposition, task graphs, topological execution, resume                                             |
+
+### Operations
+
+| Document                              | Description                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| [Contributing](/community/contributing)       | Dev setup, coding standards, testing, adding tools/agents, PR workflow |
+| [Troubleshooting](/community/troubleshooting) | Common issues, FAQ, error codes, debugging tips                        |
+
+---
+
+## Privacy & Telemetry
+
+DojOps does not collect telemetry. No project data leaves your machine except to your configured LLM provider. All generated configs, audit logs, and scan reports are stored locally in your `.dojops/` directory.
