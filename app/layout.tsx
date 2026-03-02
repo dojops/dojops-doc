@@ -1,19 +1,19 @@
-import { Footer, Layout, Navbar } from 'nextra-theme-docs'
-import { Banner, Head } from 'nextra/components'
-import { getPageMap } from 'nextra/page-map'
-import 'nextra-theme-docs/style.css'
-import type { Metadata } from 'next'
-import type { ReactNode } from 'react'
+import { Footer, Layout, Navbar } from "nextra-theme-docs";
+import { Banner, Head } from "nextra/components";
+import { getPageMap } from "nextra/page-map";
+import "nextra-theme-docs/style.css";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: {
-    default: 'DojOps Documentation',
-    template: '%s — DojOps Docs'
+    default: "DojOps Documentation",
+    template: "%s — DojOps Docs",
   },
   description:
-    'Documentation for DojOps — AI DevOps Automation Engine. Generate, validate, and execute infrastructure & CI/CD configurations.',
-  icons: '/icon.png'
-}
+    "Documentation for DojOps — AI DevOps Automation Engine. Generate, validate, and execute infrastructure & CI/CD configurations.",
+  icons: "/icon.png",
+};
 
 const banner = (
   <Banner storageKey="dojops-launch">
@@ -21,21 +21,33 @@ const banner = (
       DojOps — AI DevOps Automation Engine. Learn more →
     </a>
   </Banner>
-)
+);
 
 const navbar = (
   <Navbar
     logo={
-      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <img src="/icon.png" alt="DojOps" width={28} height={28} />
         <b>DojOps</b>
       </span>
     }
     projectLink="https://github.com/dojops/dojops"
   />
-)
+);
 
-const footer = <Footer>MIT {new Date().getFullYear()} © DojOps</Footer>
+const footer = (
+  <Footer>
+    MIT {new Date().getFullYear()} © DojOps · Created by{" "}
+    <a
+      href="https://github.com/MHChlagou"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}
+    >
+      Mohamed Hedi CHLAGOU
+    </a>
+  </Footer>
+);
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -55,5 +67,5 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         </Layout>
       </body>
     </html>
-  )
+  );
 }
