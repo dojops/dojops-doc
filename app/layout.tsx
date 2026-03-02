@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   },
   description:
     "Documentation for DojOps — AI DevOps Automation Engine. Generate, validate, and execute infrastructure & CI/CD configurations.",
-  icons: "/icon.png",
+  icons: "/dojops-favicon.png",
 };
 
 const banner = (
@@ -27,7 +27,7 @@ const navbar = (
   <Navbar
     logo={
       <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <img src="/icon.png" alt="DojOps" width={28} height={28} />
+        <img src="/dojops-favicon.png" alt="DojOps" width={28} height={28} />
         <b>DojOps</b>
       </span>
     }
@@ -52,7 +52,7 @@ const footer = (
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
-      <Head faviconGlyph="⚙️" />
+      <Head />
       <body>
         <Layout
           banner={banner}
