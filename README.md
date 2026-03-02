@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/dojops-favicon.png" alt="DojOps Docs" width="80" />
+  <img src="public/icon.png" alt="DojOps Docs" width="80" />
 </p>
 
 <h1 align="center">DojOps Documentation</h1>
