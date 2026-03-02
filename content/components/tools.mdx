@@ -574,11 +574,11 @@ Publishing tools to the Hub requires an API token. Tokens follow the GitHub PAT 
 
 **3. Create a named token** — Give your token a descriptive name (e.g. "My laptop", "CI/CD pipeline") and choose an expiration:
 
-| Expiration | Duration | Use Case |
-| --- | --- | --- |
-| 1 month | 30 days | Short-lived tasks |
-| 3 months | 90 days | Regular development |
-| No expiration | Never | CI/CD pipelines |
+| Expiration    | Duration | Use Case            |
+| ------------- | -------- | ------------------- |
+| 1 month       | 30 days  | Short-lived tasks   |
+| 3 months      | 90 days  | Regular development |
+| No expiration | Never    | CI/CD pipelines     |
 
 **4. Copy the token** — The raw token (format: `dojops_` + 40 hex chars) is displayed **once**. Copy it immediately — you won't be able to see it again.
 
@@ -683,10 +683,202 @@ dojops tools install nginx-config --global
 
 #### Environment Variables
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `DOJOPS_HUB_URL` | Hub API base URL | `https://hub.dojops.ai` |
-| `DOJOPS_HUB_TOKEN` | API token for publishing (generated at `/settings/tokens`) | — |
+| Variable           | Description                                                | Default                 |
+| ------------------ | ---------------------------------------------------------- | ----------------------- |
+| `DOJOPS_HUB_URL`   | Hub API base URL                                           | `https://hub.dojops.ai` |
+| `DOJOPS_HUB_TOKEN` | API token for publishing (generated at `/settings/tokens`) | —                       |
+
+#### Full Example: Creating and Publishing a Tool
+
+Here's a complete walkthrough — creating a `.dops` tool from scratch, publishing it to the Hub, and installing it.
+
+**1. Create the `.dops` file** — `docker-compose-generator.dops`:
+
+````yaml
+---
+dops: v1
+kind: tool
+
+meta:
+  name: docker-compose-generator
+  version: 1.0.0
+  description: "Generates Docker Compose files for multi-service applications with networking, volumes, and health checks"
+  author: your-username
+  license: MIT
+  tags: [docker, compose, containers, devops]
+
+input:
+  fields:
+    projectPath:
+      type: string
+      required: true
+      description: "Directory to write docker-compose.yml"
+    services:
+      type: string
+      required: true
+      description: "Comma-separated list of services (e.g. node-api, postgres, redis)"
+
+output:
+  type: object
+  required: [version, services]
+  properties:
+    version:
+      type: string
+    services:
+      type: object
+    volumes:
+      type: object
+    networks:
+      type: object
+
+files:
+  - path: "{projectPath}/docker-compose.yml"
+    format: yaml
+    source: llm
+    options:
+      sortKeys: false
+      indent: 2
+      noRefs: true
+
+permissions:
+  filesystem: write
+  child_process: none
+  network: none
+
+scope:
+  write: ["{projectPath}/docker-compose.yml"]
+
+risk:
+  level: LOW
+  rationale: "Only generates a docker-compose.yml file, no execution"
+
+execution:
+  mode: generate
+  deterministic: false
+  idempotent: true
+---
+
+## Prompt
+
+You are a Docker Compose expert. Generate a production-ready docker-compose.yml
+for the requested services.
+
+Follow these best practices:
+- Use specific image tags, never `latest`
+- Add health checks for databases and caches
+- Use named volumes for persistent data
+- Create a dedicated bridge network
+- Set restart policies to `unless-stopped`
+- Add resource limits (memory)
+- Use environment variables for configuration
+- Expose only necessary ports
+
+Respond with valid JSON matching the output schema.
+
+## Examples
+
+Input: "node-api, postgres, redis"
+
+Output:
+```json
+{
+  "version": "3.8",
+  "services": {
+    "node-api": {
+      "build": { "context": ".", "dockerfile": "Dockerfile" },
+      "ports": ["3000:3000"],
+      "depends_on": {
+        "postgres": { "condition": "service_healthy" },
+        "redis": { "condition": "service_healthy" }
+      },
+      "restart": "unless-stopped",
+      "networks": ["app-network"]
+    },
+    "postgres": {
+      "image": "postgres:16-alpine",
+      "volumes": ["pgdata:/var/lib/postgresql/data"],
+      "healthcheck": {
+        "test": ["CMD-SHELL", "pg_isready -U app -d appdb"],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5
+      },
+      "restart": "unless-stopped",
+      "networks": ["app-network"]
+    },
+    "redis": {
+      "image": "redis:7-alpine",
+      "volumes": ["redisdata:/data"],
+      "healthcheck": {
+        "test": ["CMD", "redis-cli", "ping"],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5
+      },
+      "restart": "unless-stopped",
+      "networks": ["app-network"]
+    }
+  },
+  "volumes": { "pgdata": {}, "redisdata": {} },
+  "networks": { "app-network": { "driver": "bridge" } }
+}
+````
+
+## Constraints
+
+- Maximum 10 services per composition
+- Never hardcode production secrets — use placeholder values
+- Always include health checks for databases and caches
+- Use Alpine-based images where available
+
+## Keywords
+
+docker, compose, docker-compose, containers, services, volumes, networks, health-check, multi-container, orchestration
+
+````
+
+**2. Set up authentication:**
+
+```bash
+export DOJOPS_HUB_TOKEN="dojops_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+````
+
+**3. Publish:**
+
+```bash
+dojops tools publish docker-compose-generator.dops --changelog "Initial release: Docker Compose generator with health checks, volumes, and networking"
+```
+
+Expected output:
+
+```
+◇  Validated: docker-compose-generator v1.0.0
+◇  SHA256: 7f3a2b1c9e8d...
+┌  Published new tool
+│  Name:    docker-compose-generator
+│  Version: v1.0.0
+│  Slug:    docker-compose-generator
+│  SHA256:  7f3a2b1c9e8d...
+│  URL:     https://hub.dojops.ai/packages/docker-compose-generator
+└
+```
+
+**4. Install and use (anyone can do this):**
+
+```bash
+# Install the tool
+dojops tools install docker-compose-generator
+
+# Use it
+dojops "Generate a docker-compose for node-api, postgres, redis"
+```
+
+**5. Publish a new version** — bump `meta.version` in the frontmatter and publish again:
+
+```bash
+# After updating version to 1.1.0 in the .dops file:
+dojops tools publish docker-compose-generator.dops --changelog "v1.1.0: Added MongoDB and RabbitMQ examples"
+```
 
 ### Tool Policy
 
