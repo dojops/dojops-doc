@@ -27,7 +27,7 @@ const navbar = (
   <Navbar
     logo={
       <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <img src="/dojops-favicon.png" alt="DojOps" width={28} height={28} />
+        <img src="/icon.png" alt="DojOps" width={28} height={28} />
         <b>DojOps</b>
       </span>
     }
