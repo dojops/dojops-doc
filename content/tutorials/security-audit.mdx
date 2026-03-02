@@ -1,0 +1,263 @@
+# Security Audit & Remediation
+
+Run a comprehensive security audit on your project with scanning, SBOM generation, and auto-remediation.
+
+---
+
+## Overview
+
+In this tutorial, you'll use DojOps to:
+
+- Run full security scans across multiple categories (vulnerabilities, dependencies, IaC, secrets)
+- Run focused scans for specific concerns
+- Generate a Software Bill of Materials (SBOM)
+- Auto-remediate findings with LLM-powered fixes
+- Compare scans to track improvement over time
+
+**Time estimate:** ~15 minutes
+
+**Prerequisites:**
+
+- Node.js >= 20 installed
+- An API key from a supported LLM provider
+- Git installed
+- Optional: `trivy`, `gitleaks`, `checkov`, `hadolint`, `shellcheck`, `semgrep` for full scanner coverage (DojOps uses whichever scanners are available)
+
+---
+
+## Step 1: Setup
+
+Install DojOps and clone the example project:
+
+```bash
+npm i -g @dojops/cli
+
+git clone https://github.com/dojops/example-nextjs.git
+cd example-nextjs
+```
+
+Configure your provider and initialize:
+
+```bash
+dojops provider add openai --token sk-...
+dojops init
+```
+
+```
+Initializing DojOps...
+
+Languages detected:
+  TypeScript, JavaScript, CSS
+
+CI/CD platforms:
+  GitHub Actions
+
+Container files:
+  Dockerfile, .dockerignore
+
+Project context saved to .dojops/context.json
+```
+
+---
+
+## Step 2: Run Full Scan
+
+Run all applicable scanners:
+
+```bash
+dojops scan
+```
+
+DojOps detects which scanners are available on your system and runs them against your project:
+
+```
+Security Scan
+
+Scanners run: 5/9
+  npm-audit     found  2 findings
+  trivy         found  0 findings
+  gitleaks      found  0 findings
+  hadolint      found  3 findings
+  checkov       found  1 finding
+
+Summary:
+  Critical  0
+  High      1
+  Medium    3
+  Low       2
+
+Results saved to .dojops/scan-history/scan-<id>.json
+```
+
+DojOps runs whichever of its 9 scanners are installed. Missing scanners are skipped with a note — you don't need all of them installed.
+
+---
+
+## Step 3: Focused Scans
+
+Run targeted scans for specific categories:
+
+### Security Scanners
+
+```bash
+dojops scan --security
+```
+
+Runs `trivy` (container/filesystem vulnerabilities) and `gitleaks` (secret detection). Use this to check for leaked credentials or known CVEs.
+
+### Dependency Audit
+
+```bash
+dojops scan --deps
+```
+
+Runs `npm-audit` and `pip-audit` (if applicable). Reports vulnerable dependencies with severity levels and remediation advice.
+
+### Infrastructure as Code
+
+```bash
+dojops scan --iac
+```
+
+Runs `checkov` (Terraform/CloudFormation/K8s policy checks), `hadolint` (Dockerfile linting), and `shellcheck` (shell script analysis). Catches misconfigurations before deployment.
+
+---
+
+## Step 4: Generate SBOM
+
+Generate a Software Bill of Materials in CycloneDX format:
+
+```bash
+dojops scan --sbom
+```
+
+```
+SBOM Generation
+
+Format:   CycloneDX
+Scanner:  trivy-sbom
+Components found: 142
+
+Output: .dojops/scan-history/sbom-<id>.json
+
+SBOM includes:
+  - All npm dependencies (direct + transitive)
+  - Component versions and licenses
+  - Package URLs (purl) for each component
+  - SHA-256 hashes for integrity tracking
+```
+
+SBOMs are essential for supply chain security and compliance. The output is compatible with standard CycloneDX tooling.
+
+---
+
+## Step 5: Auto-Remediation
+
+Use LLM-powered auto-fix to generate remediation for scan findings:
+
+```bash
+dojops scan --fix
+```
+
+DojOps sends the scan findings to your LLM provider and generates targeted fixes:
+
+```
+Auto-Remediation
+
+Finding: hadolint DL3008 — Pin versions in apt-get install
+  Fix: Updated Dockerfile apt-get line with pinned versions
+  Apply? (y/n): y
+
+Finding: hadolint DL3018 — Pin versions in apk add
+  Fix: Updated Dockerfile apk add line with pinned versions
+  Apply? (y/n): y
+
+Finding: npm-audit — moderate severity in dependency
+  Fix: Updated package.json with patched version
+  Apply? (y/n): y
+
+Remediation complete. 3 fixes applied.
+```
+
+Each fix is presented for approval before being applied. The LLM generates context-aware fixes that understand your specific project setup, not just generic advice.
+
+---
+
+## Step 6: Compare Scans
+
+After applying fixes, run another scan and compare with the previous results:
+
+```bash
+dojops scan --compare
+```
+
+```
+Scan Comparison
+
+Previous scan: scan-001 (2025-01-15 10:00)
+Current scan:  scan-002 (2025-01-15 10:15)
+
+  Resolved:    3 findings
+    - hadolint DL3008 (medium)
+    - hadolint DL3018 (medium)
+    - npm-audit moderate vulnerability
+
+  New:         0 findings
+  Unchanged:   3 findings
+
+Trend: 6 → 3 findings (50% reduction)
+```
+
+Scan comparison gives you a clear before/after view, making it easy to verify that remediations worked and no new issues were introduced.
+
+---
+
+## Step 7: Verify Audit Trail
+
+All scan operations are recorded in the hash-chained audit log. Verify its integrity:
+
+```bash
+dojops history verify
+```
+
+```
+Audit chain integrity: verified
+Entries: 5
+Chain status: valid (all hashes match)
+```
+
+View the scan history:
+
+```bash
+dojops history list
+```
+
+```
+ID         Type    Tool          Status     Date
+scan-001   scan    multi-scan    completed  2025-01-15 10:00
+scan-002   scan    sbom          completed  2025-01-15 10:05
+fix-001    fix     remediation   completed  2025-01-15 10:10
+scan-003   scan    multi-scan    completed  2025-01-15 10:15
+```
+
+The audit trail provides a tamper-evident record of every scan, fix, and operation — useful for compliance and incident response.
+
+---
+
+## Summary
+
+In this tutorial, you:
+
+1. **Ran a full scan** across 9 scanner categories to identify vulnerabilities
+2. **Used focused scans** (`--security`, `--deps`, `--iac`) for targeted analysis
+3. **Generated an SBOM** in CycloneDX format for supply chain visibility
+4. **Auto-remediated** findings with LLM-powered, context-aware fixes
+5. **Compared scans** to verify a 50% reduction in findings
+6. **Verified the audit trail** with hash-chain integrity checks
+
+### Next Steps
+
+- **[Enhance a Next.js Project](/tutorials/enhance-nextjs-project)** — Improve DevOps configs with AI
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Build a full pipeline using plan and apply
+- **[Security Scanning](/components/security-scanning)** — Deep dive into all 9 scanners
+- **[Execution Engine](/components/execution-engine)** — Policies, sandboxing, and audit trails

@@ -1,0 +1,234 @@
+# Enhance a Next.js Project
+
+Scan, analyze, and improve an existing project's DevOps setup using DojOps.
+
+---
+
+## Overview
+
+In this tutorial, you'll take an existing Next.js project and use DojOps to:
+
+- Initialize project scanning and detect the existing DevOps stack
+- Run a quality check to identify gaps and improvements
+- Generate enhanced CI/CD and Dockerfile configurations with AI
+
+**Time estimate:** ~15 minutes
+
+**Prerequisites:**
+
+- Node.js >= 20 installed
+- An API key from a supported LLM provider (OpenAI, Anthropic, DeepSeek, Gemini, or a local Ollama instance)
+- Git installed
+
+---
+
+## Step 1: Install DojOps
+
+Install the CLI globally via npm:
+
+```bash
+npm i -g @dojops/cli
+```
+
+Verify the installation:
+
+```bash
+dojops --version
+```
+
+```
+@dojops/cli v1.0.3
+```
+
+Run the doctor command to check your environment:
+
+```bash
+dojops doctor
+```
+
+```
+DojOps Doctor
+  Node.js    v20.x.x    ok
+  npm        v10.x.x    ok
+  git        v2.x.x     ok
+  Config     ~/.dojops/  ok
+```
+
+---
+
+## Step 2: Clone the Example Project
+
+We'll use a simple Next.js portfolio site designed as a tutorial example — it has a basic CI workflow and Dockerfile with intentional gaps for DojOps to find and fix:
+
+```bash
+git clone https://github.com/dojops/example-nextjs.git
+cd example-nextjs
+```
+
+Take a quick look at the project structure:
+
+```bash
+ls -la
+```
+
+You'll see a minimal Next.js app (`next.config.ts`, `package.json`, `src/` with a landing page and 2 components) plus DevOps files like `Dockerfile`, `.github/workflows/ci.yml`, and `.dockerignore`.
+
+---
+
+## Step 3: Configure a Provider
+
+Add your LLM provider. This example uses DeepSeek, but any supported provider works:
+
+```bash
+# DeepSeek
+dojops provider add deepseek --token sk-...
+
+# Or OpenAI
+dojops provider add openai --token sk-...
+
+# Or Anthropic
+dojops provider add anthropic --token sk-ant-...
+```
+
+Verify the provider is active:
+
+```bash
+dojops auth status
+```
+
+```
+Provider:  deepseek
+Model:     deepseek-chat
+Status:    authenticated
+```
+
+See [Provider Management](/getting-started/providers) for the full list of supported providers.
+
+---
+
+## Step 4: Initialize the Project
+
+Run `dojops init` to scan the project and build a DevOps context:
+
+```bash
+dojops init
+```
+
+DojOps scans your repository and reports what it finds:
+
+```
+Initializing DojOps...
+
+Languages detected:
+  TypeScript, JavaScript, CSS
+
+CI/CD platforms:
+  GitHub Actions (.github/workflows/ci.yml)
+
+Container files:
+  Dockerfile, .dockerignore
+
+DevOps files found:
+  .github/workflows/ci.yml
+  Dockerfile
+  .dockerignore
+  .gitignore
+
+Recommended agents:
+  github-actions-specialist
+  dockerfile-specialist
+
+Project context saved to .dojops/context.json
+```
+
+This creates a `.dojops/` directory with your project's context. All subsequent commands use this context to give the LLM accurate information about your stack.
+
+---
+
+## Step 5: Check DevOps Maturity
+
+Run an LLM-powered quality check on your detected DevOps files:
+
+```bash
+dojops check
+```
+
+DojOps reads your DevOps files and sends them to the LLM for analysis:
+
+```
+DevOps Quality Check
+
+Score: 62/100 (Basic)
+
+Findings:
+  warning  CI workflow lacks caching for node_modules
+  warning  No security scanning step in CI pipeline
+  warning  Dockerfile does not pin base image digest
+  info     No Docker Compose file for local development
+  info     No Makefile or Justfile for task automation
+
+Missing files:
+  SECURITY.md
+  CODEOWNERS
+  renovate.json or dependabot.yml
+```
+
+The score tells you where you stand. The findings give you specific, actionable improvements — exactly what we'll address next.
+
+---
+
+## Step 6: Enhance the CI Workflow
+
+Ask DojOps to improve the GitHub Actions workflow based on the quality check findings:
+
+```bash
+dojops "Enhance the GitHub Actions CI workflow with dependency caching, security scanning, and Docker image building"
+```
+
+DojOps routes this to the `github-actions-specialist` agent, reads your existing `.github/workflows/ci.yml`, and generates an enhanced version. Because DojOps detected the existing file during `init`, it preserves your current steps and adds improvements:
+
+- **Dependency caching** — `actions/cache` for `node_modules` and `.next/cache`
+- **Security scanning** — npm audit step
+- **Docker build** — Multi-stage build verification
+- **Matrix testing** — Node.js 20 and 22
+
+A `.bak` backup of your original workflow is created automatically before any changes are written.
+
+---
+
+## Step 7: Enhance the Dockerfile
+
+Next, improve the Dockerfile:
+
+```bash
+dojops "Enhance the Dockerfile with pinned base image versions, security hardening, and build caching"
+```
+
+DojOps routes this to the `dockerfile-specialist` and generates improvements such as:
+
+- **Pinned versions** — Specific Node.js and nginx image tags instead of `latest`
+- **Non-root user** — Running the final stage as a non-root user
+- **Layer caching** — Optimized `COPY` order for better Docker layer caching
+- **Health check** — `HEALTHCHECK` directive for container orchestration
+- **Security labels** — OCI image labels for traceability
+
+Again, a `.bak` backup is created before overwriting.
+
+---
+
+## Summary
+
+In this tutorial, you:
+
+1. **Installed DojOps** and verified your environment with `doctor`
+2. **Initialized** a real project, detecting its languages, CI/CD, and container setup
+3. **Checked DevOps maturity** and identified specific gaps
+4. **Enhanced the CI workflow** with caching, security scanning, and matrix testing
+5. **Enhanced the Dockerfile** with pinned versions, security hardening, and health checks
+
+### Next Steps
+
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Build a full pipeline from zero using `plan` and `apply`
+- **[Security Audit & Remediation](/tutorials/security-audit)** — Run comprehensive security scans with auto-fix
+- **[CLI Reference](/usage/cli)** — Full command documentation
+- **[DevOps Tools](/components/tools)** — All 12 built-in tools and the custom tool system
