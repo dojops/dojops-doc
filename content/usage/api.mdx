@@ -666,10 +666,10 @@ The [DojOps Hub](https://hub.dojops.ai) is a separate service with its own API f
 
 The Hub supports two authentication methods:
 
-| Method | Header | Use Case |
-| --- | --- | --- |
-| **API Token** (Bearer) | `Authorization: Bearer dojops_...` | CLI tool publishing, programmatic access |
-| **Session Cookie** | `next-auth.session-token=...` | Browser-based access (automatic via GitHub OAuth) |
+| Method                 | Header                             | Use Case                                          |
+| ---------------------- | ---------------------------------- | ------------------------------------------------- |
+| **API Token** (Bearer) | `Authorization: Bearer dojops_...` | CLI tool publishing, programmatic access          |
+| **Session Cookie**     | `next-auth.session-token=...`      | Browser-based access (automatic via GitHub OAuth) |
 
 All authenticated endpoints accept both methods. The Bearer token is checked first; session cookie is the fallback.
 
@@ -720,10 +720,10 @@ Create a new API token.
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `name` | string | Yes | Label for the token (max 50 chars) |
-| `expiration` | string | No | `1month`, `3months`, or `never` (default: `never`) |
+| Field        | Type   | Required | Description                                        |
+| ------------ | ------ | -------- | -------------------------------------------------- |
+| `name`       | string | Yes      | Label for the token (max 50 chars)                 |
+| `expiration` | string | No       | `1month`, `3months`, or `never` (default: `never`) |
 
 **Response (201):**
 
@@ -760,11 +760,11 @@ Publish a new package or version. Requires authentication (Bearer token or sessi
 
 **Request:** `multipart/form-data`
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `file` | File | Yes | `.dops` file (max 1MB) |
-| `sha256` | string | No | Client-computed SHA-256 hash (publisher attestation) |
-| `changelog` | string | No | Version changelog |
+| Field       | Type   | Required | Description                                          |
+| ----------- | ------ | -------- | ---------------------------------------------------- |
+| `file`      | File   | Yes      | `.dops` file (max 1MB)                               |
+| `sha256`    | string | No       | Client-computed SHA-256 hash (publisher attestation) |
+| `changelog` | string | No       | Version changelog                                    |
 
 **curl example with Bearer token:**
 
@@ -799,10 +799,10 @@ curl -X POST https://hub.dojops.ai/api/packages \
 
 ### Hub Rate Limits
 
-| Action | Limit | Window |
-| --- | --- | --- |
-| Publish package | 5 | per hour |
-| Star/unstar | 30 | per minute |
-| Post comment | 10 | per minute |
-| Search | 60 | per minute |
-| Create token | 5 | per hour |
+| Action          | Limit | Window     |
+| --------------- | ----- | ---------- |
+| Publish package | 5     | per hour   |
+| Star/unstar     | 30    | per minute |
+| Post comment    | 10    | per minute |
+| Search          | 60    | per minute |
+| Create token    | 5     | per hour   |

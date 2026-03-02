@@ -49,16 +49,16 @@ And produces audit entries for every operation, whether successful, failed, or d
 
 The `ExecutionPolicy` controls what the executor is allowed to do:
 
-| Field                    | Type                   | Default   | Description                                                           |
-| ------------------------ | ---------------------- | --------- | --------------------------------------------------------------------- |
-| `allowWrite`             | boolean                | `false`   | Whether file writes are permitted                                     |
-| `allowedPaths`           | string[]               | `[]`      | Paths the executor may write to (glob patterns)                       |
-| `deniedPaths`            | string[]               | `[]`      | Paths the executor must not write to                                  |
+| Field                    | Type                     | Default   | Description                                                           |
+| ------------------------ | ------------------------ | --------- | --------------------------------------------------------------------- |
+| `allowWrite`             | boolean                  | `false`   | Whether file writes are permitted                                     |
+| `allowedPaths`           | string[]                 | `[]`      | Paths the executor may write to (glob patterns)                       |
+| `deniedPaths`            | string[]                 | `[]`      | Paths the executor must not write to                                  |
 | `envVars`                | `Record<string, string>` | `{}`      | Environment variables available during execution                      |
-| `timeoutMs`              | number                 | `30000`   | Maximum execution time (milliseconds)                                 |
-| `maxFileSize`            | number                 | `1048576` | Maximum file size in bytes (1MB default)                              |
-| `skipVerification`       | boolean                | `true`    | Skip the verify step (SDK default; CLI overrides to `false`)          |
-| `enforceDevOpsAllowlist` | boolean                | `true`    | When no explicit `allowedPaths`, restrict writes to DevOps files only |
+| `timeoutMs`              | number                   | `30000`   | Maximum execution time (milliseconds)                                 |
+| `maxFileSize`            | number                   | `1048576` | Maximum file size in bytes (1MB default)                              |
+| `skipVerification`       | boolean                  | `true`    | Skip the verify step (SDK default; CLI overrides to `false`)          |
+| `enforceDevOpsAllowlist` | boolean                  | `true`    | When no explicit `allowedPaths`, restrict writes to DevOps files only |
 
 ### Path Resolution
 

@@ -1,4 +1,4 @@
 export default {
-  contributing: 'Contributing',
-  troubleshooting: 'Troubleshooting'
-}
+  contributing: "Contributing",
+  troubleshooting: "Troubleshooting",
+};
