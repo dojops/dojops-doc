@@ -655,3 +655,154 @@ All POST endpoints validate request bodies against Zod schemas. Invalid requests
   "details": [{ "path": ["prompt"], "message": "Required" }]
 }
 ```
+
+---
+
+## DojOps Hub API
+
+The [DojOps Hub](https://hub.dojops.ai) is a separate service with its own API for the tool marketplace. It uses a different authentication system from the local DojOps server.
+
+### Hub Authentication
+
+The Hub supports two authentication methods:
+
+| Method | Header | Use Case |
+| --- | --- | --- |
+| **API Token** (Bearer) | `Authorization: Bearer dojops_...` | CLI tool publishing, programmatic access |
+| **Session Cookie** | `next-auth.session-token=...` | Browser-based access (automatic via GitHub OAuth) |
+
+All authenticated endpoints accept both methods. The Bearer token is checked first; session cookie is the fallback.
+
+**Generating an API token:**
+
+1. Sign in to the Hub with GitHub OAuth
+2. Go to **Settings → API Tokens** (`/settings/tokens`)
+3. Create a named token with an expiration (1 month, 3 months, or no expiration)
+4. Copy the raw token — it's shown **once** and stored as a SHA-256 hash
+
+Token format: `dojops_` followed by 40 hex characters. Maximum 10 tokens per user.
+
+### Token Management Endpoints
+
+Token CRUD endpoints require session authentication only (not Bearer) — a leaked token cannot create or list other tokens.
+
+#### `GET /api/tokens`
+
+List the current user's API tokens.
+
+**Response:**
+
+```json
+{
+  "tokens": [
+    {
+      "id": "clx1abc...",
+      "name": "My laptop",
+      "tokenPrefix": "dojops_a1b2c3",
+      "expiresAt": "2026-06-01T00:00:00.000Z",
+      "lastUsedAt": "2026-03-01T14:30:00.000Z",
+      "createdAt": "2026-03-01T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### `POST /api/tokens`
+
+Create a new API token.
+
+**Request:**
+
+```json
+{
+  "name": "CI/CD pipeline",
+  "expiration": "3months"
+}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | Yes | Label for the token (max 50 chars) |
+| `expiration` | string | No | `1month`, `3months`, or `never` (default: `never`) |
+
+**Response (201):**
+
+```json
+{
+  "id": "clx1abc...",
+  "name": "CI/CD pipeline",
+  "tokenPrefix": "dojops_a1b2c3",
+  "expiresAt": "2026-06-01T00:00:00.000Z",
+  "createdAt": "2026-03-01T10:00:00.000Z",
+  "rawToken": "dojops_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+}
+```
+
+The `rawToken` field is only included in the creation response. It cannot be retrieved again.
+
+#### `DELETE /api/tokens/:id`
+
+Revoke a token. Only the token owner can delete it.
+
+**Response:**
+
+```json
+{
+  "deleted": true
+}
+```
+
+### Package Publishing Endpoint
+
+#### `POST /api/packages`
+
+Publish a new package or version. Requires authentication (Bearer token or session).
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `file` | File | Yes | `.dops` file (max 1MB) |
+| `sha256` | string | No | Client-computed SHA-256 hash (publisher attestation) |
+| `changelog` | string | No | Version changelog |
+
+**curl example with Bearer token:**
+
+```bash
+# Publish using an API token
+curl -X POST https://hub.dojops.ai/api/packages \
+  -H "Authorization: Bearer dojops_a1b2c3d4e5f6..." \
+  -F "file=@my-tool.dops" \
+  -F "sha256=$(sha256sum my-tool.dops | cut -d' ' -f1)" \
+  -F "changelog=Initial release"
+```
+
+**Response (201 — new package):**
+
+```json
+{
+  "slug": "my-tool",
+  "version": "1.0.0",
+  "created": true
+}
+```
+
+**Response (200 — new version of existing package):**
+
+```json
+{
+  "slug": "my-tool",
+  "version": "1.1.0",
+  "updated": true
+}
+```
+
+### Hub Rate Limits
+
+| Action | Limit | Window |
+| --- | --- | --- |
+| Publish package | 5 | per hour |
+| Star/unstar | 30 | per minute |
+| Post comment | 10 | per minute |
+| Search | 60 | per minute |
+| Create token | 5 | per hour |
