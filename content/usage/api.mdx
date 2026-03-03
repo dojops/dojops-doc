@@ -1,6 +1,6 @@
 # API Reference
 
-DojOps exposes a REST API via Express with 19 endpoints covering generation, planning, diagnostics, scanning, chat, metrics, and history. Start the server with `dojops serve`.
+DojOps exposes a REST API via Express with 20 endpoints covering generation, planning, diagnostics, scanning, chat, metrics, and history. Start the server with `dojops serve`.
 
 ---
 
@@ -64,8 +64,12 @@ Returns server status and auth requirement. When authenticated (or when auth is 
   "status": "ok",
   "authRequired": false,
   "provider": "openai",
+  "providerStatus": "ok",
   "tools": ["github-actions", "terraform", "kubernetes", ...],
+  "customToolCount": 2,
   "metricsEnabled": true,
+  "memory": 52428800,
+  "uptime": 3600,
   "timestamp": "2026-01-15T10:30:00.000Z"
 }
 ```
@@ -92,7 +96,7 @@ Agent-routed LLM generation. DojOps routes the prompt to the most relevant speci
 | Field         | Type   | Required | Description             |
 | ------------- | ------ | -------- | ----------------------- |
 | `prompt`      | string | Yes      | Natural language prompt |
-| `temperature` | number | No       | LLM temperature (0-1)   |
+| `temperature` | number | No       | LLM temperature (0-2)   |
 
 **Response:**
 
@@ -272,10 +276,10 @@ Run security scanners against a project directory.
 }
 ```
 
-| Field      | Type   | Required | Description                                        |
-| ---------- | ------ | -------- | -------------------------------------------------- |
-| `target`   | string | No       | Project path (defaults to cwd)                     |
-| `scanType` | string | No       | `all` (default), `security`, `deps`, `iac`, `sbom` |
+| Field      | Type   | Required | Description                                                   |
+| ---------- | ------ | -------- | ------------------------------------------------------------- |
+| `target`   | string | No       | Project path (defaults to cwd)                                |
+| `scanType` | string | No       | `all` (default), `security`, `deps`, `iac`, `sbom`, `license` |
 
 **Response:**
 
@@ -560,9 +564,12 @@ Plan, execution, and scan aggregates.
   "totalExecutions": 12,
   "successRate": 0.83,
   "avgExecutionTimeMs": 4500,
+  "totalScans": 8,
+  "totalFindings": 27,
   "criticalFindings": 2,
   "highFindings": 5,
-  "mostUsedCommands": {"generate": 20, "plan": 15, "scan": 8},
+  "mostUsedAgents": [{"agent": "terraform-specialist", "count": 10}, ...],
+  "failureReasons": [{"reason": "timeout", "count": 2}, ...],
   "recentActivity": [...]
 }
 ```
@@ -582,11 +589,12 @@ Scan findings, severity trends, and top issues.
 ```json
 {
   "totalScans": 8,
-  "severityBreakdown": {"critical": 2, "high": 5, "medium": 12, "low": 8},
-  "categoryBreakdown": {"SECURITY": 10, "DEPENDENCY": 8, "IAC": 5, "SECRETS": 4},
-  "findingsTrend": [...],
-  "topIssues": [...],
-  "scanHistory": [...]
+  "totalFindings": 27,
+  "bySeverity": {"critical": 2, "high": 5, "medium": 12, "low": 8},
+  "byCategory": {"security": 10, "dependency": 8, "iac": 5, "secrets": 4},
+  "findingsTrend": [{"date": "2026-01-15", "critical": 0, "high": 2, "medium": 3, "low": 1}, ...],
+  "topIssues": [{"message": "lodash prototype pollution", "severity": "HIGH", "count": 3, "tool": "npm-audit"}, ...],
+  "scanHistory": [{"id": "scan-a1b2", "timestamp": "...", "total": 5, "critical": 0, "high": 2, "durationMs": 3200}, ...]
 }
 ```
 
@@ -605,10 +613,11 @@ Audit chain integrity and command distribution.
 ```json
 {
   "totalEntries": 45,
-  "chainIntegrity": true,
-  "statusBreakdown": {"success": 38, "failure": 5, "cancelled": 2},
-  "commandDistribution": {"generate": 20, "apply": 12, "scan": 8, "plan": 5},
-  "timeline": [...]
+  "chainIntegrity": {"valid": true, "errors": 0, "totalEntries": 45, "latestHash": "abc123..."},
+  "byStatus": {"success": 38, "failure": 5, "cancelled": 2},
+  "byCommand": [{"command": "generate", "count": 20}, {"command": "apply", "count": 12}, ...],
+  "timeline": [...],
+  "recentEntries": [...]
 }
 ```
 
@@ -616,6 +625,27 @@ Audit chain integrity and command distribution.
 
 ```bash
 curl http://localhost:3000/api/metrics/audit
+```
+
+#### `GET /api/metrics/tokens`
+
+Token usage budget tracker. Tracks total tokens consumed across all LLM calls.
+
+**Response:**
+
+```json
+{
+  "totalTokens": 125000,
+  "callCount": 42,
+  "avgTokensPerCall": 2976,
+  "lastRecordedAt": "2026-01-15T10:30:00.000Z"
+}
+```
+
+**curl:**
+
+```bash
+curl http://localhost:3000/api/metrics/tokens
 ```
 
 ---

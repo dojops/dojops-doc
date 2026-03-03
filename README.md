@@ -48,7 +48,7 @@ content/
 │   ├── agents.mdx                 # 16 built-in agents + custom agents
 │   ├── tools.mdx                  # 12 DevOps tools + custom tool system
 │   ├── tool-spec-v1.mdx           # Frozen v1 tool contract
-│   ├── security-scanning.mdx      # 9 scanners, modes, remediation
+│   ├── security-scanning.mdx      # 10 scanners, modes, remediation
 │   ├── execution-engine.mdx       # SafeExecutor, policies, audit logging
 │   └── planner.mdx                # Task decomposition, topological execution
 └── community/

@@ -9,9 +9,10 @@ DojOps includes 16 built-in specialist agents for intelligent prompt routing, pl
 When you send a prompt to DojOps, the `AgentRouter` scores it against each agent's keyword list:
 
 1. **Keyword matching** — Each agent has a set of domain-specific keywords. The router counts how many keywords appear in the prompt.
-2. **Confidence scoring** — The score is normalized based on keyword match density. Higher scores indicate stronger domain relevance.
-3. **Threshold check** — If the highest-scoring agent exceeds the confidence threshold, the prompt is routed to that specialist.
-4. **Fallback** — If no agent exceeds the threshold, the prompt goes to the general-purpose `DevOpsAgent`.
+2. **Primary keyword boosting** — Each agent also has a `primaryKeywords` subset (typically 3-5 keywords) that receive higher weight during scoring, ensuring strong domain signals are prioritized.
+3. **Confidence scoring** — The score is normalized based on keyword match density. Higher scores indicate stronger domain relevance.
+4. **Threshold check** — If the highest-scoring agent exceeds the confidence threshold, the prompt is routed to that specialist.
+5. **Fallback** — If no agent exceeds the threshold, the prompt goes to the general-purpose `DevOpsAgent`.
 
 The selected agent's system prompt is prepended to the LLM request, providing domain-specific instructions and constraints.
 
@@ -60,7 +61,7 @@ Each agent is matched by the following keyword sets:
 | `compliance-auditor`       | compliance, soc2, hipaa, pci, gdpr, policy, governance, regulation, opa, rego, kyverno, sentinel, cis benchmark, audit trail                       |
 | `ci-debugger`              | debug, error, failed, failure, log, broken, fix, timeout, flaky, crash, exit code, stack trace, oom, ci error                                      |
 | `appsec-specialist`        | appsec, owasp, xss, injection, csrf, ssrf, pentest, sast, dast, code review, secure coding, exploit, snyk, trivy, gitleaks                         |
-| `shell-specialist`         | bash, shell, shellcheck, sh, zsh, posix, script, cron, sed, awk, grep, pipefail, trap, shebang                                                     |
+| `shell-specialist`         | bash, shell, shellcheck, sh, zsh, posix, script, cron, sed, awk, grep, pipefail, trap, shebang, systemd, service, timer, unit, journalctl          |
 | `python-specialist`        | python, pip, pytest, mypy, ruff, poetry, venv, asyncio, flask, django, fastapi, pep8, pylint, typer                                                |
 
 ---
@@ -235,6 +236,7 @@ Built-in agents are defined in `packages/core/src/agents/specialists.ts`. Each a
 - `domain` — Category label
 - `description` — System prompt context
 - `keywords` — Array of matching keywords for routing
+- `primaryKeywords` — Subset of keywords with boosted weight for stronger routing signals
 - `toolDependencies` — Optional external tools
 
 All agents include a `NO_FOLLOWUP_INSTRUCTION` suffix ensuring single-shot responses without conversational follow-ups.
