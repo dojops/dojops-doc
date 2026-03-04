@@ -6,20 +6,20 @@ DojOps includes 12 built-in DevOps tools covering CI/CD, infrastructure-as-code,
 
 ## Tool Overview
 
-| Tool           | Output Format     | Output Files                        | Detector | Verifier             |
-| -------------- | ----------------- | ----------------------------------- | -------- | -------------------- |
-| GitHub Actions | YAML (raw)        | `.github/workflows/ci.yml`          | Yes      | Structure lint       |
-| Terraform      | HCL (raw)         | `main.tf`, `variables.tf`           | Yes      | `terraform validate` |
-| Kubernetes     | YAML (raw)        | K8s manifests                       | --       | `kubectl --dry-run`  |
-| Helm           | YAML (raw)        | `Chart.yaml`, `values.yaml`         | --       | --                   |
-| Ansible        | YAML (raw)        | `{name}.yml`                        | --       | --                   |
-| Docker Compose | YAML (raw)        | `docker-compose.yml`                | Yes      | --                   |
-| Dockerfile     | Dockerfile (raw)  | `Dockerfile`, `.dockerignore`       | Yes      | `hadolint`           |
-| Nginx          | Nginx conf (raw)  | `nginx.conf`                        | --       | --                   |
-| Makefile       | Make syntax (raw) | `Makefile`                          | Yes      | --                   |
-| GitLab CI      | YAML (raw)        | `.gitlab-ci.yml`                    | Yes      | Structure lint       |
-| Prometheus     | YAML (raw)        | `prometheus.yml`, `alert-rules.yml` | --       | --                   |
-| Systemd        | INI (raw)         | `{name}.service`                    | --       | --                   |
+| Tool           | Output Format     | Output Files                        | Detector | Verifier                      |
+| -------------- | ----------------- | ----------------------------------- | -------- | ----------------------------- |
+| GitHub Actions | YAML (raw)        | `.github/workflows/ci.yml`          | Yes      | Structure lint + `actionlint` |
+| Terraform      | HCL (raw)         | `main.tf`, `variables.tf`           | Yes      | `terraform validate`          |
+| Kubernetes     | YAML (raw)        | K8s manifests                       | --       | `kubectl --dry-run`           |
+| Helm           | YAML (raw)        | `Chart.yaml`, `values.yaml`         | --       | --                            |
+| Ansible        | YAML (raw)        | `{name}.yml`                        | --       | --                            |
+| Docker Compose | YAML (raw)        | `docker-compose.yml`                | Yes      | --                            |
+| Dockerfile     | Dockerfile (raw)  | `Dockerfile`, `.dockerignore`       | Yes      | `hadolint`                    |
+| Nginx          | Nginx conf (raw)  | `nginx.conf`                        | --       | --                            |
+| Makefile       | Make syntax (raw) | `Makefile`                          | Yes      | --                            |
+| GitLab CI      | YAML (raw)        | `.gitlab-ci.yml`                    | Yes      | Structure lint + `yamllint`   |
+| Prometheus     | YAML (raw)        | `prometheus.yml`, `alert-rules.yml` | --       | --                            |
+| Systemd        | INI (raw)         | `{name}.service`                    | --       | --                            |
 
 ---
 
@@ -102,13 +102,13 @@ All v1 generators accept an optional `existingContent?: string` parameter. When 
 
 Optional validation of generated output. Five tools implement verification:
 
-| Tool           | Verification Method           | Verification Command / Check                              |
-| -------------- | ----------------------------- | --------------------------------------------------------- |
-| Terraform      | External binary (`terraform`) | `terraform validate`                                      |
-| Dockerfile     | External binary (`hadolint`)  | `hadolint Dockerfile`                                     |
-| Kubernetes     | External binary (`kubectl`)   | `kubectl --dry-run=client`                                |
-| GitHub Actions | Built-in structure lint       | Checks `on` trigger, `jobs`, `runs-on`, step `run`/`uses` |
-| GitLab CI      | Built-in structure lint       | Checks job `script`, `stages` array, stage references     |
+| Tool           | Verification Method                             | Verification Command / Check                                                          |
+| -------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Terraform      | External binary (`terraform`)                   | `terraform validate`                                                                  |
+| Dockerfile     | External binary (`hadolint`)                    | `hadolint Dockerfile`                                                                 |
+| Kubernetes     | External binary (`kubectl`)                     | `kubectl --dry-run=client`                                                            |
+| GitHub Actions | Structure lint + external binary (`actionlint`) | Checks `on` trigger, `jobs`, `runs-on`, step `run`/`uses` + `actionlint workflow.yml` |
+| GitLab CI      | Structure lint + external binary (`yamllint`)   | Checks job `script`, `stages` array, stage references + `yamllint -d relaxed`         |
 
 Verification runs by default in CLI commands. Use `--skip-verify` to disable. External binary checks gracefully skip if the binary is not installed. Built-in verifiers always run.
 
@@ -192,7 +192,7 @@ Generates GitHub Actions workflow files (`.github/workflows/ci.yml`).
 
 - **Serialization:** `js-yaml`
 - **Detector:** Finds existing workflow files in `.github/workflows/`
-- **Verifier:** Built-in structure lint — validates `on` trigger, `jobs` section, `runs-on` per job (skipped for reusable workflow jobs with `uses`), step `run`/`uses` presence
+- **Verifier:** Built-in structure lint — validates `on` trigger, `jobs` section, `runs-on` per job (skipped for reusable workflow jobs with `uses`), step `run`/`uses` presence. Optional binary verification via `actionlint` (skipped if not installed)
 - **Output:** Complete workflow YAML with jobs, steps, triggers
 
 ### Terraform
@@ -264,7 +264,7 @@ Generates GitLab CI pipeline configurations.
 
 - **Serialization:** `js-yaml`
 - **Detector:** Checks for existing `.gitlab-ci.yml`
-- **Verifier:** Built-in structure lint — validates `stages` is an array, jobs have `script` (or `trigger`/`extends`), stage references are declared, hidden jobs (`.prefix`) are skipped
+- **Verifier:** Built-in structure lint — validates `stages` is an array, jobs have `script` (or `trigger`/`extends`), stage references are declared, hidden jobs (`.prefix`) are skipped. Optional binary verification via `yamllint -d relaxed` (skipped if not installed)
 - **Output:** `.gitlab-ci.yml`
 
 ### Prometheus
@@ -973,7 +973,7 @@ blockedTools:
 
 Custom modules are sandboxed with the same guardrails as built-in tools, plus additional controls:
 
-- **Verification command whitelist** — Only 16 known DevOps binaries are allowed (terraform, kubectl, helm, ansible-lint, docker, hadolint, yamllint, jsonlint, shellcheck, tflint, kubeval, conftest, checkov, trivy, kube-score, polaris). Non-whitelisted commands are rejected at runtime
+- **Verification command whitelist** — Only 33 known DevOps binaries are allowed (terraform, kubectl, helm, ansible-lint, ansible-playbook, docker, hadolint, yamllint, jsonlint, shellcheck, tflint, kubeval, conftest, checkov, trivy, kube-score, polaris, nginx, promtool, systemd-analyze, make, actionlint, caddy, haproxy, nomad, podman, fluentd, opa, vault, circleci, npx, tsc, cfn-lint). Non-whitelisted commands are rejected at runtime
 - **Permission enforcement** — The `permissions.child_process` field must be `"required"` for verification commands to execute. Omitted or `"none"` means the command is silently skipped (default-safe)
 - **Path traversal prevention** — File paths in `files[].path` and `detector.path` cannot contain `..` segments, preventing writes outside the project directory
 - **Execution guardrails** — Custom modules execute through the same `SafeExecutor` pipeline as built-in tools, inheriting `maxFileSize` (1MB default), `timeoutMs` (30s default), DevOps write allowlist enforcement, and per-file audit logging
