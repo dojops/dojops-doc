@@ -154,7 +154,7 @@ dojops agents remove sre-specialist
 
 ### Step 6: Scaffold a New Module
 
-Create a new custom tool module with template files:
+Create a new custom tool module as a `.dops` file:
 
 ```bash
 dojops modules init my-nginx-proxy
@@ -163,17 +163,16 @@ dojops modules init my-nginx-proxy
 ```
 ┌  Module Scaffolded
 │
-│  Created: .dojops/tools/my-nginx-proxy/
-│  ├  tool.yaml          — Module manifest
-│  └  input.schema.json  — Input parameter schema
+│  Created: .dojops/modules/my-nginx-proxy.dops
 │
-│  Next steps:
-│  1. Edit tool.yaml to define your tool's behavior
-│  2. Edit input.schema.json to define input parameters
-│  3. Run: dojops modules validate .dojops/tools/my-nginx-proxy/
+│  Edit the .dops file to customize your module.
 │
 └  Ready to customize
 ```
+
+The generated `.dops` file is a single self-contained file combining YAML frontmatter (metadata, input/output schemas, file specs, permissions) with markdown prompt sections. Open it in your editor to customize the prompt, input fields, and output format.
+
+> **Note:** The `--legacy` flag generates the old `tool.yaml` + `input.schema.json` format instead. Legacy format is supported but will not receive new features.
 
 ### Step 7: List Discovered Modules
 
@@ -186,10 +185,10 @@ dojops modules list
 ```
 ┌  Custom Modules
 │
-│  Project (.dojops/tools/):
-│  ├  my-nginx-proxy  v1.0.0  — (scaffold template)
+│  Project (.dojops/modules/):
+│  ├  my-nginx-proxy  v0.1.0  — (scaffold template)
 │
-│  Global (~/.dojops/tools/):
+│  Global (~/.dojops/modules/):
 │  (none)
 │
 └  1 project, 0 global
@@ -197,27 +196,25 @@ dojops modules list
 
 ### Step 8: Validate a Module
 
-Check that your module manifest and schemas are valid:
+Check that your module is valid:
 
 ```bash
-dojops modules validate .dojops/tools/my-nginx-proxy/
+dojops modules validate my-nginx-proxy
 ```
 
 ```
 ┌  Module Validation
 │
-│  ✓ tool.yaml — valid manifest (spec: 1)
-│  ✓ input.schema.json — valid JSON Schema
-│  ✓ Name: my-nginx-proxy (valid format)
-│  ✓ Files: 1 output file defined
-│  ✓ Verification: command in whitelist
+│  ✓ DOPS module is valid: my-nginx-proxy v0.1.0
+│  Format: .dops
+│  Files: 1 output file defined
 │
 └  Module is valid
 ```
 
 ### Step 9: Load a Module from Disk
 
-Import a module from any local path into your project:
+Import a `.dops` module or legacy tool directory from any local path into your project:
 
 ```bash
 dojops modules load /path/to/shared-tools/redis-config/
@@ -227,8 +224,6 @@ dojops modules load /path/to/shared-tools/redis-config/
 ┌  Module Loaded
 │
 │  Copied to: .dojops/tools/redis-config/
-│  ├  tool.yaml
-│  └  input.schema.json
 │
 └  Module available for use
 ```
@@ -275,7 +270,7 @@ dojops modules install docker-swarm
 │
 │  Package: docker-swarm v1.2.0
 │  Integrity: SHA-256 verified ✓
-│  Location: .dojops/tools/docker-swarm/
+│  Location: .dojops/tools/docker-swarm.dops
 │
 └  Module ready to use
 ```

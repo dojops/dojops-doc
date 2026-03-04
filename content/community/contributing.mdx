@@ -225,25 +225,25 @@ For tools that don't need to be built into the core, use the custom tool system 
    dojops modules init my-tool
    ```
 
-   This creates `.dojops/tools/my-tool/` with template `tool.yaml` and `input.schema.json`.
+   This creates `.dojops/modules/my-tool.dops` — a single `.dops` file combining YAML frontmatter with markdown prompt sections.
 
-2. **Edit** `tool.yaml` — set the name, description, system prompt, output files, and serializer.
+2. **Edit** the `.dops` file — customize the prompt, input fields, output format, file specs, and permissions.
 
-3. **Edit** `input.schema.json` — define the JSON Schema for your tool's input parameters.
-
-4. **Validate** the tool:
+3. **Validate** the tool:
 
    ```bash
-   dojops modules validate .dojops/tools/my-tool/
+   dojops modules validate my-tool
    ```
 
-5. **Test** by generating a config:
+4. **Test** by generating a config:
 
    ```bash
    dojops "Generate my-tool config for production"
    ```
 
-Custom tools are automatically discovered and available to the Planner, Executor, and API. See [DevOps Tools — Custom Tool System](/components/tools#custom-tool-system) for the full manifest format.
+Custom tools are automatically discovered and available to the Planner, Executor, and API. See [DevOps Tools — Custom Tool System](/components/tools#custom-tool-system) for the full `.dops` format.
+
+> **Note:** Use `dojops modules init my-tool --legacy` to scaffold the old `tool.yaml` + `input.schema.json` format instead.
 
 ---
 

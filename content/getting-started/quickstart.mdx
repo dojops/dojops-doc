@@ -265,17 +265,17 @@ See [Web Dashboard](/usage/dashboard) for the full guide.
 
 ## Extending with Custom Tools
 
-DojOps supports custom tools via a declarative tool system. Create a custom tool by dropping a `tool.yaml` manifest + JSON Schema into `~/.dojops/tools/` (global) or `.dojops/tools/` (project-scoped):
+DojOps supports custom tools via a declarative `.dops` module system. Scaffold a module with `dojops modules init`, which creates a single `.dops` file combining metadata, schemas, and prompts:
 
 ```bash
-# Scaffold a new custom module
+# Scaffold a new .dops module
 dojops modules init my-tool
 
 # List discovered custom modules
 dojops modules list
 
-# Validate a module manifest
-dojops modules validate .dojops/tools/my-tool/
+# Validate a module
+dojops modules validate my-tool
 ```
 
 Custom tools are automatically available to all commands — the Planner includes them in capabilities, the Executor validates and runs them, and the audit trail tracks their usage.
