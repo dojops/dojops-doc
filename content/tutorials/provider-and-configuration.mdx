@@ -1,0 +1,413 @@
+# Provider & Configuration Management
+
+Configure LLM providers, manage configuration profiles, install toolchain binaries, and keep DojOps up to date.
+
+---
+
+## Overview
+
+In this tutorial, you'll learn to:
+
+- Add, switch, and remove LLM providers
+- Create and use configuration profiles for different environments
+- Install and manage system toolchain binaries
+- Run system health diagnostics
+- Check for and install CLI updates
+
+**Time estimate:** ~10 minutes
+
+**Prerequisites:**
+
+- DojOps installed (`npm i -g @dojops/cli`)
+- API keys for your LLM providers
+
+---
+
+## Part 1: Provider Management
+
+### Step 1: List Providers
+
+See all configured providers and their status:
+
+```bash
+dojops provider
+```
+
+```
+┌  LLM Providers
+│
+│  openai       ✓ configured (default)
+│  anthropic    ✓ configured
+│  ollama       ✗ not configured
+│  deepseek     ✗ not configured
+│  gemini       ✗ not configured
+│  github-copilot  ✗ not configured
+│
+└  2 configured, 1 default
+```
+
+Get JSON output for scripting:
+
+```bash
+dojops provider list --output json
+```
+
+### Step 2: Add a Provider
+
+Add a new provider with its API key:
+
+```bash
+dojops provider add anthropic --token sk-ant-api03-...
+```
+
+```
+┌  Provider Added
+│
+│  Provider: anthropic
+│  Status: ✓ configured
+│
+└  Token saved
+```
+
+You can also use environment variables:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-api03-...
+export DEEPSEEK_API_KEY=sk-...
+export GEMINI_API_KEY=AI...
+```
+
+### Step 3: Switch the Default Provider
+
+Use the interactive picker:
+
+```bash
+dojops provider switch
+```
+
+```
+◆  Select default provider:
+│  ● openai (current)
+│  ○ anthropic
+│  ○ ollama
+```
+
+Or set directly:
+
+```bash
+dojops provider default anthropic
+```
+
+Shortcut flag:
+
+```bash
+dojops provider --as-default anthropic
+```
+
+### Step 4: Override Per-Command
+
+Use any provider for a single command without changing defaults:
+
+```bash
+# Use Anthropic for this generation only
+dojops --provider=anthropic "Create a Terraform config for S3"
+
+# Use a specific model
+dojops --model=gpt-4o-mini "Create a simple Dockerfile"
+
+# Set temperature for reproducibility
+dojops --temperature=0 "Create a Kubernetes deployment"
+```
+
+### Step 5: Configure a Fallback Provider
+
+Set a fallback provider that's used when the primary fails:
+
+```bash
+# Via CLI flag
+dojops --fallback-provider=ollama "Create a CI workflow"
+
+# Via environment variable
+export DOJOPS_FALLBACK_PROVIDER=ollama
+```
+
+### Step 6: Remove a Provider
+
+```bash
+dojops provider remove deepseek
+```
+
+### Step 7: Authenticate with GitHub Copilot
+
+GitHub Copilot uses OAuth Device Flow authentication:
+
+```bash
+dojops auth login --provider github-copilot
+```
+
+```
+┌  GitHub Copilot Authentication
+│
+│  Open this URL in your browser:
+│  https://github.com/login/device
+│
+│  Enter code: ABCD-1234
+│
+│  Waiting for authorization...
+│  ✓ Authenticated as @username
+│
+└  Token saved to ~/.dojops/copilot-token.json
+```
+
+Check authentication status:
+
+```bash
+dojops auth status
+```
+
+---
+
+## Part 2: Configuration Profiles
+
+### Step 8: View Current Configuration
+
+```bash
+dojops config show
+```
+
+```
+┌  Configuration
+│
+│  Provider: openai
+│  Model: gpt-4o (default)
+│  Temperature: (not set)
+│  Fallback: ollama
+│  Profile: (default)
+│
+└  Active configuration
+```
+
+### Step 9: Create a Profile
+
+Save current configuration as a named profile:
+
+```bash
+dojops config profile create production
+```
+
+```
+┌  Profile Created
+│
+│  Name: production
+│  Provider: openai
+│  Model: gpt-4o
+│
+└  Saved — use `dojops config profile use production` to activate
+```
+
+Create profiles for different environments:
+
+```bash
+# Switch to Anthropic, then save
+dojops provider default anthropic
+dojops config profile create staging
+
+# Switch to Ollama for local dev
+dojops provider default ollama
+dojops config profile create local-dev
+
+# Return to default profile
+dojops config profile use default
+```
+
+### Step 10: List and Switch Profiles
+
+```bash
+dojops config profile list
+```
+
+```
+┌  Configuration Profiles
+│
+│  default     openai / gpt-4o (active)
+│  production  openai / gpt-4o
+│  staging     anthropic / claude-sonnet-4-6
+│  local-dev   ollama / llama3.1
+│
+└  4 profiles
+```
+
+Switch to a profile:
+
+```bash
+dojops config profile use staging
+```
+
+Use a profile for a single command:
+
+```bash
+dojops --profile=production "Create a Terraform config"
+```
+
+---
+
+## Part 3: System Toolchain
+
+### Step 11: List Toolchain Binaries
+
+DojOps can install verification binaries into a sandboxed toolchain:
+
+```bash
+dojops toolchain list
+```
+
+```
+┌  System Toolchain (~/.dojops/toolchain/)
+│
+│  terraform    ✗ not installed  (v1.9.8)
+│  kubectl      ✗ not installed  (v1.31.4)
+│  helm         ✗ not installed  (v3.17.3)
+│  hadolint     ✗ not installed  (v2.12.0)
+│  trivy        ✗ not installed  (v0.58.2)
+│  gitleaks     ✗ not installed  (v8.22.1)
+│  ansible      ✗ not installed  (v11.1.0)
+│  shellcheck   ✗ not installed  (v0.10.0)
+│  actionlint   ✗ not installed  (v1.7.7)
+│  promtool     ✗ not installed  (v2.55.1)
+│  circleci     ✗ not installed  (v0.1.31364)
+│  gh           ✗ not installed  (v2.63.2)
+│
+└  0 installed, 12 available
+```
+
+### Step 12: Install Toolchain Binaries
+
+Install verification tools for your infrastructure:
+
+```bash
+# Install individual binaries
+dojops toolchain install terraform
+dojops toolchain install hadolint
+dojops toolchain install shellcheck
+
+# Install for CI validation
+dojops toolchain install actionlint
+```
+
+```
+┌  Installing: terraform v1.9.8
+│
+│  Downloading from releases.hashicorp.com...
+│  Extracting to ~/.dojops/toolchain/terraform
+│  ✓ Installed: terraform v1.9.8
+│
+└  Ready — used for config verification in apply
+```
+
+### Step 13: Manage Toolchain
+
+Remove a specific binary:
+
+```bash
+dojops toolchain remove terraform
+```
+
+Remove all toolchain binaries:
+
+```bash
+dojops toolchain clean
+```
+
+---
+
+## Part 4: System Health & Updates
+
+### Step 14: Run System Diagnostics
+
+Check your DojOps setup for issues:
+
+```bash
+dojops status
+```
+
+```
+┌  DojOps Status
+│
+│  Version: v1.0.5
+│  Node.js: v20.11.0
+│
+│  Provider: openai ✓ connected
+│  Model: gpt-4o
+│
+│  Project: ✓ initialized (.dojops/)
+│  Plans: 5 saved
+│  Audit: 47 entries, chain intact
+│
+│  Toolchain:
+│  ├  terraform ✓ v1.9.8
+│  ├  hadolint  ✓ v2.12.0
+│  └  trivy     ✗ not installed
+│
+└  System healthy
+```
+
+> **Note:** `dojops doctor` is an alias for `dojops status`.
+
+### Step 15: Check for Updates
+
+```bash
+# Check only (don't install)
+dojops upgrade --check
+```
+
+```
+┌  Update Check
+│
+│  Current: v1.0.5
+│  Latest:  v1.0.6
+│
+│  Run `dojops upgrade` to install
+│
+└  Update available
+```
+
+Install the update:
+
+```bash
+dojops upgrade
+```
+
+Auto-approve:
+
+```bash
+dojops upgrade --yes
+```
+
+---
+
+## Environment Variable Reference
+
+| Variable                         | Description                                   |
+| -------------------------------- | --------------------------------------------- |
+| `OPENAI_API_KEY`                 | OpenAI API key                                |
+| `ANTHROPIC_API_KEY`              | Anthropic API key                             |
+| `DEEPSEEK_API_KEY`               | DeepSeek API key                              |
+| `GEMINI_API_KEY`                 | Gemini API key                                |
+| `GITHUB_COPILOT_TOKEN`           | GitHub Copilot OAuth token (skip Device Flow) |
+| `DOJOPS_PROVIDER`                | Default LLM provider                          |
+| `DOJOPS_MODEL`                   | Default LLM model                             |
+| `DOJOPS_TEMPERATURE`             | LLM temperature (0-2)                         |
+| `DOJOPS_FALLBACK_PROVIDER`       | Fallback provider name                        |
+| `DOJOPS_HUB_URL`                 | Hub API base URL                              |
+| `DOJOPS_HUB_TOKEN`               | Hub API token for publishing                  |
+| `OLLAMA_HOST`                    | Ollama server URL                             |
+| `OLLAMA_TLS_REJECT_UNAUTHORIZED` | Skip Ollama TLS cert verification             |
+
+---
+
+## What's Next?
+
+- [Getting Started](/getting-started/quickstart) — First-time setup
+- [Provider Management](/getting-started/providers) — Detailed provider guide
+- [Configuration](/getting-started/configuration) — Full config reference
+- [CLI Reference](/usage/cli) — All commands and flags

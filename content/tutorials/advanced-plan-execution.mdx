@@ -1,0 +1,405 @@
+# Advanced Plan Execution
+
+Master DojOps plan execution with dry runs, resume, retry, replay, rollback, and targeted task execution.
+
+---
+
+## Overview
+
+In this tutorial, you'll learn the advanced `dojops apply` options:
+
+- Preview changes with `--dry-run` before writing files
+- Resume partially-failed plans with `--resume` and `--retry`
+- Run deterministic replays with `--replay`
+- Execute individual tasks with `--task`
+- Manage timeouts, force mode, and path overrides
+- Roll back and clean up generated artifacts
+- Inspect execution history and audit trails
+
+**Time estimate:** ~15 minutes
+
+**Prerequisites:**
+
+- DojOps installed and configured
+- A project initialized (`dojops init`)
+- A saved plan (run `dojops plan "your goal"` first)
+
+---
+
+## Step 1: Create and Preview a Plan
+
+Start by creating a plan:
+
+```bash
+dojops plan "Set up CI/CD with GitHub Actions, Dockerfile, and docker-compose for a Node.js app"
+```
+
+```
+┌  Plan Created
+│
+│  Plan ID: plan-f7a2b1c3
+│  Tasks: 3
+│
+│  Task 1: Generate GitHub Actions CI workflow
+│  Task 2: Generate multi-stage Dockerfile
+│  Task 3: Generate docker-compose.yml (depends on Task 2)
+│
+└  Run `dojops apply` to execute
+```
+
+Preview what would happen without writing any files:
+
+```bash
+dojops apply --dry-run
+```
+
+```
+┌  Dry Run — plan-f7a2b1c3
+│
+│  Task 1: github-actions
+│  Would create: .github/workflows/ci.yml
+│
+│  Task 2: dockerfile
+│  Would create: Dockerfile
+│
+│  Task 3: docker-compose
+│  Would create: docker-compose.yml
+│
+│  Summary: 3 files would be created, 0 modified
+│
+└  No files were written (dry run)
+```
+
+---
+
+## Step 2: Execute with Approval
+
+Run the plan with the default approval workflow:
+
+```bash
+dojops apply
+```
+
+```
+┌  Executing Plan: plan-f7a2b1c3
+│
+│  Task 1/3: github-actions
+│  Generated: .github/workflows/ci.yml
+│
+│  ◆ Approve this file? (y/n): y
+│  ✓ Written: .github/workflows/ci.yml
+│
+│  Task 2/3: dockerfile
+│  Generated: Dockerfile
+│
+│  ◆ Approve this file? (y/n): y
+│  ✓ Written: Dockerfile
+│
+│  Task 3/3: docker-compose
+│  Generated: docker-compose.yml
+│
+│  ◆ Approve this file? (y/n): y
+│  ✓ Written: docker-compose.yml
+│
+└  Plan complete — 3/3 tasks succeeded
+```
+
+Auto-approve all files (for CI/CD or trusted plans):
+
+```bash
+dojops apply --yes
+```
+
+---
+
+## Step 3: Resume a Failed Plan
+
+If a plan partially fails (e.g., network timeout on task 2), resume from where it left off:
+
+```bash
+dojops apply --resume
+```
+
+```
+┌  Resuming Plan: plan-f7a2b1c3
+│
+│  Task 1/3: github-actions — ✓ already completed
+│  Task 2/3: dockerfile — retrying...
+│  Generated: Dockerfile
+│  ✓ Written: Dockerfile
+│
+│  Task 3/3: docker-compose
+│  Generated: docker-compose.yml
+│  ✓ Written: docker-compose.yml
+│
+└  Plan complete — 3/3 tasks succeeded (1 resumed)
+```
+
+Resume skips already-completed tasks. Combine with `--yes` for unattended recovery:
+
+```bash
+dojops apply --resume --yes
+```
+
+### Retry Failed Tasks
+
+By default, `--resume` skips failed tasks and continues with unblocked ones. Add `--retry` to re-attempt failed tasks:
+
+```bash
+dojops apply --resume --retry
+```
+
+```
+┌  Resuming Plan: plan-f7a2b1c3 (with retry)
+│
+│  Task 1/3: github-actions — ✓ already completed
+│  Task 2/3: dockerfile — ✗ previously failed — retrying...
+│  Generated: Dockerfile
+│  ✓ Written: Dockerfile
+│
+│  Task 3/3: docker-compose
+│  Generated: docker-compose.yml
+│  ✓ Written: docker-compose.yml
+│
+└  Plan complete — 3/3 tasks succeeded (1 retried)
+```
+
+---
+
+## Step 4: Deterministic Replay
+
+Replay a plan with `temperature: 0` for reproducible output. This validates that the environment matches the original plan:
+
+```bash
+dojops apply --replay
+```
+
+```
+┌  Replay Mode — plan-f7a2b1c3
+│
+│  Environment Validation:
+│  ✓ Provider: openai (matches plan)
+│  ✓ Model: gpt-4o (matches plan)
+│  ✓ Tool hashes: all match
+│
+│  Executing with temperature=0...
+│
+│  Task 1/3: github-actions ✓
+│  Task 2/3: dockerfile ✓
+│  Task 3/3: docker-compose ✓
+│
+└  Replay complete — deterministic execution
+```
+
+If the environment has changed since plan creation, replay warns you:
+
+```
+⚠ Environment mismatch:
+  Provider changed: openai → anthropic
+  Tool hash changed: dockerfile (tool.yaml modified)
+
+Use --force to proceed despite mismatches.
+```
+
+Force replay despite mismatches:
+
+```bash
+dojops apply --replay --yes
+```
+
+---
+
+## Step 5: Execute a Single Task
+
+Run only one specific task from a plan:
+
+```bash
+dojops apply --task 2
+```
+
+```
+┌  Executing Single Task: plan-f7a2b1c3 / Task 2
+│
+│  Task 2: dockerfile
+│  Generated: Dockerfile
+│  ✓ Written: Dockerfile
+│
+└  1 task completed
+```
+
+This is useful when you want to regenerate just one file without re-running the entire plan.
+
+---
+
+## Step 6: Timeouts and Force Mode
+
+### Per-Task Timeout
+
+Set a custom timeout for LLM generation (default: 60 seconds):
+
+```bash
+dojops apply --timeout 120
+```
+
+### Force Mode
+
+Skip the git dirty working tree check, HIGH risk confirmation gate, and replay validation:
+
+```bash
+dojops apply --force
+```
+
+This is useful in CI environments where the working directory may have uncommitted changes. Use with caution.
+
+### Skip Verification
+
+Skip external tool verification (e.g., `terraform validate`, `actionlint`):
+
+```bash
+dojops apply --skip-verify
+```
+
+### Allow All Paths
+
+Bypass the DevOps file write allowlist (for non-standard output locations):
+
+```bash
+dojops apply --allow-all-paths
+```
+
+### Install Packages After Apply
+
+Automatically run the package manager install after a successful apply:
+
+```bash
+dojops apply --install-packages
+```
+
+---
+
+## Step 7: Rollback a Plan
+
+Reverse an applied plan — deletes created files and restores `.bak` backups:
+
+```bash
+dojops rollback plan-f7a2b1c3
+```
+
+```
+┌  Rolling Back: plan-f7a2b1c3
+│
+│  ✓ Deleted: .github/workflows/ci.yml
+│  ✓ Deleted: Dockerfile
+│  ✓ Deleted: docker-compose.yml
+│  ✓ Restored: nginx.conf from nginx.conf.bak
+│
+└  Rollback complete — 3 files deleted, 1 restored
+```
+
+---
+
+## Step 8: Clean Up Artifacts
+
+Remove generated artifacts from a plan without restoring backups:
+
+```bash
+dojops clean plan-f7a2b1c3
+```
+
+```
+┌  Cleaning: plan-f7a2b1c3
+│
+│  ✓ Removed: .github/workflows/ci.yml
+│  ✓ Removed: Dockerfile
+│  ✓ Removed: docker-compose.yml
+│
+└  3 artifacts removed
+```
+
+> **Note:** `dojops destroy` is a deprecated alias for `clean`.
+
+---
+
+## Step 9: Review Execution History
+
+### List History
+
+```bash
+dojops history list
+```
+
+```
+┌  Execution History
+│
+│  plan-f7a2b1c3  2024-01-15 14:30  3/3 tasks  ✓ completed
+│  plan-e6d5c4b2  2024-01-14 09:15  2/2 tasks  ✓ completed
+│  plan-d1a2b3c4  2024-01-13 16:45  4/4 tasks  ✗ partial (3/4)
+│
+└  3 plans
+```
+
+### Show Plan Details
+
+```bash
+dojops history show plan-f7a2b1c3
+```
+
+### Verify Audit Trail
+
+Check the integrity of the hash-chained audit log:
+
+```bash
+dojops history verify
+```
+
+```
+┌  Audit Verification
+│
+│  Entries: 47
+│  Chain: ✓ intact (all hashes valid)
+│  First: 2024-01-10T08:00:00Z
+│  Last:  2024-01-15T14:35:00Z
+│
+└  Audit log integrity verified
+```
+
+### View Audit Entries
+
+```bash
+dojops history audit
+```
+
+### Repair Broken Chain
+
+If audit log entries are corrupted (e.g., manual edit):
+
+```bash
+dojops history repair
+```
+
+---
+
+## Quick Reference
+
+| Flag                 | Description                                              |
+| -------------------- | -------------------------------------------------------- |
+| `--dry-run`          | Preview changes without writing files                    |
+| `--yes`              | Auto-approve all confirmations                           |
+| `--resume`           | Resume from last completed task                          |
+| `--retry`            | Retry failed tasks (use with `--resume`)                 |
+| `--replay`           | Deterministic: temperature=0, validate environment match |
+| `--force`            | Skip git dirty check, risk gate, replay validation       |
+| `--task <id>`        | Execute only one task from the plan                      |
+| `--timeout <sec>`    | Per-task timeout in seconds (default: 60)                |
+| `--skip-verify`      | Skip external config verification                        |
+| `--allow-all-paths`  | Bypass DevOps file write allowlist                       |
+| `--install-packages` | Run package manager install after apply                  |
+
+---
+
+## What's Next?
+
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a pipeline using plan + apply
+- [CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis) — Debug failures and analyze diffs
+- [API Server & Dashboard](/tutorials/api-server-and-dashboard) — Self-host the API and dashboard
+- [CLI Reference](/usage/cli) — Full command reference

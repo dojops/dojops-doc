@@ -1,0 +1,332 @@
+# Custom Agents & Modules
+
+Create custom specialist agents, build custom tool modules, and publish to the DojOps Hub.
+
+---
+
+## Overview
+
+In this tutorial, you'll learn to:
+
+- Create custom specialist agents (LLM-generated and manual)
+- Browse, inspect, and remove agents
+- Scaffold, validate, and test custom tool modules
+- Search, install, and publish modules on the DojOps Hub
+
+**Time estimate:** ~20 minutes
+
+**Prerequisites:**
+
+- DojOps installed and configured with an LLM provider
+- A project initialized (`dojops init`)
+- For publishing: a DojOps Hub account and API token
+
+---
+
+## Part 1: Custom Agents
+
+### Step 1: List Available Agents
+
+View all built-in and custom agents:
+
+```bash
+dojops agents list
+```
+
+```
+┌  Specialist Agents
+│
+│  Built-in Agents (16):
+│  ├  terraform-specialist     — Infrastructure as Code (Terraform, OpenTofu)
+│  ├  kubernetes-specialist    — Container orchestration (K8s, Helm)
+│  ├  ci-specialist            — CI/CD pipelines (GitHub Actions, GitLab CI)
+│  ├  docker-specialist        — Containers (Dockerfile, Compose)
+│  ├  ansible-specialist       — Configuration management (Ansible)
+│  ├  monitoring-specialist    — Observability (Prometheus, Grafana)
+│  ├  security-specialist      — Security scanning and hardening
+│  ├  nginx-specialist         — Web server configuration (Nginx)
+│  └  ... (8 more)
+│
+│  Custom Agents (0):
+│  (none)
+│
+└  16 built-in, 0 custom
+```
+
+### Step 2: Inspect an Agent
+
+Get detailed information about any agent:
+
+```bash
+dojops agents info terraform-specialist
+```
+
+```
+┌  Agent: terraform-specialist
+│
+│  Domain: infrastructure
+│  Description: Expert in Terraform/OpenTofu IaC configurations
+│
+│  Keywords: terraform, tofu, hcl, provider, module, resource,
+│            state, plan, apply, backend, variable, output
+│
+│  Primary Keywords: terraform, tofu, hcl
+│
+│  Tool Dependencies: terraform
+│
+└  Routes prompts containing Terraform-related keywords
+```
+
+### Step 3: Create a Custom Agent (LLM-Generated)
+
+Create a new specialist agent using AI:
+
+```bash
+dojops agents create "an SRE specialist for incident response and reliability engineering"
+```
+
+```
+┌  Creating Custom Agent
+│
+│  Generating agent configuration...
+│
+│  Name: sre-specialist
+│  Domain: reliability
+│  Description: Expert in incident response, SLOs, error budgets,
+│               chaos engineering, and production reliability
+│
+│  Keywords: sre, incident, postmortem, slo, sla, error-budget,
+│            reliability, chaos, runbook, on-call, pagerduty,
+│            observability, toil, capacity
+│
+│  Saved to: .dojops/agents/sre-specialist/README.md
+│
+└  Agent created — available immediately
+```
+
+The agent is now active and participates in keyword routing:
+
+```bash
+dojops "Create a runbook for database failover incidents"
+# Routes to sre-specialist automatically
+```
+
+### Step 4: Create a Custom Agent (Manual)
+
+For full control over the agent definition:
+
+```bash
+dojops agents create --manual
+```
+
+```
+┌  Create Custom Agent (Manual)
+│
+◆  Agent name: compliance-auditor
+◆  Domain: compliance
+◆  Description: Expert in regulatory compliance (SOC2, HIPAA, PCI-DSS)
+◆  Keywords (comma-separated): compliance, soc2, hipaa, pci, audit,
+│    regulation, gdpr, policy, control, framework
+│
+│  Saved to: .dojops/agents/compliance-auditor/README.md
+│
+└  Agent created — available immediately
+```
+
+### Step 5: Remove a Custom Agent
+
+```bash
+dojops agents remove sre-specialist
+```
+
+```
+┌  Remove Agent
+│
+│  Removed: sre-specialist
+│  Deleted: .dojops/agents/sre-specialist/
+│
+└  Agent removed
+```
+
+---
+
+## Part 2: Custom Modules
+
+### Step 6: Scaffold a New Module
+
+Create a new custom tool module with template files:
+
+```bash
+dojops modules init my-nginx-proxy
+```
+
+```
+┌  Module Scaffolded
+│
+│  Created: .dojops/tools/my-nginx-proxy/
+│  ├  tool.yaml          — Module manifest
+│  └  input.schema.json  — Input parameter schema
+│
+│  Next steps:
+│  1. Edit tool.yaml to define your tool's behavior
+│  2. Edit input.schema.json to define input parameters
+│  3. Run: dojops modules validate .dojops/tools/my-nginx-proxy/
+│
+└  Ready to customize
+```
+
+### Step 7: List Discovered Modules
+
+View all custom modules (global + project-scoped):
+
+```bash
+dojops modules list
+```
+
+```
+┌  Custom Modules
+│
+│  Project (.dojops/tools/):
+│  ├  my-nginx-proxy  v1.0.0  — (scaffold template)
+│
+│  Global (~/.dojops/tools/):
+│  (none)
+│
+└  1 project, 0 global
+```
+
+### Step 8: Validate a Module
+
+Check that your module manifest and schemas are valid:
+
+```bash
+dojops modules validate .dojops/tools/my-nginx-proxy/
+```
+
+```
+┌  Module Validation
+│
+│  ✓ tool.yaml — valid manifest (spec: 1)
+│  ✓ input.schema.json — valid JSON Schema
+│  ✓ Name: my-nginx-proxy (valid format)
+│  ✓ Files: 1 output file defined
+│  ✓ Verification: command in whitelist
+│
+└  Module is valid
+```
+
+### Step 9: Load a Module from Disk
+
+Import a module from any local path into your project:
+
+```bash
+dojops modules load /path/to/shared-tools/redis-config/
+```
+
+```
+┌  Module Loaded
+│
+│  Copied to: .dojops/tools/redis-config/
+│  ├  tool.yaml
+│  └  input.schema.json
+│
+└  Module available for use
+```
+
+---
+
+## Part 3: DojOps Hub
+
+### Step 10: Search for Modules
+
+Search the [DojOps Hub](https://hub.dojops.ai) for community modules:
+
+```bash
+dojops modules search docker
+```
+
+```
+┌  Hub Search: "docker"
+│
+│  docker-swarm        v1.2.0  ★ 45  ↓ 230  Docker Swarm stack configs
+│  docker-rootless     v1.0.0  ★ 23  ↓ 112  Rootless Docker daemon setup
+│  docker-registry     v2.1.0  ★ 18  ↓ 89   Private Docker registry config
+│
+└  3 results
+```
+
+Refine your search:
+
+```bash
+dojops modules search terraform --limit 5
+dojops modules search k8s --output json
+```
+
+### Step 11: Install a Module from Hub
+
+Install a community module for immediate use:
+
+```bash
+dojops modules install docker-swarm
+```
+
+```
+┌  Module Installed
+│
+│  Package: docker-swarm v1.2.0
+│  Integrity: SHA-256 verified ✓
+│  Location: .dojops/tools/docker-swarm/
+│
+└  Module ready to use
+```
+
+Install a specific version globally (shared across all projects):
+
+```bash
+dojops modules install docker-swarm --version 1.0.0 --global
+```
+
+### Step 12: Publish a Module to Hub
+
+First, set up your Hub API token:
+
+```bash
+# 1. Sign in at hub.dojops.ai → Settings → API Tokens
+# 2. Generate a token (format: dojops_<40-hex-chars>)
+# 3. Set the environment variable:
+export DOJOPS_HUB_TOKEN="dojops_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+```
+
+Publish your `.dops` module:
+
+```bash
+dojops modules publish my-nginx-proxy.dops
+```
+
+```
+┌  Publishing to DojOps Hub
+│
+│  Package: my-nginx-proxy v1.0.0
+│  SHA-256: a1b2c3d4...
+│  Size: 2.4 KB
+│
+│  ✓ Uploaded successfully
+│  URL: https://hub.dojops.ai/packages/my-nginx-proxy
+│
+└  Published
+```
+
+Include a changelog with your release:
+
+```bash
+dojops modules publish my-nginx-proxy.dops --changelog "v1.1.0: Added SSL termination support"
+```
+
+---
+
+## What's Next?
+
+- [Enhance a Next.js Project](/tutorials/enhance-nextjs-project) — Use agents to improve an existing project
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a full pipeline
+- [DevOps Tools](/components/tools) — Full tool documentation including custom tool manifests
+- [Specialist Agents](/components/agents) — Agent routing and custom agent format

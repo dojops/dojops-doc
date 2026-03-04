@@ -1,0 +1,225 @@
+# Interactive Chat Sessions
+
+Use DojOps chat for multi-turn AI DevOps conversations with agent routing, slash commands, and session persistence.
+
+---
+
+## Overview
+
+In this tutorial, you'll learn to use `dojops chat` to:
+
+- Start interactive DevOps conversations with AI
+- Use slash commands to plan, scan, and apply within a session
+- Pin conversations to specialist agents
+- Resume and manage named sessions
+- Send single messages for scriptable automation
+
+**Time estimate:** ~10 minutes
+
+**Prerequisites:**
+
+- DojOps installed (`npm i -g @dojops/cli`)
+- An API key configured (`dojops config` or `dojops auth login`)
+- A project directory (run `dojops init` first for full features)
+
+---
+
+## Step 1: Start a Basic Chat Session
+
+Launch an interactive session:
+
+```bash
+dojops chat
+```
+
+```
+┌  DojOps Chat
+│
+◆  You: _
+```
+
+Type your DevOps question and press Enter:
+
+```
+◆  You: What CI/CD tools are configured in this project?
+│
+◇  DojOps: Based on the project context, I can see:
+│  - GitHub Actions workflow (.github/workflows/ci.yml)
+│  - Dockerfile (multi-stage build)
+│  - No Terraform or Kubernetes configs detected
+│
+◆  You: _
+```
+
+The chat maintains conversation history, so follow-up questions have full context. Type `/exit` to end the session.
+
+---
+
+## Step 2: Use Slash Commands
+
+Chat supports 8 slash commands for in-session actions:
+
+| Command         | Description                        |
+| --------------- | ---------------------------------- |
+| `/exit`         | End the chat session               |
+| `/agent <name>` | Switch to a specialist agent       |
+| `/plan <goal>`  | Decompose a goal into a task graph |
+| `/apply`        | Execute the most recent plan       |
+| `/scan`         | Run a security scan                |
+| `/history`      | Show execution history             |
+| `/clear`        | Clear conversation history         |
+| `/save`         | Save the current session           |
+
+Try planning from within chat:
+
+```
+◆  You: /plan Set up Docker Compose with nginx and redis
+
+◇  DojOps: Created plan with 3 tasks:
+│  Task 1: Generate docker-compose.yml with nginx + redis services
+│  Task 2: Generate nginx.conf with reverse proxy configuration
+│  Task 3: Generate Dockerfile for the application
+│
+│  Run /apply to execute this plan.
+│
+◆  You: /apply
+```
+
+Run a security scan mid-conversation:
+
+```
+◆  You: /scan
+
+◇  DojOps: Security Scan Results
+│  ┌─────────────┬──────────┬──────────┐
+│  │ Scanner     │ Findings │ Severity │
+│  ├─────────────┼──────────┼──────────┤
+│  │ npm-audit   │ 2        │ MEDIUM   │
+│  │ hadolint    │ 1        │ LOW      │
+│  └─────────────┴──────────┴──────────┘
+```
+
+---
+
+## Step 3: Pin to a Specialist Agent
+
+Focus a conversation on a specific domain by pinning to one of the 16 specialist agents:
+
+```bash
+dojops chat --agent=terraform
+```
+
+```
+┌  DojOps Chat (Agent: terraform-specialist)
+│
+◆  You: Create an S3 bucket with versioning and encryption
+│
+◇  DojOps: Here's a Terraform configuration for an S3 bucket...
+```
+
+You can also switch agents mid-conversation with the `/agent` command:
+
+```
+◆  You: /agent kubernetes
+
+◇  DojOps: Switched to kubernetes-specialist
+
+◆  You: Create a deployment for the app we just containerized
+```
+
+To see all available agents:
+
+```bash
+dojops agents list
+```
+
+---
+
+## Step 4: Named Sessions and Resume
+
+Create a named session for ongoing work:
+
+```bash
+dojops chat --session=infra-migration
+```
+
+```
+┌  DojOps Chat (Session: infra-migration)
+│
+◆  You: We're migrating from EC2 to ECS. Let's plan the Terraform changes.
+```
+
+End the session with `/exit`. Later, resume exactly where you left off:
+
+```bash
+dojops chat --session=infra-migration
+```
+
+```
+┌  DojOps Chat (Session: infra-migration) — Resumed
+│
+│  Previous context loaded (3 messages)
+│
+◆  You: _
+```
+
+Resume the most recent session without remembering the name:
+
+```bash
+dojops chat --resume
+```
+
+---
+
+## Step 5: Single-Message Mode (Scriptable)
+
+Send a single message and get the response without entering interactive mode:
+
+```bash
+dojops chat --message "What tools are missing in this project?"
+```
+
+```
+Based on the project scan, the following DevOps tools are missing:
+- No IaC configuration (Terraform/Pulumi)
+- No container orchestration (Kubernetes/Helm)
+- No monitoring (Prometheus/Grafana)
+```
+
+This is useful for scripting and CI/CD pipelines. The short form `-m` also works:
+
+```bash
+# Get structured output for scripts
+dojops chat -m "List all detected DevOps files" --output json
+```
+
+```json
+{
+  "response": "...",
+  "agent": "devops-generalist",
+  "session": "msg-a1b2c3"
+}
+```
+
+---
+
+## Step 6: Combine with Agent Pinning
+
+Use `--message` with `--agent` for targeted, scriptable queries:
+
+```bash
+# Ask the Terraform specialist about module structure
+dojops chat --agent=terraform -m "What Terraform modules should I create for a microservices architecture?"
+
+# Ask the security specialist about scan results
+dojops chat --agent=security -m "Analyze the latest scan findings and prioritize fixes"
+```
+
+---
+
+## What's Next?
+
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a full pipeline using plan + apply
+- [Security Audit & Remediation](/tutorials/security-audit) — Comprehensive scanning workflow
+- [Custom Agents & Modules](/tutorials/custom-agents-and-modules) — Create your own specialist agents
+- [CLI Reference](/usage/cli) — Full command reference

@@ -1,0 +1,321 @@
+# API Server & Dashboard
+
+Run the DojOps API server and web dashboard for team access, monitoring, and HTTP integration.
+
+---
+
+## Overview
+
+In this tutorial, you'll learn to:
+
+- Start the API server with `dojops serve`
+- Generate API credentials for authenticated access
+- Enable HTTPS/TLS for production deployments
+- Use the 5-tab web dashboard for monitoring
+- Call API endpoints from scripts and CI/CD pipelines
+
+**Time estimate:** ~15 minutes
+
+**Prerequisites:**
+
+- DojOps installed and configured with an LLM provider
+- A project initialized (`dojops init`)
+
+---
+
+## Step 1: Start the Server
+
+Launch the API server with the built-in web dashboard:
+
+```bash
+dojops serve
+```
+
+```
+┌  DojOps API Server
+│
+│  Dashboard: http://localhost:3000
+│  API Base:  http://localhost:3000/api/v1
+│
+│  Press Ctrl+C to stop
+│
+└  Server ready
+```
+
+Use a custom port:
+
+```bash
+dojops serve --port=8080
+```
+
+Override the LLM provider for this server instance:
+
+```bash
+dojops serve --provider=anthropic
+```
+
+---
+
+## Step 2: Set Up Authentication
+
+For team or production use, generate API credentials:
+
+```bash
+dojops serve credentials
+```
+
+```
+┌  API Credentials
+│
+│  API Key: dojops_sv_a1b2c3d4e5f6...
+│
+│  Saved to: ~/.dojops/server.json
+│
+│  Use this key in the Authorization header:
+│  Authorization: Bearer dojops_sv_a1b2c3d4e5f6...
+│
+└  Key generated — server will auto-load on next start
+```
+
+Now start the server — it automatically loads the key from `server.json`:
+
+```bash
+dojops serve
+```
+
+```
+┌  DojOps API Server (Authenticated)
+│
+│  Dashboard: http://localhost:3000
+│  Auth: API key required
+│
+└  Server ready
+```
+
+### Local Development Mode
+
+Skip authentication for local development:
+
+```bash
+dojops serve --no-auth
+```
+
+> **Warning:** Only use `--no-auth` for local development. Never expose an unauthenticated server to the network.
+
+---
+
+## Step 3: Enable HTTPS/TLS
+
+For production deployments, enable TLS with your certificate and key:
+
+```bash
+dojops serve --tls-cert=cert.pem --tls-key=key.pem
+```
+
+```
+┌  DojOps API Server (TLS)
+│
+│  Dashboard: https://localhost:3000
+│  Auth: API key required
+│  TLS: ✓ enabled
+│
+└  Server ready
+```
+
+Combine with a custom port:
+
+```bash
+dojops serve --tls-cert=cert.pem --tls-key=key.pem --port=8443
+```
+
+---
+
+## Step 4: Explore the Web Dashboard
+
+Open the dashboard in your browser at `http://localhost:3000`. It has 5 tabs:
+
+### Overview Tab
+
+Displays plan execution and scan aggregates:
+
+- Total plans created and executed
+- Success/failure rates
+- Recent activity timeline
+
+### Security Tab
+
+Shows security scan findings and severity trends:
+
+- Finding counts by severity (CRITICAL, HIGH, MEDIUM, LOW)
+- Scanner breakdown (trivy, gitleaks, checkov, etc.)
+- Trend over time
+
+### Audit Tab
+
+Displays the hash-chained audit trail:
+
+- Audit chain integrity status
+- Timeline of all operations
+- Per-entry details with hash verification
+
+### Agents Tab
+
+Lists all specialist agents with their capabilities:
+
+- 16 built-in agents with domains and keywords
+- Custom agents (project and global)
+- Agent routing statistics
+
+### History Tab
+
+Execution history with filtering:
+
+- Plan execution results
+- Per-task status and timing
+- Filter by type, status, and date
+
+---
+
+## Step 5: Call the API from Scripts
+
+Use the API endpoints for automation and CI/CD integration. All endpoints are available at both `/api/` and `/api/v1/`.
+
+### Health Check
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+```json
+{
+  "status": "ok",
+  "provider": "openai",
+  "customToolCount": 2
+}
+```
+
+### Generate a Config
+
+```bash
+curl -X POST http://localhost:3000/api/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{"prompt": "Create a Dockerfile for a Go application"}'
+```
+
+### Run a Security Scan
+
+```bash
+curl -X POST http://localhost:3000/api/scan \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"scanTypes": ["security", "deps"]}'
+```
+
+### Create and Execute a Plan
+
+```bash
+# Create a plan
+curl -X POST http://localhost:3000/api/plan \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Set up CI/CD for a Python project", "execute": true}'
+```
+
+### Debug a CI Failure
+
+```bash
+curl -X POST http://localhost:3000/api/debug-ci \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"log": "npm ERR! ERESOLVE unable to resolve dependency tree..."}'
+```
+
+### Get Dashboard Metrics
+
+```bash
+# All metrics at once
+curl http://localhost:3000/api/metrics \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# Individual metric categories
+curl http://localhost:3000/api/metrics/overview \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+curl http://localhost:3000/api/metrics/security \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+curl http://localhost:3000/api/metrics/audit \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+curl http://localhost:3000/api/metrics/tokens \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Chat via API
+
+```bash
+# Create a session
+curl -X POST http://localhost:3000/api/chat/sessions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "infra-planning"}'
+
+# Send a message
+curl -X POST http://localhost:3000/api/chat \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What Terraform modules do we need?", "sessionId": "SESSION_ID"}'
+```
+
+---
+
+## Step 6: API in CI/CD Pipelines
+
+Example GitHub Actions step using the DojOps API:
+
+```yaml
+- name: DojOps Security Scan
+  run: |
+    RESULT=$(curl -s -X POST ${{ secrets.DOJOPS_API_URL }}/api/scan \
+      -H "Authorization: Bearer ${{ secrets.DOJOPS_API_KEY }}" \
+      -H "Content-Type: application/json" \
+      -d '{"scanTypes": ["security"]}')
+    echo "$RESULT" | jq '.findings[] | select(.severity == "CRITICAL")'
+```
+
+---
+
+## API Endpoint Summary
+
+| Method | Path                     | Description                    |
+| ------ | ------------------------ | ------------------------------ |
+| GET    | `/api/health`            | Health check + provider status |
+| POST   | `/api/generate`          | Agent-routed generation        |
+| POST   | `/api/plan`              | Plan creation + execution      |
+| POST   | `/api/debug-ci`          | CI log diagnosis               |
+| POST   | `/api/diff`              | Infrastructure diff analysis   |
+| POST   | `/api/scan`              | Security scanning              |
+| POST   | `/api/chat`              | Chat message                   |
+| POST   | `/api/chat/sessions`     | Create chat session            |
+| GET    | `/api/chat/sessions`     | List chat sessions             |
+| GET    | `/api/chat/sessions/:id` | Get chat session               |
+| DELETE | `/api/chat/sessions/:id` | Delete chat session            |
+| GET    | `/api/agents`            | List agents                    |
+| GET    | `/api/history`           | Execution history              |
+| GET    | `/api/history/:id`       | Single history entry           |
+| DELETE | `/api/history`           | Clear history                  |
+| GET    | `/api/metrics`           | All dashboard metrics          |
+| GET    | `/api/metrics/overview`  | Plan/execution aggregates      |
+| GET    | `/api/metrics/security`  | Scan findings + trends         |
+| GET    | `/api/metrics/audit`     | Audit chain integrity          |
+| GET    | `/api/metrics/tokens`    | LLM token usage                |
+
+---
+
+## What's Next?
+
+- [Web Dashboard](/usage/dashboard) — Detailed dashboard guide
+- [API Reference](/usage/api) — Full endpoint documentation with schemas
+- [Advanced Plan Execution](/tutorials/advanced-plan-execution) — Resume, retry, replay, rollback
+- [Security Audit & Remediation](/tutorials/security-audit) — Scanning workflows
