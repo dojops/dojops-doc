@@ -225,12 +225,14 @@ Custom tools execute through the same `SafeExecutor` pipeline as built-in tools 
 
 ### Verification Command Whitelist
 
-The `verification.command` field in tool manifests can only invoke whitelisted binaries:
+The `verification.command` field in tool manifests can only invoke one of 33 whitelisted binaries:
 
 ```
-terraform, kubectl, helm, ansible-lint, docker, hadolint,
-yamllint, jsonlint, shellcheck, tflint, kubeval, conftest,
-checkov, trivy, kube-score, polaris
+terraform, kubectl, helm, ansible-lint, ansible-playbook, docker,
+hadolint, yamllint, jsonlint, shellcheck, tflint, kubeval,
+conftest, checkov, trivy, kube-score, polaris, nginx,
+promtool, systemd-analyze, make, actionlint, caddy, haproxy,
+nomad, podman, fluentd, opa, vault, circleci, npx, tsc, cfn-lint
 ```
 
 Any other command (e.g., `curl`, `rm`, `bash`) is rejected at runtime with a descriptive error.

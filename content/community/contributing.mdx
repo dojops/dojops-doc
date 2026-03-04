@@ -44,15 +44,16 @@ packages/
   core/             LLM providers (6) + specialist agents (16) + CI debugger + infra diff + DevOps checker
   planner/          Task graph decomposition + topological executor
   executor/         SafeExecutor + policy engine + approval workflows + audit log
-  tools/            12 built-in DevOps tools
-  scanner/          9 security scanners + remediation engine
+  runtime/          12 built-in DevOps tools as .dops v2 modules (DopsRuntime + DopsRuntimeV2)
+  scanner/          10 security scanners + remediation engine
   session/          Chat session management + memory + context injection
+  context/          Context7 documentation augmentation for v2 tools
   sdk/              BaseTool<T> abstract class + Zod re-export + verification types + file-reader utilities
 ```
 
 Package scope: `@dojops/*`
 
-Dependency flow: `cli -> api -> tool-registry -> tools -> core -> sdk`
+Dependency flow: `cli -> api -> tool-registry -> runtime -> core -> sdk`
 
 ---
 
@@ -111,17 +112,18 @@ DojOps uses Vitest for testing. Current coverage:
 
 | Package                 | Tests    |
 | ----------------------- | -------- |
-| `@dojops/runtime`       | 481      |
-| `@dojops/core`          | 465      |
-| `@dojops/cli`           | 247      |
+| `@dojops/runtime`       | 589      |
+| `@dojops/core`          | 496      |
+| `@dojops/cli`           | 315      |
+| `@dojops/tool-registry` | 252      |
 | `@dojops/api`           | 236      |
-| `@dojops/tool-registry` | 224      |
 | `@dojops/scanner`       | 110      |
 | `@dojops/executor`      | 67       |
 | `@dojops/planner`       | 39       |
 | `@dojops/session`       | 38       |
+| `@dojops/context`       | 29       |
 | `@dojops/sdk`           | 24       |
-| **Total**               | **1931** |
+| **Total**               | **2195** |
 
 ### Writing Tests
 
@@ -132,96 +134,82 @@ DojOps uses Vitest for testing. Current coverage:
 
 ---
 
-## Adding a New Tool
+## Adding a New Built-in Tool
 
-All tools follow the `BaseTool<T>` pattern. See [DevOps Tools](/components/tools) for the full pattern.
+All 12 built-in tools are `.dops v2` module files in `packages/runtime/modules/`. To add a new built-in tool, create a `.dops` file following the v2 format. See [DevOps Tools](/components/tools) for the full pattern.
 
 ### Step-by-Step
 
-1. **Create directory:** `packages/tools/src/my-tool/`
+1. **Create the `.dops` module file:** `packages/runtime/modules/my-tool.dops`
 
-2. **Define schemas** (`schemas.ts`):
+   A `.dops v2` file has YAML frontmatter followed by markdown prompt sections:
 
-   ```typescript
-   import { z } from "@dojops/sdk";
+   ```yaml
+   ---
+   meta:
+     name: my-tool
+     version: "1.0.0"
+     description: "Generates my-tool configuration"
+     tags: [my-domain]
 
-   export const MyToolInputSchema = z.object({
-     name: z.string(),
-     // tool-specific fields
-     existingContent: z
-       .string()
-       .optional()
-       .describe(
-         "Existing config file content to update/enhance. If omitted, tool auto-detects existing files.",
-       ),
-   });
+   context:
+     technology: "my-tool"
+     outputGuidance: "Generate a complete, valid my-tool config file."
+     bestPractices:
+       - "Follow official documentation conventions"
+       - "Include comments explaining non-obvious settings"
 
-   export const MyToolOutputSchema = z.object({
-     // LLM response structure
-   });
+   files:
+     - path: "my-tool.conf"
+       format: raw
 
-   export type MyToolInput = z.infer<typeof MyToolInputSchema>;
-   export type MyToolOutput = z.infer<typeof MyToolOutputSchema>;
+   scope:
+     write:
+       - "my-tool.conf"
+
+   risk:
+     level: LOW
+     rationale: "Generates a single configuration file"
+
+   execution:
+     mode: generate
+     deterministic: true
+     idempotent: true
+
+   detection:
+     paths:
+       - "my-tool.conf"
+
+   verification:
+     structural:
+       - rule: not_empty
+       - rule: min_lines
+         value: 3
+
+   permissions:
+     filesystem: project
+     child_process: none
+     network: none
+   ---
+
+   ## Prompt
+
+   Generate a complete my-tool configuration based on the user's requirements.
+
+   {outputGuidance}
+
+   {bestPractices}
+
+   ## Keywords
+
+   my-tool, my-domain
    ```
 
-3. **Implement generator** (`generator.ts`):
+2. **Register the module** in `packages/runtime/src/built-in-modules.ts` — add the filename to the module list.
 
-   ```typescript
-   import { parseAndValidate } from "@dojops/core";
+3. **Add a specialist agent keyword** (if needed) in `packages/core/src/agents/specialists.ts` — add your tool's keywords so the `AgentRouter` can route prompts to it.
 
-   export async function generateMyTool(
-     input: MyToolInput,
-     provider: LLMProvider,
-     existingContent?: string,
-   ) {
-     const isUpdate = !!existingContent;
-     const system = isUpdate
-       ? "Update the existing config. Preserve existing structure and settings."
-       : "Generate a new config from scratch.";
-     const prompt = isUpdate
-       ? `${buildPrompt(input)}\n\n--- EXISTING CONFIGURATION ---\n${existingContent}\n--- END ---`
-       : buildPrompt(input);
-     const response = await provider.generate({ system, prompt, schema: MyToolOutputSchema });
-     return parseAndValidate(response.content, MyToolOutputSchema);
-   }
-   ```
-
-4. **Create tool class** (`my-tool.ts`):
-
-   ```typescript
-   import { BaseTool, readExistingConfig, backupFile, atomicWriteFileSync } from "@dojops/sdk";
-
-   export class MyTool extends BaseTool<MyToolInput> {
-     name = "my-tool";
-     inputSchema = MyToolInputSchema;
-
-     async generate(input: MyToolInput) {
-       const existingContent = input.existingContent ?? readExistingConfig(outputPath);
-       const isUpdate = !!existingContent;
-       const result = await generateMyTool(input, this.provider, existingContent);
-       return { success: true, data: { ...result, isUpdate } };
-     }
-
-     async execute(input: MyToolInput) {
-       const result = await this.generate(input);
-       if (result.data.isUpdate) backupFile(outputPath);
-       atomicWriteFileSync(outputPath, result.data.content);
-       return {
-         ...result,
-         filesWritten: [outputPath],
-         filesModified: result.data.isUpdate ? [outputPath] : [],
-       };
-     }
-   }
-   ```
-
-5. **Optional: Add detector** (`detector.ts`) for filesystem context detection
-
-6. **Optional: Add verifier** (`verifier.ts`) for external tool validation
-
-7. **Export:** Add to `packages/tools/src/index.ts`
-
-8. **Write tests:** `my-tool.test.ts` with mocked LLM provider — include tests for auto-detection of existing files, update mode prompts, and `.bak` backup creation
+4. **Write tests:** Create `packages/runtime/src/__tests__/modules/my-tool.test.ts` with mocked LLM provider — test prompt compilation, update mode, and verification.
 
 ---
 
@@ -234,7 +222,7 @@ For tools that don't need to be built into the core, use the custom tool system 
 1. **Scaffold** a custom tool:
 
    ```bash
-   dojops tools init my-tool
+   dojops modules init my-tool
    ```
 
    This creates `.dojops/tools/my-tool/` with template `tool.yaml` and `input.schema.json`.
@@ -246,7 +234,7 @@ For tools that don't need to be built into the core, use the custom tool system 
 4. **Validate** the tool:
 
    ```bash
-   dojops tools validate .dojops/tools/my-tool/
+   dojops modules validate .dojops/tools/my-tool/
    ```
 
 5. **Test** by generating a config:

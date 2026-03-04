@@ -107,21 +107,22 @@ Chat supports slash commands: `/exit`, `/agent <name>`, `/plan <goal>`, `/apply`
 
 ### Configuration & Server
 
-| Command                             | Description                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------- |
-| `dojops config`                     | Configure provider, model, tokens (interactive)                                 |
-| `dojops config show`                | Display current configuration                                                   |
-| `dojops config profile create NAME` | Save current config as a named profile                                          |
-| `dojops config profile use NAME`    | Switch to a named profile                                                       |
-| `dojops config profile list`        | List all profiles                                                               |
-| `dojops auth login`                 | Authenticate with LLM provider                                                  |
-| `dojops auth status`                | Show saved tokens and default provider                                          |
-| `dojops serve [--port=N]`           | Start API server + web dashboard                                                |
-| `dojops serve --no-auth`            | Start server without API key authentication (local dev only)                    |
-| `dojops serve credentials`          | Generate API key for dashboard/API authentication                               |
-| `dojops init`                       | Initialize `.dojops/` + comprehensive repo scan (11 CI, IaC, scripts, security) |
-| `dojops doctor`                     | System health diagnostics + project metrics                                     |
-| `dojops upgrade`                    | Check for and install CLI updates (`--check` for check-only)                    |
+| Command                                       | Description                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------------------- |
+| `dojops config`                               | Configure provider, model, tokens (interactive)                                 |
+| `dojops config show`                          | Display current configuration                                                   |
+| `dojops config profile create NAME`           | Save current config as a named profile                                          |
+| `dojops config profile use NAME`              | Switch to a named profile                                                       |
+| `dojops config profile list`                  | List all profiles                                                               |
+| `dojops auth login`                           | Authenticate with LLM provider                                                  |
+| `dojops auth status`                          | Show saved tokens and default provider                                          |
+| `dojops serve [--port=N]`                     | Start API server + web dashboard                                                |
+| `dojops serve --no-auth`                      | Start server without API key authentication (local dev only)                    |
+| `dojops serve --tls-cert=PATH --tls-key=PATH` | Enable HTTPS/TLS on the API server                                              |
+| `dojops serve credentials`                    | Generate API key for dashboard/API authentication                               |
+| `dojops init`                                 | Initialize `.dojops/` + comprehensive repo scan (11 CI, IaC, scripts, security) |
+| `dojops status`                               | System health diagnostics + project metrics (alias: `doctor`)                   |
+| `dojops upgrade`                              | Check for and install CLI updates (`--check` for check-only)                    |
 
 ---
 
@@ -395,6 +396,9 @@ dojops serve                         # auto-loads key from server.json
 
 # Start without authentication (local development only)
 dojops serve --no-auth
+
+# Enable HTTPS/TLS
+dojops serve --tls-cert=cert.pem --tls-key=key.pem
 
 # Configuration profiles
 dojops config profile create staging
