@@ -71,27 +71,20 @@ ERROR: Could not find a version that satisfies the requirement torch==2.1.0"
 
 ## Step 2: Analyze an Infrastructure Diff
 
-When running `terraform plan` or similar tools, feed the output to DojOps for risk analysis:
+When running `terraform plan` or similar tools, save the output to a file and feed it to DojOps for risk analysis:
 
 ```bash
-dojops analyze diff "Terraform will perform the following actions:
+# Save the plan output to a file (recommended for multiline diffs)
+terraform plan -no-color > plan.diff
 
-  # aws_security_group.web will be updated in-place
-  ~ resource \"aws_security_group\" \"web\" {
-      ~ ingress {
-          - cidr_blocks = [\"10.0.0.0/8\"]
-          + cidr_blocks = [\"0.0.0.0/0\"]
-            from_port   = 443
-            to_port     = 443
-        }
-    }
+# Analyze the diff
+dojops analyze diff --file plan.diff
+```
 
-  # aws_instance.app will be destroyed
-  - resource \"aws_instance\" \"app\" {
-      - instance_type = \"t3.medium\"
-    }
+You can also pipe directly:
 
-Plan: 0 to add, 1 to change, 1 to destroy."
+```bash
+terraform plan -no-color | dojops analyze diff
 ```
 
 ```

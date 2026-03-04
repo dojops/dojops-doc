@@ -93,8 +93,11 @@ Some agents declare external tool dependencies that enhance their capabilities:
 # List all agents
 dojops agents list
 
-# Show agent details
-dojops agents info terraform-specialist
+# Show agent details (partial names supported)
+dojops agents info terraform              # matches terraform-specialist
+dojops agents info security               # matches security-auditor
+dojops agents info cloud                  # matches cloud-architect
+dojops agents info terraform-specialist   # exact name also works
 
 # Pin chat to an agent
 dojops chat --agent=terraform
@@ -210,8 +213,8 @@ dojops agents create --global "a cost optimization specialist"
 # List all agents (built-in + custom)
 dojops agents list
 
-# Show agent details (includes source path for custom agents)
-dojops agents info sre-specialist
+# Show agent details (partial names supported, includes source path for custom agents)
+dojops agents info sre                    # matches sre-specialist
 
 # Remove a custom agent
 dojops agents remove sre-specialist
