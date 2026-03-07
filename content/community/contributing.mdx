@@ -44,7 +44,7 @@ packages/
   core/             LLM providers (6) + specialist agents (16) + CI debugger + infra diff + DevOps checker
   planner/          Task graph decomposition + topological executor
   executor/         SafeExecutor + policy engine + approval workflows + audit log
-  runtime/          12 built-in DevOps tools as .dops v2 modules (DopsRuntime + DopsRuntimeV2)
+  runtime/          13 built-in DevOps tools as .dops v2 modules (DopsRuntime + DopsRuntimeV2)
   scanner/          10 security scanners + remediation engine
   session/          Chat session management + memory + context injection
   context/          Context7 documentation augmentation for v2 tools
@@ -136,7 +136,7 @@ DojOps uses Vitest for testing. Current coverage:
 
 ## Adding a New Built-in Tool
 
-All 12 built-in tools are `.dops v2` module files in `packages/runtime/modules/`. To add a new built-in tool, create a `.dops` file following the v2 format. See [DevOps Tools](/components/tools) for the full pattern.
+All 13 built-in tools are `.dops v2` module files in `packages/runtime/modules/`. To add a new built-in tool, create a `.dops` file following the v2 format. See [DevOps Tools](/components/tools) for the full pattern.
 
 ### Step-by-Step
 
