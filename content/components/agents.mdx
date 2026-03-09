@@ -1,6 +1,6 @@
 # Specialist Agents
 
-DojOps includes 16 built-in specialist agents for intelligent prompt routing, plus support for user-defined **custom agents**. Each agent is a domain expert with a tailored system prompt, keyword set, and optional tool dependencies.
+DojOps includes 17 built-in specialist agents for intelligent prompt routing, plus support for user-defined **custom agents**. Each agent is a domain expert with a tailored system prompt, keyword set, and optional tool dependencies.
 
 ---
 
@@ -38,6 +38,7 @@ The selected agent's system prompt is prepended to the LLM request, providing do
 | 14  | `appsec-specialist`        | application-security    | OWASP Top 10, SAST/DAST, code review, pentest methodology, Snyk, Trivy, Gitleaks                     |
 | 15  | `shell-specialist`         | shell-scripting         | Bash/POSIX, ShellCheck, error handling, cron, automation, sed, awk, pipefail                         |
 | 16  | `python-specialist`        | python-scripting        | Type hints, pytest, Poetry, async, Flask, Django, FastAPI, mypy, ruff                                |
+| 17  | `devsecops-reviewer`       | devsecops-review        | DevSecOps review pipeline: tool validation, Context7 docs, structured LLM analysis of DevOps configs |
 
 ---
 
@@ -63,6 +64,7 @@ Each agent is matched by the following keyword sets:
 | `appsec-specialist`        | appsec, owasp, xss, injection, csrf, ssrf, pentest, sast, dast, code review, secure coding, exploit, snyk, trivy, gitleaks                         |
 | `shell-specialist`         | bash, shell, shellcheck, sh, zsh, posix, script, cron, sed, awk, grep, pipefail, trap, shebang, systemd, service, timer, unit, journalctl          |
 | `python-specialist`        | python, pip, pytest, mypy, ruff, poetry, venv, asyncio, flask, django, fastapi, pep8, pylint, typer                                                |
+| `devsecops-reviewer`       | review, devsecops, validate, audit, compliance, best practices, security review, config review, iac review, pipeline review                        |
 
 ---
 
@@ -132,7 +134,7 @@ dojops plan "Set up end-to-end CI/CD with Docker and Kubernetes"
 
 ## Custom Agents
 
-In addition to the 16 built-in agents, you can create your own custom agents. Custom agents participate in the same keyword-based routing as built-in agents and can even override built-in agents by name.
+In addition to the 17 built-in agents, you can create your own custom agents. Custom agents participate in the same keyword-based routing as built-in agents and can even override built-in agents by name.
 
 ### Agent Definition Format
 
@@ -248,7 +250,7 @@ All agents include a `NO_FOLLOWUP_INSTRUCTION` suffix ensuring single-shot respo
 
 ## Specialized Analyzers
 
-In addition to the 16 routed agents, DojOps provides three specialized analyzers that are invoked directly (not via `AgentRouter`):
+In addition to the 17 routed agents, DojOps provides three specialized analyzers that are invoked directly (not via `AgentRouter`):
 
 | Analyzer       | Class               | Input                | Output Schema             | CLI Command           |
 | -------------- | ------------------- | -------------------- | ------------------------- | --------------------- |

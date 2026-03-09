@@ -111,7 +111,22 @@ Optional validation of generated output. Five tools implement verification:
 | GitHub Actions | Structure lint + external binary (`actionlint`) | Checks `on` trigger, `jobs`, `runs-on`, step `run`/`uses` + `actionlint workflow.yml` |
 | GitLab CI      | Structure lint + external binary (`yamllint`)   | Checks job `script`, `stages` array, stage references + `yamllint -d relaxed`         |
 
-Verification runs by default in CLI commands. Use `--skip-verify` to disable. External binary checks gracefully skip if the binary is not installed. Built-in verifiers always run.
+Verification runs by default in CLI commands. Use `--skip-verify` to disable. Built-in verifiers always run.
+
+#### Auto-Install of Missing Binaries
+
+When a verification command requires an external binary that is not installed, DojOps automatically installs it into the sandboxed toolchain (`~/.dojops/toolchain/`) before running verification. This means you don't need to manually install `terraform`, `hadolint`, `actionlint`, or other verification tools — DojOps handles it transparently on first use.
+
+#### `{entryFile}` Placeholder
+
+Verification commands in `.dops` modules support the `{entryFile}` placeholder, which is replaced at runtime with the path to the primary output file. This lets modules define verification commands that reference the generated file dynamically:
+
+```yaml
+verification:
+  command: hadolint {entryFile}
+```
+
+The `{entryFile}` value is resolved from the first entry in the module's `files` array.
 
 ### Existing Config Auto-Detection
 

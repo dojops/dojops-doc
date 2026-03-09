@@ -148,9 +148,17 @@ Tools that implement `verify()` can validate their generated output with externa
 
 1. **Default on** — Verification runs by default in CLI commands (`apply`, `plan --execute`). Use `--skip-verify` to disable. The SDK default (`DEFAULT_POLICY.skipVerification = true`) remains unchanged for programmatic callers
 2. **Tool check** — If the tool doesn't implement `verify()`, the step is skipped
-3. **Binary check** — If the external binary isn't installed, verification is skipped with a warning
+3. **Auto-install** — If the external binary isn't installed, DojOps auto-installs it into the sandboxed toolchain (`~/.dojops/toolchain/`) via the `OnBinaryMissing` callback before running verification. This replaces the previous behavior of silently skipping verification when a binary was missing
 4. **Blocking** — Failed verification blocks execution (returns `VerificationResult.valid=false`)
 5. **Logged** — Verification results are included in the audit entry
+
+### OnBinaryMissing Callback
+
+The `SafeExecutor` accepts an optional `OnBinaryMissing` callback that is invoked when a verification command references a binary not found on `$PATH`. The default implementation auto-installs the binary via the `dojops toolchain install` mechanism into `~/.dojops/toolchain/`. This ensures verification is never silently skipped due to a missing tool.
+
+### Self-Repair Loop (CriticAgent)
+
+When verification fails, the executor can invoke a `CriticAgent` self-repair loop. The CriticAgent receives the verification errors and the generated output, then asks the LLM to fix the issues. The corrected output is re-verified, and the loop repeats until verification passes or a maximum retry count is reached. This enables automatic recovery from common generation errors (e.g., invalid YAML syntax, missing required fields) without user intervention.
 
 ---
 

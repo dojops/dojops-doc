@@ -304,6 +304,8 @@ dojops toolchain install actionlint
 └  Ready — used for config verification in apply
 ```
 
+> **Auto-install:** You can also skip manual installation entirely. When DojOps runs verification during `apply` and a required binary is missing, it automatically installs it into the toolchain on first use. Manual installation is useful when you want to pre-populate the toolchain (e.g., in CI environments or air-gapped setups).
+
 ### Step 13: Manage Toolchain
 
 Remove a specific binary:
