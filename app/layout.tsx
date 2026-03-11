@@ -2,16 +2,17 @@ import { Footer, Layout, Navbar } from "nextra-theme-docs";
 import { Banner, Head } from "nextra/components";
 import { getPageMap } from "nextra/page-map";
 import "nextra-theme-docs/style.css";
+import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: {
     default: "DojOps Documentation",
-    template: "%s — DojOps Docs",
+    template: "%s DojOps Docs",
   },
   description:
-    "Documentation for DojOps — AI DevOps Automation Engine. Generate, validate, and execute infrastructure & CI/CD configurations.",
+    "Documentation for DojOps AI DevOps Automation Engine. Generate, validate, and execute infrastructure & CI/CD configurations.",
   icons: "/dojops-favicon.png",
 };
 
@@ -27,8 +28,8 @@ const navbar = (
   <Navbar
     logo={
       <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <img src="/icon.png" alt="DojOps" width={28} height={28} />
-        <b>DojOps</b>
+        <img src="/icon.png" alt="DojOps" width={24} height={24} />
+        <b>DojOps Docs</b>
       </span>
     }
     projectLink="https://github.com/dojops/dojops"

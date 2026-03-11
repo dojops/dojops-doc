@@ -1,0 +1,31 @@
+/* ======== GOOGLE FONTS ======== */
+
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
+
+/* ======== NEXTRA THEME OVERRIDES ======== */
+
+:root {
+  --nextra-primary-hue: 199deg;
+  --nextra-primary-saturation: 89%;
+}
+
+/* ======== BASE STYLES ======== */
+
+body {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ======== REDUCED MOTION ======== */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
