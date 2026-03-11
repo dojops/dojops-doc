@@ -172,8 +172,6 @@ dojops modules init my-nginx-proxy
 
 The generated `.dops` file is a single self-contained file combining YAML frontmatter (metadata, input/output schemas, file specs, permissions) with markdown prompt sections. Open it in your editor to customize the prompt, input fields, and output format.
 
-> **Note:** The `--legacy` flag generates the old `tool.yaml` + `input.schema.json` format instead. Legacy format is supported but will not receive new features.
-
 ### Step 7: List Discovered Modules
 
 View all custom modules (global + project-scoped):
@@ -323,5 +321,5 @@ dojops modules publish my-nginx-proxy.dops --changelog "v1.1.0: Added SSL termin
 
 - [Enhance a Next.js Project](/tutorials/enhance-nextjs-project) — Use agents to improve an existing project
 - [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a full pipeline
-- [DevOps Tools](/components/tools) — Full tool documentation including custom tool manifests
+- [DevOps Modules](/components/modules) — Full module documentation including custom module format
 - [Specialist Agents](/components/agents) — Agent routing and custom agent format

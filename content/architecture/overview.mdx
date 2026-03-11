@@ -1,6 +1,6 @@
 # Architecture
 
-DojOps is designed as a modular, layered DevOps agent system — not a simple chatbot that generates bash commands. It is a structured, safe, extensible orchestration framework with 13 built-in DevOps tools, a custom tool system for extending with additional tools, 17 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails.
+DojOps is designed as a modular, layered DevOps agent system — not a simple chatbot that generates bash commands. It is a structured, safe, extensible orchestration framework with 13 built-in DevOps modules, a custom module system for extending with additional modules, 17 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails.
 
 ---
 
@@ -19,10 +19,10 @@ Agent Router (17 specialist agents, keyword confidence scoring)
 Planner Engine (LLM -> TaskGraph -> topological execution)
  |
  v
-Tool Registry (13 built-in tools + custom tools, unified discovery)
+Module Registry (13 built-in modules + custom modules, unified discovery)
  |
  v
-Tool SDK Layer (BaseTool<T>, Zod validation)
+Module SDK Layer (BaseModule<T>, Zod validation)
  |
  v
 Execution Engine (Sandboxed, policy-enforced, approval-gated, audit-logged)
@@ -39,15 +39,15 @@ DojOps is a pnpm monorepo with Turbo build orchestration. TypeScript (ES2022, Co
 ```
 @dojops/cli            CLI entry point + rich TUI (@clack/prompts)
 @dojops/api            REST API (Express) + web dashboard + factory functions
-@dojops/tool-registry  Tool registry + custom tool system (discovers built-in + custom tools)
+@dojops/module-registry Module registry + custom module system (discovers built-in + custom modules)
 @dojops/planner        TaskGraph decomposition + topological executor
 @dojops/executor       SafeExecutor: sandbox + policy engine + approval + audit log
-@dojops/runtime        13 built-in DevOps tools as .dops v2 modules (DopsRuntime + DopsRuntimeV2)
+@dojops/runtime        13 built-in DevOps modules as .dops files (DopsRuntime)
 @dojops/scanner        10 security scanners + remediation engine
 @dojops/session        Chat session management + memory + context injection
-@dojops/context        Context7 documentation augmentation for v2 tools
+@dojops/context        Context7 documentation augmentation for modules
 @dojops/core           LLM abstraction + 6 providers + 17 specialist agents + CI debugger + infra diff + DevOps checker
-@dojops/sdk            BaseTool<T> abstract class with Zod validation + optional verify() + file-reader utilities
+@dojops/sdk            BaseModule<T> abstract class with Zod validation + optional verify() + file-reader utilities
 ```
 
 ### Dependency Flow
@@ -55,7 +55,7 @@ DojOps is a pnpm monorepo with Turbo build orchestration. TypeScript (ES2022, Co
 ```
 @dojops/cli
   +-- @dojops/api
-  |     +-- @dojops/tool-registry
+  |     +-- @dojops/module-registry
   |     |     +-- @dojops/runtime
   |     |     |     +-- @dojops/core
   |     |     |     +-- @dojops/sdk
@@ -74,7 +74,7 @@ DojOps is a pnpm monorepo with Turbo build orchestration. TypeScript (ES2022, Co
 **Simplified linear flow:**
 
 ```
-cli -> api -> tool-registry -> runtime -> core -> sdk
+cli -> api -> module-registry -> runtime -> core -> sdk
           -> planner -> executor
           -> scanner
           -> session -> core
@@ -113,7 +113,7 @@ All responses pass through `parseAndValidate()` — strips markdown fences, `JSO
 
 17 built-in specialist agents with keyword-based routing and confidence scoring, plus support for custom agents. The `AgentRouter` scores prompts against each agent's keyword list and routes to the highest-confidence match. If no agent exceeds the threshold, it falls back to the general-purpose `DevOpsAgent`.
 
-Custom agents are defined as structured `README.md` files in `.dojops/agents/<name>/` (project) or `~/.dojops/agents/<name>/` (global). They can be created via LLM (`dojops agents create "description"`) or manually (`dojops agents create --manual`). Custom agents participate in the same keyword-based routing as built-in agents and can override built-in agents by name. Discovery is handled by `@dojops/tool-registry`.
+Custom agents are defined as structured `README.md` files in `.dojops/agents/<name>/` (project) or `~/.dojops/agents/<name>/` (global). They can be created via LLM (`dojops agents create "description"`) or manually (`dojops agents create --manual`). Custom agents participate in the same keyword-based routing as built-in agents and can override built-in agents by name. Discovery is handled by `@dojops/module-registry`.
 
 Additionally, three specialized analyzers (not routed via `AgentRouter`) provide structured analysis:
 
@@ -129,24 +129,22 @@ LLM-powered goal decomposition into structured, dependency-aware task graphs. Us
 
 See [Task Planner](/components/planner) for details.
 
-### 4. Tool SDK (`@dojops/sdk`)
+### 4. Module SDK (`@dojops/sdk`)
 
-Abstract `BaseTool<T>` class with Zod input schema validation, abstract `generate()` for LLM generation, optional `execute()` for file writes, and optional `verify()` for external tool validation. Also provides `readExistingConfig()`, `backupFile()`, `atomicWriteFileSync()` (temp + rename for crash-safe writes), and `restoreBackup()` utilities.
+Abstract `BaseModule<T>` class with Zod input schema validation, abstract `generate()` for LLM generation, optional `execute()` for file writes, and optional `verify()` for external tool validation. Also provides `readExistingConfig()`, `backupFile()`, `atomicWriteFileSync()` (temp + rename for crash-safe writes), and `restoreBackup()` utilities.
 
-See [DevOps Tools](/components/tools) for the tool pattern.
+See [DevOps Modules](/components/modules) for the module pattern.
 
 ### 4b. DOPS Runtime (`@dojops/runtime`)
 
-The DOPS runtime processes `.dops` module files — a declarative format combining YAML frontmatter with markdown prompt sections. Two format versions are supported: **v1** (structured JSON output with serialization) and **v2** (raw content generation with Context7 integration).
+The DOPS runtime processes `.dops` module files — a declarative format combining YAML frontmatter with markdown prompt sections. Raw content generation with Context7 integration.
 
 **Frontmatter sections** (all optional except `meta`, `files`):
 
 | Section        | Purpose                                                                               |
 | -------------- | ------------------------------------------------------------------------------------- |
 | `meta`         | Name, version, description, author, license, tags, repository                         |
-| `input`        | v1 only: Field definitions with types, constraints, defaults                          |
-| `output`       | v1 only: JSON Schema for LLM output validation                                        |
-| `context`      | v2: Technology context, output guidance, best practices, Context7 library references  |
+| `context`      | Technology context, output guidance, best practices, Context7 library references      |
 | `files`        | Output file specs with path templates, format, serialization options                  |
 | `scope`        | Write boundary — explicit list of allowed write paths (enforced at file-write time)   |
 | `risk`         | Self-classification: `LOW` / `MEDIUM` / `HIGH` with rationale string                  |
@@ -156,39 +154,36 @@ The DOPS runtime processes `.dops` module files — a declarative format combini
 | `verification` | Structural rules + optional binary verification command                               |
 | `permissions`  | Filesystem, child_process, and network permission declarations                        |
 
-**Markdown sections**: `## Prompt` (required), `## Update Prompt` (optional), `## Examples`, `## Constraints`, `## Keywords` (required).
+**Markdown sections**: `## Prompt` (required), `## Keywords` (required).
 
 **Key runtime features**:
 
-- `DopsRuntime` (v1) / `DopsRuntimeV2` (v2) — Two runtime classes for their respective format versions
-- `parseDopsFileAny()` / `parseDopsStringAny()` — Version-detecting parsers that route to the correct runtime
-- `compilePromptV2()` — Compiles v2 prompts with `{outputGuidance}`, `{bestPractices}`, `{context7Docs}`, `{projectContext}` variables
+- `DopsRuntime` — Runtime class for `.dops` modules
+- `parseDopsFile()` / `parseDopsString()` — Parsers for `.dops` files
+- `compilePrompt()` — Compiles prompts with `{outputGuidance}`, `{bestPractices}`, `{context7Docs}`, `{projectContext}` variables
 - `stripCodeFences()` — Strips markdown code fences from raw LLM output before writing
-- `DocProvider` interface — Enables Context7 documentation augmentation for v2 tools
-- `DopsRuntime.risk` / `DopsRuntimeV2.risk` — Returns declared risk or defaults to `{ level: "LOW", rationale: "No risk classification declared" }`
+- `DocProvider` interface — Enables Context7 documentation augmentation for modules
+- `DopsRuntime.risk` — Returns declared risk or defaults to `{ level: "LOW", rationale: "No risk classification declared" }`
 - `DopsRuntime.metadata` — Includes `riskLevel`, `systemPromptHash`, `toolHash` for audit integration
 - **Scope enforcement** — `writeFiles()` validates resolved paths against `scope.write` patterns after `{var}` expansion; out-of-scope writes throw
 - **Update strategy** — `preserve_structure` injects additional prompt instructions to maintain existing config organization
 
-### 5. DevOps Tools (`@dojops/runtime`)
+### 5. DevOps Modules (`@dojops/runtime`)
 
-13 built-in tools covering CI/CD, IaC, containers, monitoring, and system services. All 13 are now `.dops v2` modules in `packages/runtime/modules/`, processed by `DopsRuntimeV2` — generating raw file content directly via LLM with Context7 documentation augmentation. All tools support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
+13 built-in modules covering CI/CD, IaC, containers, monitoring, and system services. All 13 are `.dops` modules in `packages/runtime/modules/`, processed by `DopsRuntime` — generating raw file content directly via LLM with Context7 documentation augmentation. All modules support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
 
-See [DevOps Tools](/components/tools) for the full tool list.
+See [DevOps Modules](/components/modules) for the full module list.
 
-### 5b. Tool Registry (`@dojops/tool-registry`)
+### 5b. Module Registry (`@dojops/module-registry`)
 
-Unified registry layer between consumers (Planner, Executor, CLI, API) and tool implementations. Combines all 13 built-in tools with custom tools discovered from disk:
+Unified registry layer between consumers (Planner, Executor, CLI, API) and module implementations. Combines all 13 built-in modules with custom modules discovered from disk:
 
-- **`.dops` module discovery** — Discovers `.dops` modules alongside `tool.yaml` manifests; uses `parseDopsFileAny()` for version detection
-- **v2 module routing** — `isV2Module()` check routes v2 modules to `DopsRuntimeV2` instantiation
-- **Custom tool discovery** — Scans `~/.dojops/tools/` (global) and `.dojops/tools/` (project) for `tool.yaml` manifests and `.dops` files
-- **Manifest validation** — Zod schema validates tool manifests; JSON Schema inputs are converted to Zod at runtime
-- **CustomTool adapter** — Converts declarative `tool.yaml` into a `DevOpsTool`-compatible object with generate/execute/verify
-- **Tool policy** — `.dojops/policy.yaml` supports `allowedTools` and `blockedTools` lists
-- **Audit enrichment** — Custom tool executions include `toolType`, `toolSource`, `toolVersion`, `toolHash`, and `systemPromptHash` in audit entries
-- **Tool isolation** — Verification commands restricted to a whitelist of 16 allowed binaries (terraform, kubectl, helm, etc.), `child_process` permission must be `"required"` for execution, path traversal (`..`) blocked in manifest file paths and detector paths
-- **Unified interface** — `ToolRegistry.getAll()` returns `DevOpsTool[]`, so Planner, Executor, and API remain unchanged
+- **`.dops` module discovery** — Discovers `.dops` modules from `.dojops/modules/` (project) and `~/.dojops/modules/` (global)
+- **Module validation** — Zod schema validates `.dops` frontmatter
+- **Module policy** — `.dojops/policy.yaml` supports `allowedModules` and `blockedModules` lists
+- **Audit enrichment** — Custom module executions include `toolType`, `toolSource`, `toolVersion`, `toolHash`, and `systemPromptHash` in audit entries
+- **Module isolation** — Verification commands restricted to a whitelist of 33 allowed binaries, `child_process` permission must be `"required"` for execution, path traversal (`..`) blocked in file paths and detector paths
+- **Unified interface** — `ModuleRegistry.getAll()` returns `DevOpsModule[]`, so Planner, Executor, and API remain unchanged
 
 ### 6. Execution Engine (`@dojops/executor`)
 
@@ -208,7 +203,7 @@ Multi-turn conversation management with memory windowing, LLM-generated summarie
 
 ### 9. REST API & Dashboard (`@dojops/api`)
 
-Express-based API with dependency injection via `createApp(deps)`. Uses `@dojops/tool-registry` to load all built-in + custom tools. 20 endpoints exposing all capabilities over HTTP with API v1 versioning (`/api/v1/` prefix with backward-compatible `/api/` alias, `X-API-Version: 1` header on v1 routes). Vanilla web dashboard with 5 tabs (Overview, Security, Audit, Agents, History). Health endpoint reports `customToolCount`. Per-route rate limiting and token budget tracking via `TokenTracker`.
+Express-based API with dependency injection via `createApp(deps)`. Uses `@dojops/module-registry` to load all built-in + custom modules. 20 endpoints exposing all capabilities over HTTP with API v1 versioning (`/api/v1/` prefix with backward-compatible `/api/` alias, `X-API-Version: 1` header on v1 routes). Vanilla web dashboard with 5 tabs (Overview, Security, Audit, Agents, History). Health endpoint reports `customModuleCount`. Per-route rate limiting and token budget tracking via `TokenTracker`.
 
 See [API Reference](/usage/api) and [Web Dashboard](/usage/dashboard).
 
@@ -227,7 +222,7 @@ See [CLI Reference](/usage/cli).
 3. **Schema validation everywhere** — Tool inputs, LLM responses, plan structures, API requests.
 4. **Idempotent operations** — Generated configs produce the same result on re-execution. YAML keys are sorted for deterministic output.
 5. **Clear separation of concerns** — Orchestration, generation, validation, execution, and auditing are independent layers.
-6. **Extensibility** — New tools follow the `BaseTool<T>` pattern. New agents are registered in the specialist list.
+6. **Extensibility** — New modules follow the `BaseModule<T>` pattern. New agents are registered in the specialist list.
 7. **Declarative safety** — `.dops` modules declare their own scope boundaries, risk levels, and execution semantics, enabling automated policy enforcement without hardcoded tool-specific rules.
 
 ---
@@ -245,15 +240,15 @@ DojOps stores project state in the `.dojops/` directory:
   execution-logs/        Per-execution results (*.json)
   scan-history/          Security scan reports (*.json)
   sessions/              Chat session persistence (*.json)
-  tools/                 Project-scoped custom tools (tool.yaml + input.schema.json)
+  modules/               Project-scoped custom modules (.dops files)
   agents/                Project-scoped custom agents (<name>/README.md)
-  policy.yaml            Tool policy (allowedTools / blockedTools)
+  policy.yaml            Module policy (allowedModules / blockedModules)
   history/
     audit.jsonl          Hash-chained audit log (append-only)
   lock.json              Execution lock (PID-based)
 
 ~/.dojops/
-  tools/                 Global custom tools (shared across projects)
+  modules/               Global custom modules (shared across projects)
   toolchain/             System binary sandbox (installed verification binaries)
   agents/                Global custom agents (shared across projects)
 ```

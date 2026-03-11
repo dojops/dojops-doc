@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions to DojOps are welcome. This guide covers development setup, coding standards, testing, and how to add new tools and agents.
+Contributions to DojOps are welcome. This guide covers development setup, coding standards, testing, and how to add new modules and agents.
 
 ---
 
@@ -40,20 +40,20 @@ pnpm lint
 packages/
   cli/              CLI entry point + TUI (@clack/prompts)
   api/              REST API (Express) + web dashboard
-  tool-registry/    Tool registry + custom tool system (built-in + custom tool discovery)
+  module-registry/  Module registry + custom module system (built-in + custom module discovery)
   core/             LLM providers (6) + specialist agents (17) + CI debugger + infra diff + DevOps checker
   planner/          Task graph decomposition + topological executor
   executor/         SafeExecutor + policy engine + approval workflows + audit log
-  runtime/          13 built-in DevOps tools as .dops v2 modules (DopsRuntime + DopsRuntimeV2)
+  runtime/          13 built-in DevOps modules as .dops files (DopsRuntime)
   scanner/          10 security scanners + remediation engine
   session/          Chat session management + memory + context injection
-  context/          Context7 documentation augmentation for v2 tools
-  sdk/              BaseTool<T> abstract class + Zod re-export + verification types + file-reader utilities
+  context/          Context7 documentation augmentation for modules
+  sdk/              BaseModule<T> abstract class + Zod re-export + verification types + file-reader utilities
 ```
 
 Package scope: `@dojops/*`
 
-Dependency flow: `cli -> api -> tool-registry -> runtime -> core -> sdk`
+Dependency flow: `cli -> api -> module-registry -> runtime -> core -> sdk`
 
 ---
 
@@ -110,20 +110,20 @@ Key conventions:
 
 DojOps uses Vitest for testing. Current coverage:
 
-| Package                 | Tests    |
-| ----------------------- | -------- |
-| `@dojops/runtime`       | 589      |
-| `@dojops/core`          | 496      |
-| `@dojops/cli`           | 315      |
-| `@dojops/tool-registry` | 252      |
-| `@dojops/api`           | 236      |
-| `@dojops/scanner`       | 110      |
-| `@dojops/executor`      | 67       |
-| `@dojops/planner`       | 39       |
-| `@dojops/session`       | 38       |
-| `@dojops/context`       | 29       |
-| `@dojops/sdk`           | 24       |
-| **Total**               | **2195** |
+| Package                   | Tests    |
+| ------------------------- | -------- |
+| `@dojops/runtime`         | 589      |
+| `@dojops/core`            | 496      |
+| `@dojops/cli`             | 315      |
+| `@dojops/module-registry` | 252      |
+| `@dojops/api`             | 236      |
+| `@dojops/scanner`         | 110      |
+| `@dojops/executor`        | 67       |
+| `@dojops/planner`         | 39       |
+| `@dojops/session`         | 38       |
+| `@dojops/context`         | 29       |
+| `@dojops/sdk`             | 24       |
+| **Total**                 | **2195** |
 
 ### Writing Tests
 
@@ -134,15 +134,15 @@ DojOps uses Vitest for testing. Current coverage:
 
 ---
 
-## Adding a New Built-in Tool
+## Adding a New Built-in Module
 
-All 13 built-in tools are `.dops v2` module files in `packages/runtime/modules/`. To add a new built-in tool, create a `.dops` file following the v2 format. See [DevOps Tools](/components/tools) for the full pattern.
+All 13 built-in modules are `.dops` files in `packages/runtime/modules/`. To add a new built-in module, create a `.dops` file following the format. See [DevOps Modules](/components/modules) for the full pattern.
 
 ### Step-by-Step
 
 1. **Create the `.dops` module file:** `packages/runtime/modules/my-tool.dops`
 
-   A `.dops v2` file has YAML frontmatter followed by markdown prompt sections:
+   A `.dops` file has YAML frontmatter followed by markdown prompt sections:
 
    ```yaml
    ---
@@ -213,13 +213,13 @@ All 13 built-in tools are `.dops v2` module files in `packages/runtime/modules/`
 
 ---
 
-## Creating a Custom Tool
+## Creating a Custom Module
 
-For tools that don't need to be built into the core, use the custom tool system instead. Custom tools are declarative — no TypeScript code required.
+For modules that don't need to be built into the core, use the custom module system instead. Custom modules are declarative — no TypeScript code required.
 
 ### Step-by-Step
 
-1. **Scaffold** a custom tool:
+1. **Scaffold** a custom module:
 
    ```bash
    dojops modules init my-tool
@@ -229,7 +229,7 @@ For tools that don't need to be built into the core, use the custom tool system 
 
 2. **Edit** the `.dops` file — customize the prompt, input fields, output format, file specs, and permissions.
 
-3. **Validate** the tool:
+3. **Validate** the module:
 
    ```bash
    dojops modules validate my-tool
@@ -241,9 +241,7 @@ For tools that don't need to be built into the core, use the custom tool system 
    dojops "Generate my-tool config for production"
    ```
 
-Custom tools are automatically discovered and available to the Planner, Executor, and API. See [DevOps Tools — Custom Tool System](/components/tools#custom-tool-system) for the full `.dops` format.
-
-> **Note:** Use `dojops modules init my-tool --legacy` to scaffold the old `tool.yaml` + `input.schema.json` format instead.
+Custom modules are automatically discovered and available to the Planner, Executor, and API. See [DevOps Modules — Custom Module System](/components/modules#custom-module-system) for the full `.dops` format.
 
 ---
 
@@ -314,7 +312,7 @@ Built-in agents are defined in `packages/core/src/agents/specialists.ts`.
 - [ ] Linting passes (`pnpm lint`)
 - [ ] Formatting is correct (`pnpm format:check`)
 - [ ] New features include tests
-- [ ] New tools follow the `BaseTool<T>` pattern
+- [ ] New modules follow the `BaseModule<T>` pattern
 - [ ] Breaking changes are documented
 
 ---
