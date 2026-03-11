@@ -144,6 +144,33 @@ dojops doctor        # System health check
 dojops --help        # Show all commands
 ```
 
+## Shell Completion
+
+Enable tab completion for dojops commands, flags, and values:
+
+```bash
+# Auto-detect and install
+dojops completion install
+
+# Or for a specific shell
+dojops completion install bash
+dojops completion install zsh
+dojops completion install fish
+```
+
+You can also pipe the script manually:
+
+```bash
+# Bash
+dojops completion bash > ~/.bash_completion.d/dojops
+
+# Zsh
+dojops completion zsh > ~/.zsh/completions/_dojops
+
+# Fish
+dojops completion fish > ~/.config/fish/completions/dojops.fish
+```
+
 ---
 
 ## Troubleshooting
