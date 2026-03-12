@@ -1,6 +1,6 @@
 # Architecture
 
-DojOps is designed as a modular, layered DevOps agent system — not a simple chatbot that generates bash commands. It is a structured, safe, extensible orchestration framework with 13 built-in DevOps modules, a custom module system for extending with additional modules, 17 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails.
+DojOps is a modular DevOps agent system with 13 built-in modules, a custom module system, 17 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails. Every LLM output is schema-validated and policy-checked before anything gets written.
 
 ---
 
@@ -115,7 +115,7 @@ All responses pass through `parseAndValidate()` — strips markdown fences, `JSO
 
 Custom agents are defined as structured `README.md` files in `.dojops/agents/<name>/` (project) or `~/.dojops/agents/<name>/` (global). They can be created via LLM (`dojops agents create "description"`) or manually (`dojops agents create --manual`). Custom agents participate in the same keyword-based routing as built-in agents and can override built-in agents by name. Discovery is handled by `@dojops/module-registry`.
 
-Additionally, three specialized analyzers (not routed via `AgentRouter`) provide structured analysis:
+Three specialized analyzers (not routed via `AgentRouter`) provide structured analysis:
 
 - **`CIDebugger`** — CI log diagnosis producing `CIDiagnosis` (error type, root cause, fixes)
 - **`InfraDiffAnalyzer`** — Infrastructure diff analysis producing `InfraDiffAnalysis` (risk, cost, security)
@@ -209,7 +209,7 @@ See [API Reference](/usage/api) and [Web Dashboard](/usage/dashboard).
 
 ### 10. CLI (`@dojops/cli`)
 
-Full-lifecycle CLI with rich TUI powered by `@clack/prompts`. Interactive prompts, spinners, styled panels, semantic log levels. Includes `dojops init` (comprehensive repo scanner with 11 CI platforms, IaC, scripts, security detection) and `dojops check` (LLM-powered DevOps config quality analysis).
+Full-lifecycle CLI with rich TUI powered by `@clack/prompts`. Interactive prompts, spinners, styled panels, semantic log levels. Includes `dojops init` (repo scanner covering 11 CI platforms, IaC, scripts, security detection) and `dojops check` (LLM-powered DevOps config quality analysis).
 
 See [CLI Reference](/usage/cli).
 

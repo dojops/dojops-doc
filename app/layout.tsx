@@ -12,14 +12,14 @@ export const metadata: Metadata = {
     template: "%s DojOps Docs",
   },
   description:
-    "Documentation for DojOps AI DevOps Automation Engine. Generate, validate, and execute infrastructure & CI/CD configurations.",
+    "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI.",
   icons: "/dojops-favicon.png",
 };
 
 const banner = (
   <Banner storageKey="dojops-launch">
     <a href="https://dojops.ai" target="_blank" rel="noopener noreferrer">
-      DojOps — AI DevOps Automation Engine. Learn more →
+      DojOps: AI-powered DevOps automation. Learn more →
     </a>
   </Banner>
 );
