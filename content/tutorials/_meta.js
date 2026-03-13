@@ -8,4 +8,8 @@ export default {
   "advanced-plan-execution": "Advanced Plan Execution",
   "api-server-and-dashboard": "API Server & Dashboard",
   "provider-and-configuration": "Provider & Configuration",
+  "model-aliases-and-thinking": "Model Aliases & Thinking Levels",
+  "token-analytics-and-cost-control": "Token Analytics & Cost Control",
+  "config-management-advanced": "Advanced Config Management",
+  "observability-and-learning": "Observability & Learning",
 };

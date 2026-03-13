@@ -1,0 +1,216 @@
+# Model Aliases & Thinking Levels
+
+Create friendly shortcuts for LLM models and control reasoning depth for complex DevOps tasks.
+
+---
+
+## Overview
+
+In this tutorial, you'll learn to:
+
+- Create model aliases that map friendly names to provider/model pairs
+- Use aliases in any DojOps command
+- Control LLM reasoning depth with thinking levels
+- Combine aliases and thinking for optimized workflows
+
+**Time estimate:** ~5 minutes
+
+**Prerequisites:**
+
+- DojOps installed (`npm i -g @dojops/cli`)
+- At least one LLM provider configured
+
+---
+
+## Part 1: Model Aliases
+
+### Step 1: Create Your First Alias
+
+Map a short name to a specific model:
+
+```bash
+dojops config alias fast gpt-4o-mini
+```
+
+```
+┌  Alias Created
+│
+│  Alias: fast
+│  Model: gpt-4o-mini
+│
+└  Use with: dojops --model fast "..."
+```
+
+Create more aliases for different use cases:
+
+```bash
+dojops config alias smart gpt-4o
+dojops config alias local llama3.1
+dojops config alias claude claude-sonnet-4-6
+dojops config alias cheap deepseek-chat
+```
+
+### Step 2: List Your Aliases
+
+View all configured aliases:
+
+```bash
+dojops config alias
+```
+
+```
+┌  Model Aliases
+│
+│  fast    → gpt-4o-mini
+│  smart   → gpt-4o
+│  local   → llama3.1
+│  claude  → claude-sonnet-4-6
+│  cheap   → deepseek-chat
+│
+└  5 aliases configured
+```
+
+### Step 3: Use Aliases in Commands
+
+Use the `--model` flag with your alias name instead of the full model ID:
+
+```bash
+# Quick generation with a fast model
+dojops --model fast "Create a basic Dockerfile for Node.js"
+
+# Complex architecture with a smarter model
+dojops --model smart "Design a multi-region Terraform setup with failover"
+
+# Cost-effective bulk operations
+dojops --model cheap "Create a .gitignore for a Python project"
+```
+
+Aliases work with every DojOps command:
+
+```bash
+dojops --model fast --plan "Set up GitHub Actions CI"
+dojops --model smart --debug-ci "Error: tsc build failed..."
+dojops --model claude scan --fix
+```
+
+### Step 4: Remove an Alias
+
+```bash
+dojops config alias remove local
+```
+
+```
+┌  Alias Removed
+│
+│  Removed: local → llama3.1
+│
+└  4 aliases remaining
+```
+
+---
+
+## Part 2: Thinking Levels
+
+### Step 5: Understand Thinking Levels
+
+DojOps maps three intuitive levels to provider-specific reasoning features:
+
+| Level    | Behavior                           | Best For                               |
+| -------- | ---------------------------------- | -------------------------------------- |
+| `low`    | Minimal reasoning, fast responses  | Simple configs, quick questions        |
+| `medium` | Balanced reasoning (default)       | Standard generation tasks              |
+| `high`   | Extended thinking / deep reasoning | Complex architecture, multi-step plans |
+
+Under the hood, `--thinking` maps to:
+
+- **Anthropic:** Extended thinking (budget tokens)
+- **OpenAI:** Reasoning effort parameter
+- **Other providers:** Temperature adjustment heuristic
+
+### Step 6: Use Thinking Levels
+
+Add `--thinking` to any command:
+
+```bash
+# Quick, low-effort generation
+dojops --thinking low "Create a simple .dockerignore"
+
+# Deep reasoning for complex tasks
+dojops --thinking high "Design multi-region Terraform with auto-failover, WAF, and cost optimization"
+```
+
+```
+┌  Generating with extended thinking (high)
+│
+│  Agent: terraform-specialist
+│  Thinking: extended reasoning enabled
+│
+│  ... (generation output)
+│
+└  Generated 3 files in 12.4s
+```
+
+### Step 7: Combine Aliases with Thinking
+
+The real power comes from combining both flags:
+
+```bash
+# Fast model + low thinking = cheapest possible generation
+dojops --model fast --thinking low "Add a health check to my Dockerfile"
+
+# Smart model + high thinking = maximum quality
+dojops --model smart --thinking high "Design a zero-downtime deployment strategy for Kubernetes"
+
+# Plan complex infrastructure with deep reasoning
+dojops --model smart --thinking high --plan "Migrate from EC2 to EKS with Terraform"
+```
+
+### Step 8: Set Defaults in Config
+
+Set a default thinking level for all commands:
+
+```bash
+dojops config set thinking medium
+```
+
+Override per-command as needed:
+
+```bash
+# Uses default thinking level
+dojops "Create a Makefile"
+
+# Override for this command only
+dojops --thinking high "Design a CI/CD pipeline with canary deployments"
+```
+
+---
+
+## Summary
+
+In this tutorial, you:
+
+1. **Created model aliases** (`fast`, `smart`, `cheap`) for quick model switching
+2. **Used aliases** with `--model` across all DojOps commands
+3. **Controlled reasoning depth** with `--thinking low/medium/high`
+4. **Combined both features** for cost-optimized workflows
+
+### Quick Reference
+
+```bash
+# Aliases
+dojops config alias <name> <model>      # Create
+dojops config alias                      # List
+dojops config alias remove <name>        # Remove
+dojops --model <alias> "..."             # Use
+
+# Thinking
+dojops --thinking low "..."              # Fast, minimal reasoning
+dojops --thinking medium "..."           # Balanced (default)
+dojops --thinking high "..."             # Deep reasoning
+```
+
+### Next Steps
+
+- **[Token Analytics & Cost Control](/tutorials/token-analytics-and-cost-control)** — Monitor usage and optimize costs
+- **[Provider & Configuration](/tutorials/provider-and-configuration)** — Full provider management guide
+- **[Advanced Plan Execution](/tutorials/advanced-plan-execution)** — Multi-step plans with specialist agents

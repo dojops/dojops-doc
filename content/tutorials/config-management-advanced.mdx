@@ -1,0 +1,297 @@
+# Advanced Config Management
+
+Protect your setup with encrypted secrets, backup snapshots, and bulk configuration.
+
+---
+
+## Overview
+
+In this tutorial, you'll learn to:
+
+- Store API keys securely with the encrypted secrets vault
+- Snapshot and restore your entire DojOps configuration
+- Apply bulk configuration from files for team onboarding
+- Combine these features for a robust config workflow
+
+**Time estimate:** ~10 minutes
+
+**Prerequisites:**
+
+- DojOps installed (`npm i -g @dojops/cli`)
+- A project initialized with `dojops init`
+
+---
+
+## Part 1: Encrypted Secrets Vault
+
+### Step 1: Understand the Problem
+
+By default, API keys are stored in `~/.dojops/config.json` as plaintext. The secrets vault replaces this with AES-256-GCM encrypted storage — the same encryption standard used by password managers and cloud providers.
+
+### Step 2: Store a Secret
+
+```bash
+dojops secrets set OPENAI_API_KEY sk-proj-abc123...
+```
+
+```
+┌  Secret Stored
+│
+│  Key: OPENAI_API_KEY
+│  Encryption: AES-256-GCM
+│  Storage: ~/.dojops/secrets.enc
+│
+└  Encrypted and saved
+```
+
+Store multiple provider keys:
+
+```bash
+dojops secrets set ANTHROPIC_API_KEY sk-ant-...
+dojops secrets set DEEPSEEK_API_KEY sk-...
+dojops secrets set GEMINI_API_KEY AI...
+```
+
+### Step 3: Reference Secrets in Config
+
+Your config file now references secrets instead of containing raw keys:
+
+```json
+{
+  "provider": "openai",
+  "providers": {
+    "openai": {
+      "apiKey": "$secret:OPENAI_API_KEY"
+    },
+    "anthropic": {
+      "apiKey": "$secret:ANTHROPIC_API_KEY"
+    }
+  }
+}
+```
+
+DojOps resolves `$secret:` references at runtime, so your plaintext keys never appear in config files.
+
+### Step 4: List Stored Secrets
+
+```bash
+dojops secrets list
+```
+
+```
+┌  Encrypted Secrets
+│
+│  OPENAI_API_KEY      set  (sk-proj-abc...)
+│  ANTHROPIC_API_KEY   set  (sk-ant-...)
+│  DEEPSEEK_API_KEY    set  (sk-...)
+│  GEMINI_API_KEY      set  (AI...)
+│
+└  4 secrets stored in ~/.dojops/secrets.enc
+```
+
+Only the first few characters of each key are shown for identification.
+
+### Step 5: Remove a Secret
+
+```bash
+dojops secrets remove DEEPSEEK_API_KEY
+```
+
+```
+┌  Secret Removed
+│
+│  Key: DEEPSEEK_API_KEY
+│  Status: deleted from vault
+│
+└  3 secrets remaining
+```
+
+---
+
+## Part 2: Config Backup & Restore
+
+### Step 6: Create a Backup Snapshot
+
+Before making major changes, snapshot your entire `.dojops/` directory:
+
+```bash
+dojops backup
+```
+
+```
+┌  Backup Created
+│
+│  Snapshot: backup-2026-03-13-143022.tar.gz
+│  Location: ~/.dojops/backups/
+│  Size: 24 KB
+│  SHA-256: a1b2c3d4...
+│
+│  Contents:
+│    config.json
+│    secrets.enc
+│    context.json
+│    scan-history/ (3 files)
+│    execution-logs/ (7 files)
+│    audit-log.jsonl
+│
+└  Backup verified
+```
+
+The backup is a tar.gz archive with SHA-256 integrity verification.
+
+### Step 7: List Backups
+
+```bash
+dojops backup list
+```
+
+```
+┌  Backups
+│
+│  backup-2026-03-13-143022  24 KB  2 min ago
+│  backup-2026-03-10-091500  18 KB  3 days ago
+│  backup-2026-03-01-160000  12 KB  12 days ago
+│
+└  3 snapshots (54 KB total)
+```
+
+### Step 8: Restore from a Backup
+
+Roll back to a previous configuration state:
+
+```bash
+dojops restore backup-2026-03-10-091500
+```
+
+```
+┌  Restore
+│
+│  Restoring: backup-2026-03-10-091500
+│  SHA-256: verified ✓
+│
+│  Restored:
+│    config.json
+│    secrets.enc
+│    context.json
+│    scan-history/ (2 files)
+│    execution-logs/ (5 files)
+│    audit-log.jsonl
+│
+│  Current config backed up to:
+│    backup-2026-03-13-pre-restore.tar.gz
+│
+└  Restore complete
+```
+
+DojOps automatically creates a backup of the current state before restoring, so you can always undo a restore.
+
+---
+
+## Part 3: Bulk Configuration with Config Apply
+
+### Step 9: Create a Team Config File
+
+Create a JSON file with your team's standard configuration:
+
+```json
+{
+  "provider": "openai",
+  "model": "gpt-4o",
+  "temperature": 0,
+  "fallbackProvider": "anthropic",
+  "aliases": {
+    "fast": "gpt-4o-mini",
+    "smart": "gpt-4o",
+    "review": "claude-sonnet-4-6"
+  },
+  "thinking": "medium",
+  "scan": {
+    "defaultCategories": ["security", "deps", "iac"],
+    "jsonOutput": true
+  }
+}
+```
+
+Save this as `team-defaults.json`.
+
+### Step 10: Apply the Configuration
+
+```bash
+dojops config apply team-defaults.json
+```
+
+```
+┌  Config Applied
+│
+│  Applied from: team-defaults.json
+│
+│  Changes:
+│    provider        → openai
+│    model           → gpt-4o
+│    temperature     → 0
+│    fallbackProvider → anthropic
+│    aliases         → 3 aliases set
+│    thinking        → medium
+│    scan defaults   → security, deps, iac
+│
+└  8 settings updated
+```
+
+### Step 11: Share Configs Across Your Team
+
+Check the config file into your repository for team standardization:
+
+```bash
+# Save current config as a shareable file
+dojops config export > .dojops/team-config.json
+
+# New team member applies it on setup
+git clone <your-repo>
+cd <your-repo>
+dojops init
+dojops config apply .dojops/team-config.json
+```
+
+This ensures everyone on the team uses the same model, aliases, and scan settings — reducing "works on my machine" configuration drift.
+
+---
+
+## Workflow: Safe Config Changes
+
+Combine all three features for a safe configuration workflow:
+
+```bash
+# 1. Backup before changes
+dojops backup
+
+# 2. Store secrets securely
+dojops secrets set OPENAI_API_KEY sk-proj-...
+dojops secrets set ANTHROPIC_API_KEY sk-ant-...
+
+# 3. Apply team configuration
+dojops config apply team-defaults.json
+
+# 4. Verify everything works
+dojops status
+
+# 5. If something breaks, restore
+dojops restore <latest-backup>
+```
+
+---
+
+## Summary
+
+In this tutorial, you:
+
+1. **Stored API keys securely** with AES-256-GCM encrypted vault
+2. **Referenced secrets** in config via `$secret:` syntax
+3. **Created backup snapshots** with SHA-256 integrity verification
+4. **Restored configurations** from previous snapshots
+5. **Applied bulk configs** from JSON files for team onboarding
+
+### Next Steps
+
+- **[Provider & Configuration](/tutorials/provider-and-configuration)** — Full provider management guide
+- **[Model Aliases & Thinking Levels](/tutorials/model-aliases-and-thinking)** — Optimize model selection
+- **[Observability & Learning](/tutorials/observability-and-learning)** — Detect patterns and learn from past runs
