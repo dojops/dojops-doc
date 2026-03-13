@@ -242,12 +242,17 @@ DojOps stores project state in the `.dojops/` directory:
   sessions/              Chat session persistence (*.json)
   modules/               Project-scoped custom modules (.dops files)
   agents/                Project-scoped custom agents (<name>/README.md)
+  memory/
+    dojops.db            SQLite database (WAL mode): tasks_history, notes, error_patterns
   policy.yaml            Module policy (allowedModules / blockedModules)
   history/
     audit.jsonl          Hash-chained audit log (append-only)
   lock.json              Execution lock (PID-based)
 
 ~/.dojops/
+  config.json            User configuration (provider, model, tokens)
+  vault.json             AES-256-GCM encrypted secrets vault
+  backups/               Config backup snapshots
   modules/               Global custom modules (shared across projects)
   toolchain/             System binary sandbox (installed verification binaries)
   agents/                Global custom agents (shared across projects)

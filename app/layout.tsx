@@ -63,6 +63,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           footer={footer}
           editLink="Edit this page on GitHub"
           sidebar={{ defaultMenuCollapseLevel: 1 }}
+          nextThemes={{ defaultTheme: "dark" }}
         >
           {children}
         </Layout>

@@ -125,6 +125,10 @@ Chat supports slash commands: `/exit`, `/agent <name>`, `/plan <goal>`, `/apply`
 | `dojops config set <key> <value>`             | Set a config value (supports dot notation, e.g. `tokens.openai`)                      |
 | `dojops config delete <key>`                  | Delete a config key                                                                   |
 | `dojops config validate`                      | Validate config values and file permissions                                           |
+| `dojops config backup`                        | Save current config as a timestamped backup                                           |
+| `dojops config restore [file]`                | Restore config from a backup                                                          |
+| `dojops config apply <file>`                  | Import config from a YAML or JSON file                                                |
+| `dojops config export <file>`                 | Export current config to a file                                                       |
 | `dojops auth login`                           | Authenticate with LLM provider                                                        |
 | `dojops auth status`                          | Show saved tokens and default provider                                                |
 | `dojops serve [--port=N]`                     | Start API server + web dashboard                                                      |
@@ -134,6 +138,18 @@ Chat supports slash commands: `/exit`, `/agent <name>`, `/plan <goal>`, `/apply`
 | `dojops init`                                 | Initialize `.dojops/` + full repo scan (11 CI, IaC, scripts, security)                |
 | `dojops status`                               | System health diagnostics + project metrics (alias: `doctor`, `--fix` to auto-repair) |
 | `dojops upgrade`                              | Check for and install CLI updates (`--check` for check-only)                          |
+
+### Observability & Memory
+
+| Command                        | Description                                                 |
+| ------------------------------ | ----------------------------------------------------------- |
+| `dojops tokens`                | Show LLM token usage analytics (per provider, daily, total) |
+| `dojops insights [category]`   | Surface actionable insights from project history            |
+| `dojops insights --all`        | Show all insights (default: top 10)                         |
+| `dojops memory list`           | List persistent project notes (`--category` to filter)      |
+| `dojops memory add <text>`     | Add a project note (`--category`, `--keywords`)             |
+| `dojops memory remove <id>`    | Remove a note by ID (alias: `rm`)                           |
+| `dojops memory search <query>` | Search notes by keyword                                     |
 
 ### Scheduled Jobs
 
@@ -511,6 +527,32 @@ dojops config set defaultProvider ollama  # Set a value
 dojops config set tokens.openai sk-xxx   # Set nested value
 dojops config delete tokens.deepseek     # Remove a key
 dojops config validate                   # Check config health
+
+# Backup and restore
+dojops config backup                     # Save timestamped backup
+dojops config restore                    # Interactive picker
+dojops config export config.yaml         # Export to YAML
+dojops config apply config.yaml          # Import from YAML/JSON
+```
+
+### Observability & Memory
+
+```bash
+# Token usage analytics
+dojops tokens
+dojops tokens --output json
+
+# Opportunity detection
+dojops insights                          # Top 10 insights
+dojops insights --all                    # Show everything
+dojops insights security                 # Filter by category
+
+# Project memory
+dojops memory add "Always use t3.medium for staging"
+dojops memory add "Terraform state in S3" --category=convention --keywords=terraform,s3
+dojops memory list
+dojops memory search terraform
+dojops memory remove 3
 ```
 
 ### Scheduled Jobs
