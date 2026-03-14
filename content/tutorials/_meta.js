@@ -4,7 +4,7 @@ export default {
   "security-audit": "Security Audit & Remediation",
   "interactive-chat": "Interactive Chat Sessions",
   "ci-debugging-and-analysis": "CI Debugging & Analysis",
-  "custom-agents-and-modules": "Custom Agents & Modules",
+  "custom-agents-and-skills": "Custom Agents & Skills",
   "advanced-plan-execution": "Advanced Plan Execution",
   "api-server-and-dashboard": "API Server & Dashboard",
   "provider-and-configuration": "Provider & Configuration",

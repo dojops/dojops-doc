@@ -52,16 +52,16 @@ dojops tokens
 └  Since 2026-01-15
 ```
 
-### Step 2: Module-Level Breakdown
+### Step 2: Skill-Level Breakdown
 
-See which modules consume the most tokens:
+See which skills consume the most tokens:
 
 ```bash
-dojops tokens --by-module
+dojops tokens --by-skill
 ```
 
 ```
-┌  Token Usage by Module
+┌  Token Usage by Skill
 │
 │  terraform           89,400 tokens  $0.45
 │  github-actions       52,100 tokens  $0.26
@@ -70,7 +70,7 @@ dojops tokens --by-module
 │  nginx                18,500 tokens  $0.09
 │  (other)              55,021 tokens  $0.28
 │
-└  6 modules used
+└  6 skills used
 ```
 
 ### Step 3: Visualize Trends
@@ -102,7 +102,7 @@ Export usage data for dashboards or billing systems:
 dojops tokens --output json
 ```
 
-This outputs structured JSON with per-provider, per-command, and per-module breakdowns — useful for feeding into cost monitoring tools.
+This outputs structured JSON with per-provider, per-command, and per-skill breakdowns — useful for feeding into cost monitoring tools.
 
 ---
 
@@ -254,7 +254,7 @@ Combine these features for maximum cost efficiency:
 
 In this tutorial, you:
 
-1. **Tracked token usage** with `dojops tokens` across providers, commands, and modules
+1. **Tracked token usage** with `dojops tokens` across providers, commands, and skills
 2. **Visualized trends** with `--graph` for daily usage patterns
 3. **Leveraged smart compression** that automatically cuts 70-95% of tokens on CI/scanner output
 4. **Used log deduplication** to collapse repeated CI warnings and errors

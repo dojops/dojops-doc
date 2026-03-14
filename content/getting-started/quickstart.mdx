@@ -265,24 +265,24 @@ See [Web Dashboard](/usage/dashboard) for the full guide.
 
 ---
 
-## Extending with Custom Tools
+## Extending with Custom Skills
 
-DojOps supports custom tools via a declarative `.dops` module system. Scaffold a module with `dojops modules init`, which creates a single `.dops` file combining metadata, schemas, and prompts:
+DojOps supports custom skills via a declarative `.dops` skill system. Scaffold a skill with `dojops skills init`, which creates a single `.dops` file combining metadata, schemas, and prompts:
 
 ```bash
-# Scaffold a new .dops module
-dojops modules init my-tool
+# Scaffold a new .dops skill
+dojops skills init my-tool
 
-# List discovered custom modules
-dojops modules list
+# List discovered custom skills
+dojops skills list
 
-# Validate a module
-dojops modules validate my-tool
+# Validate a skill
+dojops skills validate my-tool
 ```
 
-Custom tools are automatically available to all commands — the Planner includes them in capabilities, the Executor validates and runs them, and the audit trail tracks their usage.
+Custom skills are automatically available to all commands — the Planner includes them in capabilities, the Executor validates and runs them, and the audit trail tracks their usage.
 
-See [DevOps Tools — Custom Tool System](/components/tools#custom-tool-system) for the full guide.
+See [DevOps Skills — Custom Skill System](/components/skills#custom-skill-system) for the full guide.
 
 ---
 

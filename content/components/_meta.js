@@ -1,6 +1,6 @@
 export default {
   agents: "Specialist Agents",
-  modules: "DevOps Modules",
+  skills: "DevOps Skills",
   "security-scanning": "Security Scanning",
   "execution-engine": "Execution Engine",
   planner: "Task Planner",

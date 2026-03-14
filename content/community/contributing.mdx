@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions to DojOps are welcome. This guide covers development setup, coding standards, testing, and how to add new modules and agents.
+Contributions to DojOps are welcome. This guide covers development setup, coding standards, testing, and how to add new skills and agents.
 
 ---
 
@@ -40,20 +40,20 @@ pnpm lint
 packages/
   cli/              CLI entry point + TUI (@clack/prompts)
   api/              REST API (Express) + web dashboard
-  module-registry/  Module registry + custom module system (built-in + custom module discovery)
+  skill-registry/   Skill registry + custom skill system (built-in + custom skill discovery)
   core/             LLM providers (6) + specialist agents (17) + CI debugger + infra diff + DevOps checker
   planner/          Task graph decomposition + topological executor
   executor/         SafeExecutor + policy engine + approval workflows + audit log
-  runtime/          13 built-in DevOps modules as .dops files (DopsRuntime)
+  runtime/          13 built-in DevOps skills as .dops files (DopsRuntime)
   scanner/          10 security scanners + remediation engine
   session/          Chat session management + memory + context injection
-  context/          Context7 documentation augmentation for modules
-  sdk/              BaseModule<T> abstract class + Zod re-export + verification types + file-reader utilities
+  context/          Context7 documentation augmentation for skills
+  sdk/              BaseSkill<T> abstract class + Zod re-export + verification types + file-reader utilities
 ```
 
 Package scope: `@dojops/*`
 
-Dependency flow: `cli -> api -> module-registry -> runtime -> core -> sdk`
+Dependency flow: `cli -> api -> skill-registry -> runtime -> core -> sdk`
 
 ---
 
@@ -110,20 +110,20 @@ Key conventions:
 
 DojOps uses Vitest for testing. Current coverage:
 
-| Package                   | Tests    |
-| ------------------------- | -------- |
-| `@dojops/runtime`         | 589      |
-| `@dojops/core`            | 496      |
-| `@dojops/cli`             | 315      |
-| `@dojops/module-registry` | 252      |
-| `@dojops/api`             | 236      |
-| `@dojops/scanner`         | 110      |
-| `@dojops/executor`        | 67       |
-| `@dojops/planner`         | 39       |
-| `@dojops/session`         | 38       |
-| `@dojops/context`         | 29       |
-| `@dojops/sdk`             | 24       |
-| **Total**                 | **2195** |
+| Package                  | Tests    |
+| ------------------------ | -------- |
+| `@dojops/runtime`        | 589      |
+| `@dojops/core`           | 496      |
+| `@dojops/cli`            | 315      |
+| `@dojops/skill-registry` | 252      |
+| `@dojops/api`            | 236      |
+| `@dojops/scanner`        | 110      |
+| `@dojops/executor`       | 67       |
+| `@dojops/planner`        | 39       |
+| `@dojops/session`        | 38       |
+| `@dojops/context`        | 29       |
+| `@dojops/sdk`            | 24       |
+| **Total**                | **2195** |
 
 ### Writing Tests
 
@@ -134,13 +134,13 @@ DojOps uses Vitest for testing. Current coverage:
 
 ---
 
-## Adding a New Built-in Module
+## Adding a New Built-in Skill
 
-All 13 built-in modules are `.dops` files in `packages/runtime/modules/`. To add a new built-in module, create a `.dops` file following the format. See [DevOps Modules](/components/modules) for the full pattern.
+All 13 built-in skills are `.dops` files in `packages/runtime/skills/`. To add a new built-in skill, create a `.dops` file following the format. See [DevOps Skills](/components/skills) for the full pattern.
 
 ### Step-by-Step
 
-1. **Create the `.dops` module file:** `packages/runtime/modules/my-tool.dops`
+1. **Create the `.dops` skill file:** `packages/runtime/skills/my-tool.dops`
 
    A `.dops` file has YAML frontmatter followed by markdown prompt sections:
 
@@ -205,34 +205,34 @@ All 13 built-in modules are `.dops` files in `packages/runtime/modules/`. To add
    my-tool, my-domain
    ```
 
-2. **Register the module** in `packages/runtime/src/built-in-modules.ts` — add the filename to the module list.
+2. **Register the skill** in `packages/runtime/src/built-in-skills.ts` — add the filename to the skill list.
 
 3. **Add a specialist agent keyword** (if needed) in `packages/core/src/agents/specialists.ts` — add your tool's keywords so the `AgentRouter` can route prompts to it.
 
-4. **Write tests:** Create `packages/runtime/src/__tests__/modules/my-tool.test.ts` with mocked LLM provider — test prompt compilation, update mode, and verification.
+4. **Write tests:** Create `packages/runtime/src/__tests__/skills/my-tool.test.ts` with mocked LLM provider — test prompt compilation, update mode, and verification.
 
 ---
 
-## Creating a Custom Module
+## Creating a Custom Skill
 
-For modules that don't need to be built into the core, use the custom module system instead. Custom modules are declarative — no TypeScript code required.
+For skills that don't need to be built into the core, use the custom skill system instead. Custom skills are declarative — no TypeScript code required.
 
 ### Step-by-Step
 
-1. **Scaffold** a custom module:
+1. **Scaffold** a custom skill:
 
    ```bash
-   dojops modules init my-tool
+   dojops skills init my-tool
    ```
 
-   This creates `.dojops/modules/my-tool.dops` — a single `.dops` file combining YAML frontmatter with markdown prompt sections.
+   This creates `.dojops/skills/my-tool.dops` — a single `.dops` file combining YAML frontmatter with markdown prompt sections.
 
 2. **Edit** the `.dops` file — customize the prompt, input fields, output format, file specs, and permissions.
 
-3. **Validate** the module:
+3. **Validate** the skill:
 
    ```bash
-   dojops modules validate my-tool
+   dojops skills validate my-tool
    ```
 
 4. **Test** by generating a config:
@@ -241,7 +241,7 @@ For modules that don't need to be built into the core, use the custom module sys
    dojops "Generate my-tool config for production"
    ```
 
-Custom modules are automatically discovered and available to the Planner, Executor, and API. See [DevOps Modules — Custom Module System](/components/modules#custom-module-system) for the full `.dops` format.
+Custom skills are automatically discovered and available to the Planner, Executor, and API. See [DevOps Skills — Custom Skill System](/components/skills#custom-skill-system) for the full `.dops` format.
 
 ---
 
@@ -312,7 +312,7 @@ Built-in agents are defined in `packages/core/src/agents/specialists.ts`.
 - [ ] Linting passes (`pnpm lint`)
 - [ ] Formatting is correct (`pnpm format:check`)
 - [ ] New features include tests
-- [ ] New modules follow the `BaseModule<T>` pattern
+- [ ] New skills follow the `BaseSkill<T>` pattern
 - [ ] Breaking changes are documented
 
 ---

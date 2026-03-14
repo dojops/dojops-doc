@@ -1,6 +1,6 @@
-# Custom Agents & Modules
+# Custom Agents & Skills
 
-Create custom specialist agents, build custom tool modules, and publish to the DojOps Hub.
+Create custom specialist agents, build custom skills, and publish to the DojOps Hub.
 
 ---
 
@@ -10,8 +10,8 @@ In this tutorial, you'll learn to:
 
 - Create custom specialist agents (LLM-generated and manual)
 - Browse, inspect, and remove agents
-- Scaffold, validate, and test custom tool modules
-- Search, install, and publish modules on the DojOps Hub
+- Scaffold, validate, and test custom skills
+- Search, install, and publish skills on the DojOps Hub
 
 **Time estimate:** ~20 minutes
 
@@ -150,92 +150,92 @@ dojops agents remove sre-specialist
 
 ---
 
-## Part 2: Custom Modules
+## Part 2: Custom Skills
 
-### Step 6: Scaffold a New Module
+### Step 6: Scaffold a New Skill
 
-Create a new custom tool module as a `.dops` file:
+Create a new custom skill as a `.dops` file:
 
 ```bash
-dojops modules init my-nginx-proxy
+dojops skills init my-nginx-proxy
 ```
 
 ```
-┌  Module Scaffolded
+┌  Skill Scaffolded
 │
-│  Created: .dojops/modules/my-nginx-proxy.dops
+│  Created: .dojops/skills/my-nginx-proxy.dops
 │
-│  Edit the .dops file to customize your module.
+│  Edit the .dops file to customize your skill.
 │
 └  Ready to customize
 ```
 
 The generated `.dops` file is a single self-contained file combining YAML frontmatter (metadata, input/output schemas, file specs, permissions) with markdown prompt sections. Open it in your editor to customize the prompt, input fields, and output format.
 
-### Step 7: List Discovered Modules
+### Step 7: List Discovered Skills
 
-View all custom modules (global + project-scoped):
+View all custom skills (global + project-scoped):
 
 ```bash
-dojops modules list
+dojops skills list
 ```
 
 ```
-┌  Custom Modules
+┌  Custom Skills
 │
-│  Project (.dojops/modules/):
+│  Project (.dojops/skills/):
 │  ├  my-nginx-proxy  v0.1.0  — (scaffold template)
 │
-│  Global (~/.dojops/modules/):
+│  Global (~/.dojops/skills/):
 │  (none)
 │
 └  1 project, 0 global
 ```
 
-### Step 8: Validate a Module
+### Step 8: Validate a Skill
 
-Check that your module is valid:
+Check that your skill is valid:
 
 ```bash
-dojops modules validate my-nginx-proxy
+dojops skills validate my-nginx-proxy
 ```
 
 ```
-┌  Module Validation
+┌  Skill Validation
 │
-│  ✓ DOPS module is valid: my-nginx-proxy v0.1.0
+│  ✓ DOPS skill is valid: my-nginx-proxy v0.1.0
 │  Format: .dops
 │  Files: 1 output file defined
 │
-└  Module is valid
+└  Skill is valid
 ```
 
-### Step 9: Load a Module from Disk
+### Step 9: Load a Skill from Disk
 
-Import a `.dops` module or legacy tool directory from any local path into your project:
+Import a `.dops` skill or legacy tool directory from any local path into your project:
 
 ```bash
-dojops modules load /path/to/shared-tools/redis-config/
+dojops skills load /path/to/shared-tools/redis-config/
 ```
 
 ```
-┌  Module Loaded
+┌  Skill Loaded
 │
 │  Copied to: .dojops/tools/redis-config/
 │
-└  Module available for use
+└  Skill available for use
 ```
 
 ---
 
 ## Part 3: DojOps Hub
 
-### Step 10: Search for Modules
+### Step 10: Search for Skills
 
-Search the [DojOps Hub](https://hub.dojops.ai) for community modules:
+Search the [DojOps Hub](https://hub.dojops.ai) for community skills:
 
 ```bash
-dojops modules search docker
+dojops skills search docker
 ```
 
 ```
@@ -251,35 +251,35 @@ dojops modules search docker
 Refine your search:
 
 ```bash
-dojops modules search terraform --limit 5
-dojops modules search k8s --output json
+dojops skills search terraform --limit 5
+dojops skills search k8s --output json
 ```
 
-### Step 11: Install a Module from Hub
+### Step 11: Install a Skill from Hub
 
-Install a community module for immediate use:
+Install a community skill for immediate use:
 
 ```bash
-dojops modules install docker-swarm
+dojops skills install docker-swarm
 ```
 
 ```
-┌  Module Installed
+┌  Skill Installed
 │
 │  Package: docker-swarm v1.2.0
 │  Integrity: SHA-256 verified ✓
 │  Location: .dojops/tools/docker-swarm.dops
 │
-└  Module ready to use
+└  Skill ready to use
 ```
 
 Install a specific version globally (shared across all projects):
 
 ```bash
-dojops modules install docker-swarm --version 1.0.0 --global
+dojops skills install docker-swarm --version 1.0.0 --global
 ```
 
-### Step 12: Publish a Module to Hub
+### Step 12: Publish a Skill to Hub
 
 First, set up your Hub API token:
 
@@ -290,10 +290,10 @@ First, set up your Hub API token:
 export DOJOPS_HUB_TOKEN="dojops_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
 ```
 
-Publish your `.dops` module:
+Publish your `.dops` skill:
 
 ```bash
-dojops modules publish my-nginx-proxy.dops
+dojops skills publish my-nginx-proxy.dops
 ```
 
 ```
@@ -312,7 +312,7 @@ dojops modules publish my-nginx-proxy.dops
 Include a changelog with your release:
 
 ```bash
-dojops modules publish my-nginx-proxy.dops --changelog "v1.1.0: Added SSL termination support"
+dojops skills publish my-nginx-proxy.dops --changelog "v1.1.0: Added SSL termination support"
 ```
 
 ---
@@ -321,5 +321,5 @@ dojops modules publish my-nginx-proxy.dops --changelog "v1.1.0: Added SSL termin
 
 - [Enhance a Next.js Project](/tutorials/enhance-nextjs-project) — Use agents to improve an existing project
 - [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a full pipeline
-- [DevOps Modules](/components/modules) — Full module documentation including custom module format
+- [DevOps Skills](/components/skills) — Full skill documentation including custom skill format
 - [Specialist Agents](/components/agents) — Agent routing and custom agent format
