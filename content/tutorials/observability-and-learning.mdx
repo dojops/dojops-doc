@@ -144,12 +144,12 @@ cat .dojops/rules.md
 
 ## Scan Patterns
 
-- lodash < 4.17.21 is a recurring CVE — suggest upgrade early
-- hadolint DL3008 appears in every scan — prioritize this fix
+- lodash < 4.17.21 is a recurring CVE - suggest upgrade early
+- hadolint DL3008 appears in every scan - prioritize this fix
 
 ## Execution Patterns
 
-- Terraform tasks in this project require AWS_REGION — verify before init
+- Terraform tasks in this project require AWS_REGION - verify before init
 ```
 
 These rules are automatically included in LLM context for `scan --fix`, `debug-ci`, and `plan` commands, so the AI learns from your project's specific history.
@@ -159,7 +159,7 @@ These rules are automatically included in LLM context for `scan --fix`, `debug-c
 Add manual rules based on your team's knowledge:
 
 ```bash
-# Rules file is plain markdown — edit directly
+# Rules file is plain markdown - edit directly
 echo "- Always use Node 20 LTS in CI workflows" >> .dojops/rules.md
 ```
 
@@ -217,7 +217,7 @@ Memory means you don't have to repeat context. DojOps remembers your project's c
 
 ### Step 9: Memory in Subsequent Sessions
 
-Close and reopen chat — memory persists:
+Close and reopen chat, memory persists:
 
 ```bash
 # Session 1
@@ -313,9 +313,9 @@ The more you use DojOps, the smarter it gets for your specific project.
 
 In this tutorial, you:
 
-1. **Detected opportunities** with `dojops insights` — actionable suggestions from your history
-2. **Learned error patterns** with `dojops learn` — auto-generated rules from recurring failures
-3. **Used cross-session memory** in `dojops chat` — persistent context across conversations
+1. **Detected opportunities** with `dojops insights`, actionable suggestions from your history
+2. **Learned error patterns** with `dojops learn`, auto-generated rules from recurring failures
+3. **Used cross-session memory** in `dojops chat`, persistent context across conversations
 4. **Built a feedback loop** where DojOps improves from your project's specific patterns
 
 ### Quick Reference
@@ -336,6 +336,6 @@ dojops memory clear             # Clear project memory
 
 ### Next Steps
 
-- **[Token Analytics & Cost Control](/tutorials/token-analytics-and-cost-control)** — Monitor and reduce LLM costs
-- **[Security Audit & Remediation](/tutorials/security-audit)** — Full scanning walkthrough
-- **[Interactive Chat Sessions](/tutorials/interactive-chat)** — Deep dive into chat features
+- **[Token Analytics & Cost Control](/tutorials/token-analytics-and-cost-control)**, Monitor and reduce LLM costs
+- **[Security Audit & Remediation](/tutorials/security-audit)**, Full scanning walkthrough
+- **[Interactive Chat Sessions](/tutorials/interactive-chat)**, Deep dive into chat features

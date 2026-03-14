@@ -37,14 +37,14 @@ dojops agents list
 ┌  Specialist Agents
 │
 │  Built-in Agents (17):
-│  ├  terraform-specialist     — Infrastructure as Code (Terraform, OpenTofu)
-│  ├  kubernetes-specialist    — Container orchestration (K8s, Helm)
-│  ├  ci-specialist            — CI/CD pipelines (GitHub Actions, GitLab CI)
-│  ├  docker-specialist        — Containers (Dockerfile, Compose)
-│  ├  ansible-specialist       — Configuration management (Ansible)
-│  ├  monitoring-specialist    — Observability (Prometheus, Grafana)
-│  ├  security-specialist      — Security scanning and hardening
-│  ├  nginx-specialist         — Web server configuration (Nginx)
+│  ├  terraform-specialist     - Infrastructure as Code (Terraform, OpenTofu)
+│  ├  kubernetes-specialist    - Container orchestration (K8s, Helm)
+│  ├  ci-specialist            - CI/CD pipelines (GitHub Actions, GitLab CI)
+│  ├  docker-specialist        - Containers (Dockerfile, Compose)
+│  ├  ansible-specialist       - Configuration management (Ansible)
+│  ├  monitoring-specialist    - Observability (Prometheus, Grafana)
+│  ├  security-specialist      - Security scanning and hardening
+│  ├  nginx-specialist         - Web server configuration (Nginx)
 │  └  ... (8 more)
 │
 │  Custom Agents (0):
@@ -101,7 +101,7 @@ dojops agents create "an SRE specialist for incident response and reliability en
 │
 │  Saved to: .dojops/agents/sre-specialist/README.md
 │
-└  Agent created — available immediately
+└  Agent created - available immediately
 ```
 
 The agent is now active and participates in keyword routing:
@@ -130,7 +130,7 @@ dojops agents create --manual
 │
 │  Saved to: .dojops/agents/compliance-auditor/README.md
 │
-└  Agent created — available immediately
+└  Agent created - available immediately
 ```
 
 ### Step 5: Remove a Custom Agent
@@ -184,7 +184,7 @@ dojops skills list
 ┌  Custom Skills
 │
 │  Project (.dojops/skills/):
-│  ├  my-nginx-proxy  v0.1.0  — (scaffold template)
+│  ├  my-nginx-proxy  v0.1.0  - (scaffold template)
 │
 │  Global (~/.dojops/skills/):
 │  (none)
@@ -319,7 +319,7 @@ dojops skills publish my-nginx-proxy.dops --changelog "v1.1.0: Added SSL termina
 
 ## What's Next?
 
-- [Enhance a Next.js Project](/tutorials/enhance-nextjs-project) — Use agents to improve an existing project
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a full pipeline
-- [DevOps Skills](/components/skills) — Full skill documentation including custom skill format
-- [Specialist Agents](/components/agents) — Agent routing and custom agent format
+- [Enhance a Next.js Project](/tutorials/enhance-nextjs-project), Use agents to improve an existing project
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch), Build a full pipeline
+- [DevOps Skills](/components/skills), Full skill documentation including custom skill format
+- [Specialist Agents](/components/agents), Agent routing and custom agent format

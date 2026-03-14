@@ -62,7 +62,7 @@ The `ExecutionPolicy` controls what the executor is allowed to do:
 
 ### Path Resolution
 
-1. `deniedPaths` are checked first — any match blocks the write unconditionally
+1. `deniedPaths` are checked first, any match blocks the write unconditionally
 2. If explicit `allowedPaths` are configured, the file must match at least one
 3. If no `allowedPaths` and `enforceDevOpsAllowlist` is `true`, the file must match the DevOps write allowlist (see below)
 
@@ -117,7 +117,7 @@ When a tool updates an existing config file (detected via `isUpdate` flag in the
 - Uses `backupFile()` from `@dojops/sdk`
 - Example: `main.tf` → `main.tf.bak`, `ci.yml` → `ci.yml.bak`
 - Backups are only created when updating, not when creating new files
-- Best-effort — backup failures don't block execution
+- Best-effort, backup failures don't block execution
 
 ---
 
@@ -125,10 +125,10 @@ When a tool updates an existing config file (detected via `isUpdate` flag in the
 
 `SandboxedFs` wraps Node.js `fs` operations with policy enforcement:
 
-- **Path restriction** — Only writes to paths allowed by the `ExecutionPolicy`
-- **Size limits** — Rejects files exceeding `maxFileSize`
-- **Per-file audit** — Each file operation is logged with path, size, and timestamp
-- **Atomic writes** — Files are written via temp-file + `fs.renameSync` (POSIX atomic rename) to prevent partial writes on crash or failure
+- **Path restriction**, Only writes to paths allowed by the `ExecutionPolicy`
+- **Size limits**, Rejects files exceeding `maxFileSize`
+- **Per-file audit**, Each file operation is logged with path, size, and timestamp
+- **Atomic writes**, Files are written via temp-file + `fs.renameSync` (POSIX atomic rename) to prevent partial writes on crash or failure
 
 ---
 
@@ -146,11 +146,11 @@ Tools that implement `verify()` can validate their generated output with externa
 
 ### Verification Behavior
 
-1. **Default on** — Verification runs by default in CLI commands (`apply`, `plan --execute`). Use `--skip-verify` to disable. The SDK default (`DEFAULT_POLICY.skipVerification = true`) remains unchanged for programmatic callers
-2. **Tool check** — If the tool doesn't implement `verify()`, the step is skipped
-3. **Auto-install** — If the external binary isn't installed, DojOps auto-installs it into the sandboxed toolchain (`~/.dojops/toolchain/`) via the `OnBinaryMissing` callback before running verification. This replaces the previous behavior of silently skipping verification when a binary was missing
-4. **Blocking** — Failed verification blocks execution (returns `VerificationResult.valid=false`)
-5. **Logged** — Verification results are included in the audit entry
+1. **Default on**, Verification runs by default in CLI commands (`apply`, `plan --execute`). Use `--skip-verify` to disable. The SDK default (`DEFAULT_POLICY.skipVerification = true`) remains unchanged for programmatic callers
+2. **Tool check**, If the tool doesn't implement `verify()`, the step is skipped
+3. **Auto-install**, If the external binary isn't installed, DojOps auto-installs it into the sandboxed toolchain (`~/.dojops/toolchain/`) via the `OnBinaryMissing` callback before running verification. This replaces the previous behavior of silently skipping verification when a binary was missing
+4. **Blocking**, Failed verification blocks execution (returns `VerificationResult.valid=false`)
+5. **Logged**, Verification results are included in the audit entry
 
 ### OnBinaryMissing Callback
 
@@ -189,7 +189,7 @@ Audit entries form a hash chain:
 1. Each entry's `hash` is computed as `SHA-256(seq + timestamp + command + status + previousHash)`
 2. The `previousHash` links to the prior entry
 3. The chain can be verified end-to-end with `dojops history verify`
-4. Any tampering breaks the chain — the hash won't match
+4. Any tampering breaks the chain, the hash won't match
 
 ### Storage
 
@@ -219,8 +219,8 @@ dojops apply --yes          # warns but auto-continues
 
 `dojops rollback <plan-id>` reverses an applied plan by performing two operations:
 
-1. **Delete created files** — Removes files listed in `filesWritten` that were newly created (not updates)
-2. **Restore .bak backups** — For files listed in `filesModified` (pre-existing files that were overwritten), restores from the `.bak` backup
+1. **Delete created files**, Removes files listed in `filesWritten` that were newly created (not updates)
+2. **Restore .bak backups**, For files listed in `filesModified` (pre-existing files that were overwritten), restores from the `.bak` backup
 
 The `--dry-run` flag previews what would be deleted and restored without making changes.
 
@@ -281,9 +281,9 @@ Impact Summary:
   Risk level:       MEDIUM
 ```
 
-- **Files to create/modify** — Estimated from the plan's task descriptions
-- **Verification** — Lists which verification tools will run for the plan's tasks
-- **Risk level** — From the plan's risk classification (see Plan Risk Classification below)
+- **Files to create/modify**, Estimated from the plan's task descriptions
+- **Verification**, Lists which verification tools will run for the plan's tasks
+- **Risk level**, From the plan's risk classification (see Plan Risk Classification below)
 
 ---
 

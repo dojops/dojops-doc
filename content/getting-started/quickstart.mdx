@@ -57,7 +57,7 @@ DojOps requires an LLM provider to generate configurations. You have three optio
 ### Quick Setup (recommended)
 
 ```bash
-# Add your first provider — automatically becomes the default
+# Add your first provider - automatically becomes the default
 dojops provider add openai --token sk-...
 ```
 
@@ -158,19 +158,19 @@ dojops init
 
 This creates a `.dojops/` directory in your project root with:
 
-- `context.json` — Project context (v2 schema: languages, 11 CI platforms, IaC, containers, monitoring/web servers, scripts, security configs, and a flat list of all detected DevOps file paths)
-- `plans/` — Saved task graph plans
-- `execution-logs/` — Execution history
-- `scan-history/` — Security scan reports
-- `history/audit.jsonl` — Hash-chained audit log
+- `context.json`, Project context (v2 schema: languages, 11 CI platforms, IaC, containers, monitoring/web servers, scripts, security configs, and a flat list of all detected DevOps file paths)
+- `plans/`, Saved task graph plans
+- `execution-logs/`, Execution history
+- `scan-history/`, Security scan reports
+- `history/audit.jsonl`, Hash-chained audit log
 
 The `init` scanner detects:
 
-- **CI/CD** — GitHub Actions, GitLab CI, Jenkins, CircleCI, Azure Pipelines, AWS CodeBuild, Bitbucket, Drone, Travis CI, Tekton, Woodpecker
-- **Infrastructure** — Terraform, Kubernetes, Helm, Ansible, Kustomize, Vagrant, Pulumi, CloudFormation
-- **Monitoring/Web** — Prometheus, Nginx, Systemd, HAProxy, Tomcat, Apache, Caddy, Envoy
-- **Scripts** — Shell scripts (`.sh`), Python scripts (`.py`), Justfile
-- **Security** — `.gitignore`, `.env.example`, CODEOWNERS, SECURITY.md, Dependabot, Renovate, `.editorconfig`
+- **CI/CD**, GitHub Actions, GitLab CI, Jenkins, CircleCI, Azure Pipelines, AWS CodeBuild, Bitbucket, Drone, Travis CI, Tekton, Woodpecker
+- **Infrastructure**, Terraform, Kubernetes, Helm, Ansible, Kustomize, Vagrant, Pulumi, CloudFormation
+- **Monitoring/Web**, Prometheus, Nginx, Systemd, HAProxy, Tomcat, Apache, Caddy, Envoy
+- **Scripts**, Shell scripts (`.sh`), Python scripts (`.py`), Justfile
+- **Security**, `.gitignore`, `.env.example`, CODEOWNERS, SECURITY.md, Dependabot, Renovate, `.editorconfig`
 
 ---
 
@@ -184,9 +184,9 @@ dojops check
 
 This reads the DevOps files listed in `context.json` and sends them to the LLM for analysis. Returns:
 
-- **Maturity score** (0-100) — Minimal, Basic, Good, or Excellent
-- **Findings** — Severity-ranked issues (critical, error, warning, info) with recommendations
-- **Missing files** — Important DevOps files your project should have
+- **Maturity score** (0-100), Minimal, Basic, Good, or Excellent
+- **Findings**, Severity-ranked issues (critical, error, warning, info) with recommendations
+- **Missing files**, Important DevOps files your project should have
 
 Use `--output json` for machine-readable results.
 
@@ -255,11 +255,11 @@ dojops serve --port=8080                 # Custom port
 
 The dashboard provides 5 tabs for monitoring and operations:
 
-- **Overview** — Plan/execution/scan aggregates with activity timeline
-- **Security** — Scan findings, severity trends, category breakdown
-- **Audit** — Hash chain integrity, command distribution, timeline
-- **Agents** — Browse and search all 17 specialist agents
-- **History** — Execution history with type filtering
+- **Overview**, Plan/execution/scan aggregates with activity timeline
+- **Security**, Scan findings, severity trends, category breakdown
+- **Audit**, Hash chain integrity, command distribution, timeline
+- **Agents**, Browse and search all 17 specialist agents
+- **History**, Execution history with type filtering
 
 See [Web Dashboard](/usage/dashboard) for the full guide.
 
@@ -280,9 +280,9 @@ dojops skills list
 dojops skills validate my-tool
 ```
 
-Custom skills are automatically available to all commands — the Planner includes them in capabilities, the Executor validates and runs them, and the audit trail tracks their usage.
+Custom skills are automatically available to all commands, the Planner includes them in capabilities, the Executor validates and runs them, and the audit trail tracks their usage.
 
-See [DevOps Skills — Custom Skill System](/components/skills#custom-skill-system) for the full guide.
+See [DevOps Skills, Custom Skill System](/components/skills#custom-skill-system) for the full guide.
 
 ---
 
@@ -291,7 +291,7 @@ See [DevOps Skills — Custom Skill System](/components/skills#custom-skill-syst
 DojOps supports custom specialist agents. Create an agent by placing a structured `README.md` in `.dojops/agents/<name>/` (project-scoped) or `~/.dojops/agents/<name>/` (global):
 
 ```bash
-# LLM-generated (recommended) — describe what you want and the LLM creates the agent
+# LLM-generated (recommended) - describe what you want and the LLM creates the agent
 dojops agents create "an SRE specialist for incident response and reliability"
 
 # Manual creation via interactive prompts
@@ -307,13 +307,13 @@ dojops agents info sre
 dojops agents remove sre-specialist
 ```
 
-Custom agents are automatically discovered and routable — they participate in keyword-based routing just like built-in agents. Project agents override global agents with the same name.
+Custom agents are automatically discovered and routable, they participate in keyword-based routing just like built-in agents. Project agents override global agents with the same name.
 
 ---
 
 ## Next Steps
 
-- **[CLI Reference](/usage/cli)** — Full command documentation (including `dojops check`)
-- **[API Reference](/usage/api)** — REST API for programmatic access
-- **[Architecture](/architecture/overview)** — System design overview
-- **[Configuration](/getting-started/configuration)** — Advanced provider and profile setup
+- **[CLI Reference](/usage/cli)**, Full command documentation (including `dojops check`)
+- **[API Reference](/usage/api)**, REST API for programmatic access
+- **[Architecture](/architecture/overview)**, System design overview
+- **[Configuration](/getting-started/configuration)**, Advanced provider and profile setup

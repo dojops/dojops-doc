@@ -34,9 +34,9 @@ Per-task results with $ref:<taskId> input wiring
 
 The `decompose()` function sends the user's goal to the LLM with a structured Zod schema:
 
-1. **Prompt construction** — The goal is wrapped in a system prompt that instructs the LLM to break it into tool-specific tasks with dependency ordering. The context includes a note that tools automatically detect and read existing config files, so the planner only needs to set the correct `projectPath`/`outputPath`
-2. **Structured output** — The response is validated against the `TaskGraphSchema`
-3. **Schema validation** — Each task node's `tool` field must match a known tool name, and `deps` must reference valid task IDs
+1. **Prompt construction**, The goal is wrapped in a system prompt that instructs the LLM to break it into tool-specific tasks with dependency ordering. The context includes a note that tools automatically detect and read existing config files, so the planner only needs to set the correct `projectPath`/`outputPath`
+2. **Structured output**, The response is validated against the `TaskGraphSchema`
+3. **Schema validation**, Each task node's `tool` field must match a known tool name, and `deps` must reference valid task IDs
 
 ### TaskGraph Schema
 
@@ -59,13 +59,13 @@ interface TaskNode {
 
 ## Agent Delegation
 
-The planner supports **agent-aware decomposition** — the LLM assigns a specialist agent to each task based on domain relevance. This enriches each task's LLM generation with the agent's domain expertise.
+The planner supports **agent-aware decomposition**, the LLM assigns a specialist agent to each task based on domain relevance. This enriches each task's LLM generation with the agent's domain expertise.
 
-1. **Decomposition** — Available specialist agents are listed in the system prompt. The LLM assigns the best-matching agent to each task via the optional `agent` field.
-2. **Context injection** — During execution, the assigned agent's system prompt is injected as domain context into the skill's LLM call.
-3. **Prompt prepending** — The agent's system prompt is prepended to the skill's compiled prompt, giving the LLM both domain expertise and skill-specific generation instructions.
+1. **Decomposition**, Available specialist agents are listed in the system prompt. The LLM assigns the best-matching agent to each task via the optional `agent` field.
+2. **Context injection**, During execution, the assigned agent's system prompt is injected as domain context into the skill's LLM call.
+3. **Prompt prepending**, The agent's system prompt is prepended to the skill's compiled prompt, giving the LLM both domain expertise and skill-specific generation instructions.
 
-Agent assignment is optional and backward-compatible — tasks without a matching specialist omit the `agent` field and execute without additional domain context. Both built-in and custom agents participate in delegation.
+Agent assignment is optional and backward-compatible, tasks without a matching specialist omit the `agent` field and execute without additional domain context. Both built-in and custom agents participate in delegation.
 
 ---
 
@@ -73,10 +73,10 @@ Agent assignment is optional and backward-compatible — tasks without a matchin
 
 The `PlannerExecutor` uses Kahn's algorithm to determine execution order:
 
-1. **Build dependency graph** — Count in-degrees for each node
-2. **Initialize queue** — Start with nodes that have zero dependencies (no `deps`)
-3. **Process queue** — Execute each task, then reduce the in-degree of its dependents
-4. **Failure cascading** — If a task fails, all downstream tasks (those that depend on it, transitively) are skipped
+1. **Build dependency graph**, Count in-degrees for each node
+2. **Initialize queue**, Start with nodes that have zero dependencies (no `deps`)
+3. **Process queue**, Execute each task, then reduce the in-degree of its dependents
+4. **Failure cascading**, If a task fails, all downstream tasks (those that depend on it, transitively) are skipped
 
 ### Execution Order Example
 
@@ -182,9 +182,9 @@ HIGH risk plans always require explicit user confirmation during `apply`, even w
 
 At plan creation, the following context is captured:
 
-- **`dojopsVersion`** — Current DojOps version from `package.json`
-- **`policySnapshot`** — SHA-256 hash of the execution policy
-- **`toolVersions`** — Version metadata for each tool used in the plan
+- **`dojopsVersion`**, Current DojOps version from `package.json`
+- **`policySnapshot`**, SHA-256 hash of the execution policy
+- **`toolVersions`**, Version metadata for each tool used in the plan
 
 This snapshot enables drift detection: if the DojOps version or policy changes between plan creation and execution, `apply` shows a warning (or blocks in `--replay` mode).
 

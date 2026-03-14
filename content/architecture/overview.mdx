@@ -110,7 +110,7 @@ interface LLMProvider {
 
 The optional `generateWithTools()` method enables native tool-calling for the autonomous agent loop. OpenAI, Anthropic, and Gemini use provider-native tool-calling APIs; Ollama uses a prompt-based fallback that injects tool descriptions into the system prompt and parses structured JSON output.
 
-All responses pass through `parseAndValidate()` — strips markdown fences, `JSON.parse`, Zod `safeParse` — ensuring every LLM output conforms to the expected schema. All 6 providers support `temperature` passthrough for deterministic reproducibility (conditionally included in API calls only when explicitly set). A `DeterministicProvider` wrapper forces `temperature: 0` on every call for replay mode (`apply --replay`). A `FallbackProvider` wraps multiple providers and automatically falls back to the next on failure (configured via `--fallback-provider` flag or `DOJOPS_FALLBACK_PROVIDER` env var). The `GitHubCopilotProvider` creates a new OpenAI client per `generate()` call to use the freshest JWT (tokens expire every ~30 min).
+All responses pass through `parseAndValidate()`, strips markdown fences, `JSON.parse`, Zod `safeParse`, ensuring every LLM output conforms to the expected schema. All 6 providers support `temperature` passthrough for deterministic reproducibility (conditionally included in API calls only when explicitly set). A `DeterministicProvider` wrapper forces `temperature: 0` on every call for replay mode (`apply --replay`). A `FallbackProvider` wraps multiple providers and automatically falls back to the next on failure (configured via `--fallback-provider` flag or `DOJOPS_FALLBACK_PROVIDER` env var). The `GitHubCopilotProvider` creates a new OpenAI client per `generate()` call to use the freshest JWT (tokens expire every ~30 min).
 
 ### 2. Multi-Agent System (`@dojops/core`)
 
@@ -120,9 +120,9 @@ Custom agents are defined as structured `README.md` files in `.dojops/agents/<na
 
 Three specialized analyzers (not routed via `AgentRouter`) provide structured analysis:
 
-- **`CIDebugger`** — CI log diagnosis producing `CIDiagnosis` (error type, root cause, fixes)
-- **`InfraDiffAnalyzer`** — Infrastructure diff analysis producing `InfraDiffAnalysis` (risk, cost, security)
-- **`DevOpsChecker`** — DevOps config quality analysis producing `CheckReport` (score 0-100, findings, missing files)
+- **`CIDebugger`**, CI log diagnosis producing `CIDiagnosis` (error type, root cause, fixes)
+- **`InfraDiffAnalyzer`**, Infrastructure diff analysis producing `InfraDiffAnalysis` (risk, cost, security)
+- **`DevOpsChecker`**, DevOps config quality analysis producing `CheckReport` (score 0-100, findings, missing files)
 
 See [Specialist Agents](/components/agents) for the full agent list.
 
@@ -140,7 +140,7 @@ See [DevOps Skills](/components/skills) for the skill pattern.
 
 ### 4b. DOPS Runtime (`@dojops/runtime`)
 
-The DOPS runtime processes `.dops` skill files — a declarative format combining YAML frontmatter with markdown prompt sections. Raw content generation with Context7 integration.
+The DOPS runtime processes `.dops` skill files, a declarative format combining YAML frontmatter with markdown prompt sections. Raw content generation with Context7 integration.
 
 **Frontmatter sections** (all optional except `meta`, `files`):
 
@@ -149,7 +149,7 @@ The DOPS runtime processes `.dops` skill files — a declarative format combinin
 | `meta`         | Name, version, description, author, license, tags, repository                         |
 | `context`      | Technology context, output guidance, best practices, Context7 library references      |
 | `files`        | Output file specs with path templates, format, serialization options                  |
-| `scope`        | Write boundary — explicit list of allowed write paths (enforced at file-write time)   |
+| `scope`        | Write boundary, explicit list of allowed write paths (enforced at file-write time)    |
 | `risk`         | Self-classification: `LOW` / `MEDIUM` / `HIGH` with rationale string                  |
 | `execution`    | Mutation semantics: mode (`generate`/`update`), `deterministic`, `idempotent` flags   |
 | `update`       | Update behavior: strategy (`replace`/`preserve_structure`), `inputSource`, `injectAs` |
@@ -161,19 +161,19 @@ The DOPS runtime processes `.dops` skill files — a declarative format combinin
 
 **Key runtime features**:
 
-- `DopsRuntime` — Runtime class for `.dops` skills
-- `parseDopsFile()` / `parseDopsString()` — Parsers for `.dops` files
-- `compilePrompt()` — Compiles prompts with `{outputGuidance}`, `{bestPractices}`, `{context7Docs}`, `{projectContext}` variables
-- `stripCodeFences()` — Strips markdown code fences from raw LLM output before writing
-- `DocProvider` interface — Enables Context7 documentation augmentation for skills
-- `DopsRuntime.risk` — Returns declared risk or defaults to `{ level: "LOW", rationale: "No risk classification declared" }`
-- `DopsRuntime.metadata` — Includes `riskLevel`, `systemPromptHash`, `toolHash` for audit integration
-- **Scope enforcement** — `writeFiles()` validates resolved paths against `scope.write` patterns after `{var}` expansion; out-of-scope writes throw
-- **Update strategy** — `preserve_structure` injects additional prompt instructions to maintain existing config organization
+- `DopsRuntime`, Runtime class for `.dops` skills
+- `parseDopsFile()` / `parseDopsString()`, Parsers for `.dops` files
+- `compilePrompt()`, Compiles prompts with `{outputGuidance}`, `{bestPractices}`, `{context7Docs}`, `{projectContext}` variables
+- `stripCodeFences()`, Strips markdown code fences from raw LLM output before writing
+- `DocProvider` interface, Enables Context7 documentation augmentation for skills
+- `DopsRuntime.risk`, Returns declared risk or defaults to `{ level: "LOW", rationale: "No risk classification declared" }`
+- `DopsRuntime.metadata`, Includes `riskLevel`, `systemPromptHash`, `toolHash` for audit integration
+- **Scope enforcement**, `writeFiles()` validates resolved paths against `scope.write` patterns after `{var}` expansion; out-of-scope writes throw
+- **Update strategy**, `preserve_structure` injects additional prompt instructions to maintain existing config organization
 
 ### 5. DevOps Skills (`@dojops/runtime`)
 
-13 built-in skills covering CI/CD, IaC, containers, monitoring, and system services. All 13 are `.dops` skills in `packages/runtime/skills/`, processed by `DopsRuntime` — generating raw file content directly via LLM with Context7 documentation augmentation. All skills support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
+13 built-in skills covering CI/CD, IaC, containers, monitoring, and system services. All 13 are `.dops` skills in `packages/runtime/skills/`, processed by `DopsRuntime`, generating raw file content directly via LLM with Context7 documentation augmentation. All skills support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
 
 See [DevOps Skills](/components/skills) for the full skill list.
 
@@ -181,12 +181,12 @@ See [DevOps Skills](/components/skills) for the full skill list.
 
 Unified registry layer between consumers (Planner, Executor, CLI, API) and skill implementations. Combines all 13 built-in skills with custom skills discovered from disk:
 
-- **`.dops` skill discovery** — Discovers `.dops` skills from `.dojops/skills/` (project) and `~/.dojops/skills/` (global)
-- **Skill validation** — Zod schema validates `.dops` frontmatter
-- **Skill policy** — `.dojops/policy.yaml` supports `allowedSkills` and `blockedSkills` lists
-- **Audit enrichment** — Custom skill executions include `toolType`, `toolSource`, `toolVersion`, `toolHash`, and `systemPromptHash` in audit entries
-- **Skill isolation** — Verification commands restricted to a whitelist of 33 allowed binaries, `child_process` permission must be `"required"` for execution, path traversal (`..`) blocked in file paths and detector paths
-- **Unified interface** — `SkillRegistry.getAll()` returns `DevOpsSkill[]`, so Planner, Executor, and API remain unchanged
+- **`.dops` skill discovery**, Discovers `.dops` skills from `.dojops/skills/` (project) and `~/.dojops/skills/` (global)
+- **Skill validation**, Zod schema validates `.dops` frontmatter
+- **Skill policy**, `.dojops/policy.yaml` supports `allowedSkills` and `blockedSkills` lists
+- **Audit enrichment**, Custom skill executions include `toolType`, `toolSource`, `toolVersion`, `toolHash`, and `systemPromptHash` in audit entries
+- **Skill isolation**, Verification commands restricted to a whitelist of 33 allowed binaries, `child_process` permission must be `"required"` for execution, path traversal (`..`) blocked in file paths and detector paths
+- **Unified interface**, `SkillRegistry.getAll()` returns `DevOpsSkill[]`, so Planner, Executor, and API remain unchanged
 
 ### 6. Execution Engine (`@dojops/executor`)
 
@@ -206,7 +206,7 @@ Multi-turn conversation management with memory windowing, LLM-generated summarie
 
 ### 8b. Autonomous Agent Loop (`@dojops/session` + `@dojops/executor`)
 
-The `AgentLoop` implements a ReAct (Reasoning + Acting) pattern — an iterative cycle where the LLM reasons about what to do, calls a tool, observes the result, and repeats until the task is complete. This replaces the one-shot generation model for complex tasks that require project awareness.
+The `AgentLoop` implements a ReAct (Reasoning + Acting) pattern, an iterative cycle where the LLM reasons about what to do, calls a tool, observes the result, and repeats until the task is complete. This replaces the one-shot generation model for complex tasks that require project awareness.
 
 **7 agent tools:** `read_file`, `write_file`, `edit_file`, `run_command`, `run_skill`, `search_files`, `done`
 
@@ -230,13 +230,13 @@ See [CLI Reference](/usage/cli).
 
 ## Design Principles
 
-1. **No blind execution** — Every LLM output is validated before use.
-2. **Structured JSON outputs** — Provider-native JSON modes + Zod schemas on all LLM responses.
-3. **Schema validation everywhere** — Tool inputs, LLM responses, plan structures, API requests.
-4. **Idempotent operations** — Generated configs produce the same result on re-execution. YAML keys are sorted for deterministic output.
-5. **Clear separation of concerns** — Orchestration, generation, validation, execution, and auditing are independent layers.
-6. **Extensibility** — New skills follow the `BaseSkill<T>` pattern. New agents are registered in the specialist list.
-7. **Declarative safety** — `.dops` skills declare their own scope boundaries, risk levels, and execution semantics, enabling automated policy enforcement without hardcoded tool-specific rules.
+1. **No blind execution**, Every LLM output is validated before use.
+2. **Structured JSON outputs**, Provider-native JSON modes + Zod schemas on all LLM responses.
+3. **Schema validation everywhere**, Tool inputs, LLM responses, plan structures, API requests.
+4. **Idempotent operations**, Generated configs produce the same result on re-execution. YAML keys are sorted for deterministic output.
+5. **Clear separation of concerns**, Orchestration, generation, validation, execution, and auditing are independent layers.
+6. **Extensibility**, New skills follow the `BaseSkill<T>` pattern. New agents are registered in the specialist list.
+7. **Declarative safety**, `.dops` skills declare their own scope boundaries, risk levels, and execution semantics, enabling automated policy enforcement without hardcoded tool-specific rules.
 
 ---
 

@@ -54,7 +54,7 @@ dojops apply --dry-run
 ```
 
 ```
-┌  Dry Run — plan-f7a2b1c3
+┌  Dry Run - plan-f7a2b1c3
 │
 │  Task 1: github-actions
 │  Would create: .github/workflows/ci.yml
@@ -101,7 +101,7 @@ dojops apply
 │  ◆ Approve this file? (y/n): y
 │  ✓ Written: docker-compose.yml
 │
-└  Plan complete — 3/3 tasks succeeded
+└  Plan complete - 3/3 tasks succeeded
 ```
 
 Auto-approve all files (for CI/CD or trusted plans):
@@ -123,8 +123,8 @@ dojops apply --resume
 ```
 ┌  Resuming Plan: plan-f7a2b1c3
 │
-│  Task 1/3: github-actions — ✓ already completed
-│  Task 2/3: dockerfile — retrying...
+│  Task 1/3: github-actions - ✓ already completed
+│  Task 2/3: dockerfile - retrying...
 │  Generated: Dockerfile
 │  ✓ Written: Dockerfile
 │
@@ -132,7 +132,7 @@ dojops apply --resume
 │  Generated: docker-compose.yml
 │  ✓ Written: docker-compose.yml
 │
-└  Plan complete — 3/3 tasks succeeded (1 resumed)
+└  Plan complete - 3/3 tasks succeeded (1 resumed)
 ```
 
 Resume skips already-completed tasks. Combine with `--yes` for unattended recovery:
@@ -152,8 +152,8 @@ dojops apply --resume --retry
 ```
 ┌  Resuming Plan: plan-f7a2b1c3 (with retry)
 │
-│  Task 1/3: github-actions — ✓ already completed
-│  Task 2/3: dockerfile — ✗ previously failed — retrying...
+│  Task 1/3: github-actions - ✓ already completed
+│  Task 2/3: dockerfile - ✗ previously failed - retrying...
 │  Generated: Dockerfile
 │  ✓ Written: Dockerfile
 │
@@ -161,7 +161,7 @@ dojops apply --resume --retry
 │  Generated: docker-compose.yml
 │  ✓ Written: docker-compose.yml
 │
-└  Plan complete — 3/3 tasks succeeded (1 retried)
+└  Plan complete - 3/3 tasks succeeded (1 retried)
 ```
 
 ---
@@ -175,7 +175,7 @@ dojops apply --replay
 ```
 
 ```
-┌  Replay Mode — plan-f7a2b1c3
+┌  Replay Mode - plan-f7a2b1c3
 │
 │  Environment Validation:
 │  ✓ Provider: openai (matches plan)
@@ -188,7 +188,7 @@ dojops apply --replay
 │  Task 2/3: dockerfile ✓
 │  Task 3/3: docker-compose ✓
 │
-└  Replay complete — deterministic execution
+└  Replay complete - deterministic execution
 ```
 
 If the environment has changed since plan creation, replay warns you:
@@ -279,7 +279,7 @@ dojops apply --install-packages
 
 ## Step 7: Rollback a Plan
 
-Reverse an applied plan — deletes created files and restores `.bak` backups:
+Reverse an applied plan, deletes created files and restores `.bak` backups:
 
 ```bash
 dojops rollback plan-f7a2b1c3
@@ -293,7 +293,7 @@ dojops rollback plan-f7a2b1c3
 │  ✓ Deleted: docker-compose.yml
 │  ✓ Restored: nginx.conf from nginx.conf.bak
 │
-└  Rollback complete — 3 files deleted, 1 restored
+└  Rollback complete - 3 files deleted, 1 restored
 ```
 
 ---
@@ -399,7 +399,7 @@ dojops history repair
 
 ## What's Next?
 
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a pipeline using plan + apply
-- [CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis) — Debug failures and analyze diffs
-- [API Server & Dashboard](/tutorials/api-server-and-dashboard) — Self-host the API and dashboard
-- [CLI Reference](/usage/cli) — Full command reference
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch), Build a pipeline using plan + apply
+- [CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis), Debug failures and analyze diffs
+- [API Server & Dashboard](/tutorials/api-server-and-dashboard), Self-host the API and dashboard
+- [CLI Reference](/usage/cli), Full command reference

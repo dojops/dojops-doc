@@ -29,7 +29,7 @@ The scanner system:
 | `shellcheck`    | `shellcheck` | `iac`, `security`  | Projects with shell scripts (`.sh` files)                                          |
 | `trivy-sbom`    | `trivy`      | `SBOM`             | Always applicable (generates CycloneDX SBOM)                                       |
 | `trivy-license` | `trivy`      | `LICENSE`          | Always applicable (license compliance checking)                                    |
-| `semgrep`       | `semgrep`    | `SECURITY`         | Always applicable (SAST — static application security testing)                     |
+| `semgrep`       | `semgrep`    | `SECURITY`         | Always applicable (SAST, static application security testing)                      |
 
 ---
 
@@ -48,12 +48,12 @@ The scanner system:
 
 ## Severity Levels
 
-| Level      | Description                                                     |
-| ---------- | --------------------------------------------------------------- |
-| `CRITICAL` | Immediate action required — known exploits, exposed credentials |
-| `HIGH`     | Should be fixed soon — significant vulnerabilities              |
-| `MEDIUM`   | Should be addressed — moderate risk                             |
-| `LOW`      | Informational — minor issues or best practice violations        |
+| Level      | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `CRITICAL` | Immediate action required, known exploits, exposed credentials |
+| `HIGH`     | Should be fixed soon, significant vulnerabilities              |
+| `MEDIUM`   | Should be addressed, moderate risk                             |
+| `LOW`      | Informational, minor issues or best practice violations        |
 
 ---
 
@@ -100,8 +100,8 @@ dojops scan --compare        # Compare findings with previous scan report
 
 The `--compare` flag runs the scan and then compares the results against the most recent previous scan report. It shows:
 
-- **New findings** — Issues that appeared since the last scan
-- **Resolved findings** — Issues that were present in the previous scan but are now fixed
+- **New findings**, Issues that appeared since the last scan
+- **Resolved findings**, Issues that were present in the previous scan but are now fixed
 
 Finding comparison uses deterministic IDs (based on tool, rule, file, and line) to accurately track which findings are new vs resolved.
 
@@ -192,13 +192,13 @@ interface ScanFinding {
 
 ### How It Works
 
-1. **Filter** — Only HIGH and CRITICAL findings are sent for remediation
-2. **LLM analysis** — Findings are sent to the configured provider with a structured Zod schema
-3. **Fix generation** — The LLM produces a `RemediationPlan` with specific file patches
-4. **Patch application** — Fixes are applied via three action types:
-   - `replace` — String replacement in a file (old>>>new format)
-   - `update-version` — Version update in `package.json` or `requirements.txt`
-   - `write` — Full file overwrite
+1. **Filter**, Only HIGH and CRITICAL findings are sent for remediation
+2. **LLM analysis**, Findings are sent to the configured provider with a structured Zod schema
+3. **Fix generation**, The LLM produces a `RemediationPlan` with specific file patches
+4. **Patch application**, Fixes are applied via three action types:
+   - `replace`, String replacement in a file (old>>>new format)
+   - `update-version`, Version update in `package.json` or `requirements.txt`
+   - `write`, Full file overwrite
 
 ### Safety
 
@@ -212,12 +212,12 @@ interface ScanFinding {
 
 When running `dojops scan --sbom`, the SBOM output is saved to `.dojops/sbom/` and its SHA-256 hash is computed and stored in the scan report:
 
-- **Hash tracking** — Each SBOM's content hash (`sbomHash`) is stored in the scan report, enabling integrity verification
-- **Change detection** — On subsequent scans, the current SBOM hash is compared against the previous scan's hash. If the SBOM has changed, a warning is displayed:
+- **Hash tracking**, Each SBOM's content hash (`sbomHash`) is stored in the scan report, enabling integrity verification
+- **Change detection**, On subsequent scans, the current SBOM hash is compared against the previous scan's hash. If the SBOM has changed, a warning is displayed:
   ```
   SBOM changed since last scan (previous: abc123..., current: def456...)
   ```
-- **Audit trail** — SBOM hashes are included in the scan history, providing a versioned record of dependency composition over time
+- **Audit trail**, SBOM hashes are included in the scan history, providing a versioned record of dependency composition over time
 
 This enables compliance workflows that require tracking dependency changes across releases.
 

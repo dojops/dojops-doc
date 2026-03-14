@@ -11,7 +11,7 @@ In this tutorial, you'll use the autonomous agent mode to complete a multi-step 
 - Reads your existing files to understand project structure
 - Makes targeted edits instead of overwriting entire files
 - Runs commands to verify changes work
-- Adapts when something fails — retries with a different approach
+- Adapts when something fails, retries with a different approach
 
 **Time estimate:** ~15 minutes
 
@@ -68,7 +68,7 @@ The agent will:
 3. Call `done` with a summary of all dependencies
 
 ```
-◆ Autonomous agent mode — iterative tool-use (max 20 iterations)
+◆ Autonomous agent mode - iterative tool-use (max 20 iterations)
 ◇ read_file package.json
 ◇ done completing...
 
@@ -99,7 +99,7 @@ The agent will typically:
 5. **Done** with a summary of changes
 
 ```
-◆ Autonomous agent mode — iterative tool-use (max 20 iterations)
+◆ Autonomous agent mode - iterative tool-use (max 20 iterations)
 ◇ search_files *.ts
 ◇ read_file src/app.ts
 ◇ edit_file src/app.ts
@@ -240,20 +240,20 @@ User prompt
 | `search_files` | Search files by name or content pattern    |
 | `done`         | Signal task completion with a summary      |
 
-All file operations are enforced by the execution policy — the agent cannot write outside allowed paths or run commands beyond the configured timeout.
+All file operations are enforced by the execution policy, the agent cannot write outside allowed paths or run commands beyond the configured timeout.
 
 ---
 
 ## Auto vs Plan: When to Use Which
 
-| Aspect             | `dojops auto`                      | `dojops plan --execute`             |
-| ------------------ | ---------------------------------- | ----------------------------------- |
-| **Best for**       | Tasks requiring project awareness  | Multi-file generation from scratch  |
-| **Reads files**    | Yes — examines existing code first | No — generates based on prompt only |
-| **Edit style**     | Targeted line-level edits          | Full file generation                |
-| **Error recovery** | Retries with different approach    | Fails and reports                   |
-| **Verification**   | Runs commands mid-loop             | Post-execution verification only    |
-| **Audit trail**    | Logged as `auto` type in history   | Logged as `plan` type in history    |
+| Aspect             | `dojops auto`                     | `dojops plan --execute`            |
+| ------------------ | --------------------------------- | ---------------------------------- |
+| **Best for**       | Tasks requiring project awareness | Multi-file generation from scratch |
+| **Reads files**    | Yes, examines existing code first | No, generates based on prompt only |
+| **Edit style**     | Targeted line-level edits         | Full file generation               |
+| **Error recovery** | Retries with different approach   | Fails and reports                  |
+| **Verification**   | Runs commands mid-loop            | Post-execution verification only   |
+| **Audit trail**    | Logged as `auto` type in history  | Logged as `plan` type in history   |
 
 **Rule of thumb:** Use `auto` when you want the agent to understand your existing codebase. Use `plan` when you're generating new configs from scratch.
 
@@ -269,8 +269,8 @@ All file operations are enforced by the execution policy — the agent cannot wr
 
 ### Next Steps
 
-- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Compare the plan-based approach for greenfield projects
-- **[Custom Agents & Skills](/tutorials/custom-agents-and-skills)** — Create skills the agent can invoke via `run_skill`
-- **[API Server & Dashboard](/tutorials/api-server-and-dashboard)** — Use the auto endpoint programmatically
-- **[Architecture Overview](/architecture/overview)** — Understand the AgentLoop and ToolExecutor internals
-- **[CLI Reference](/usage/cli)** — Full command reference for `dojops auto`
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)**, Compare the plan-based approach for greenfield projects
+- **[Custom Agents & Skills](/tutorials/custom-agents-and-skills)**, Create skills the agent can invoke via `run_skill`
+- **[API Server & Dashboard](/tutorials/api-server-and-dashboard)**, Use the auto endpoint programmatically
+- **[Architecture Overview](/architecture/overview)**, Understand the AgentLoop and ToolExecutor internals
+- **[CLI Reference](/usage/cli)**, Full command reference for `dojops auto`

@@ -50,13 +50,13 @@ Complete reference for the `dojops` command-line interface.
 
 ### Autonomous Agent
 
-| Command                          | Description                                                     |
-| -------------------------------- | --------------------------------------------------------------- |
-| `dojops auto <prompt>`           | Autonomous agent mode — iterative tool-use loop (ReAct pattern) |
-| `dojops auto --max-iterations=N` | Set max loop iterations (default: 20)                           |
-| `dojops auto --allow-all-paths`  | Bypass DevOps file write allowlist                              |
+| Command                          | Description                                                    |
+| -------------------------------- | -------------------------------------------------------------- |
+| `dojops auto <prompt>`           | Autonomous agent mode, iterative tool-use loop (ReAct pattern) |
+| `dojops auto --max-iterations=N` | Set max loop iterations (default: 20)                          |
+| `dojops auto --allow-all-paths`  | Bypass DevOps file write allowlist                             |
 
-The autonomous agent reads files, makes targeted changes, runs commands, and verifies — all iteratively. It uses 7 tools: `read_file`, `write_file`, `edit_file`, `run_command`, `run_skill`, `search_files`, and `done`.
+The autonomous agent reads files, makes targeted changes, runs commands, and verifies, all iteratively. It uses 7 tools: `read_file`, `write_file`, `edit_file`, `run_command`, `run_skill`, `search_files`, and `done`.
 
 ### Interactive
 
@@ -90,7 +90,7 @@ Chat supports slash commands: `/exit`, `/agent <name>`, `/plan <goal>`, `/apply`
 | `dojops skills install <name>`    | Install a .dops skill from the DojOps Hub                 |
 | `dojops skills search <query>`    | Search the DojOps Hub for skills                          |
 | `dojops skills dev <path.dops>`   | Validate a .dops file with live feedback                  |
-| `dojops skills dev --watch`       | Watch mode — re-validate on file changes                  |
+| `dojops skills dev --watch`       | Watch mode, re-validate on file changes                   |
 | `dojops toolchain list`           | List system toolchain binaries with install status        |
 | `dojops toolchain install <name>` | Download binary into toolchain (~/.dojops/toolchain/)     |
 | `dojops toolchain remove <name>`  | Remove a toolchain binary                                 |
@@ -215,7 +215,7 @@ Chat supports slash commands: `/exit`, `/agent <name>`, `/plan <goal>`, `/apply`
 
 ## Lifecycle Hooks
 
-DojOps supports lifecycle hooks — shell commands that run at specific events during CLI operations. Configure hooks in `.dojops/hooks.json`:
+DojOps supports lifecycle hooks, shell commands that run at specific events during CLI operations. Configure hooks in `.dojops/hooks.json`:
 
 ```json
 {
@@ -458,7 +458,7 @@ dojops skills install my-skill
 dojops skills install my-skill --version 1.0.0 --global
 ```
 
-The CLI sends the token as a `Bearer` header. Tokens can be managed (created, viewed, revoked) from the Hub Settings page at `/settings/tokens`. See [DevOps Skills — Hub Integration](/components/skills#hub-integration) for the full publish/install flow.
+The CLI sends the token as a `Bearer` header. Tokens can be managed (created, viewed, revoked) from the Hub Settings page at `/settings/tokens`. See [DevOps Skills, Hub Integration](/components/skills#hub-integration) for the full publish/install flow.
 
 ### Provider Management
 

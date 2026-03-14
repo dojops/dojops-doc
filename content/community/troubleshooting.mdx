@@ -79,7 +79,7 @@ export OLLAMA_HOST=https://ollama.corp.internal:8443
 export OLLAMA_TLS_REJECT_UNAUTHORIZED=false
 ```
 
-Run `dojops status` to verify connectivity — it will show the resolved Ollama URL.
+Run `dojops status` to verify connectivity, it will show the resolved Ollama URL.
 
 ### GitHub Copilot Authentication Issues
 
@@ -104,7 +104,7 @@ Run `dojops status` to verify connectivity — it will show the resolved Ollama 
 
 **Solution:**
 
-- This is expected — Copilot JWTs are short-lived (~30 min). DojOps auto-refreshes them before each API call using your long-lived GitHub OAuth token
+- This is expected, Copilot JWTs are short-lived (~30 min). DojOps auto-refreshes them before each API call using your long-lived GitHub OAuth token
 - If auto-refresh fails, your GitHub OAuth token may have been revoked. Re-authenticate:
   ```bash
   dojops auth logout --provider github-copilot
@@ -189,7 +189,7 @@ wget -O hadolint https://github.com/hadolint/hadolint/releases/latest/download/h
 pip install pip-audit
 ```
 
-DojOps gracefully skips unavailable scanners — they're not required for basic functionality.
+DojOps gracefully skips unavailable scanners, they're not required for basic functionality.
 
 ### Scanner Timeout
 

@@ -763,13 +763,13 @@ All authenticated endpoints accept both methods. The Bearer token is checked fir
 1. Sign in to the Hub with GitHub OAuth
 2. Go to **Settings → API Tokens** (`/settings/tokens`)
 3. Create a named token with an expiration (1 month, 3 months, or no expiration)
-4. Copy the raw token — it's shown **once** and stored as a SHA-256 hash
+4. Copy the raw token, it's shown **once** and stored as a SHA-256 hash
 
 Token format: `dojops_` followed by 40 hex characters. Maximum 10 tokens per user.
 
 ### Token Management Endpoints
 
-Token CRUD endpoints require session authentication only (not Bearer) — a leaked token cannot create or list other tokens.
+Token CRUD endpoints require session authentication only (not Bearer), a leaked token cannot create or list other tokens.
 
 #### `GET /api/tokens`
 
@@ -862,7 +862,7 @@ curl -X POST https://hub.dojops.ai/api/packages \
   -F "changelog=Initial release"
 ```
 
-**Response (201 — new package):**
+**Response (201, new package):**
 
 ```json
 {
@@ -872,7 +872,7 @@ curl -X POST https://hub.dojops.ai/api/packages \
 }
 ```
 
-**Response (200 — new version of existing package):**
+**Response (200, new version of existing package):**
 
 ```json
 {

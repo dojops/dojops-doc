@@ -58,7 +58,7 @@ DojOps Doctor
 
 ## Step 2: Clone the Example Project
 
-We'll use a simple Next.js portfolio site designed as a tutorial example — it has a basic CI workflow and Dockerfile with intentional gaps for DojOps to find and fix:
+We'll use a simple Next.js portfolio site designed as a tutorial example, it has a basic CI workflow and Dockerfile with intentional gaps for DojOps to find and fix:
 
 ```bash
 git clone https://github.com/dojops/example-nextjs.git
@@ -173,7 +173,7 @@ Missing files:
   renovate.json or dependabot.yml
 ```
 
-The score tells you where you stand. The findings give you specific, actionable improvements — exactly what we'll address next.
+The score tells you where you stand. The findings give you specific, actionable improvements, exactly what we'll address next.
 
 ---
 
@@ -187,10 +187,10 @@ dojops "Enhance the GitHub Actions CI workflow with dependency caching, security
 
 DojOps routes this to the `github-actions-specialist` agent, reads your existing `.github/workflows/ci.yml`, and generates an enhanced version. Because DojOps detected the existing file during `init`, it preserves your current steps and adds improvements:
 
-- **Dependency caching** — `actions/cache` for `node_modules` and `.next/cache`
-- **Security scanning** — npm audit step
-- **Docker build** — Multi-stage build verification
-- **Matrix testing** — Node.js 20 and 22
+- **Dependency caching**, `actions/cache` for `node_modules` and `.next/cache`
+- **Security scanning**, npm audit step
+- **Docker build**, Multi-stage build verification
+- **Matrix testing**, Node.js 20 and 22
 
 A `.bak` backup of your original workflow is created automatically before any changes are written.
 
@@ -206,11 +206,11 @@ dojops "Enhance the Dockerfile with pinned base image versions, security hardeni
 
 DojOps routes this to the `dockerfile-specialist` and generates improvements such as:
 
-- **Pinned versions** — Specific Node.js and nginx image tags instead of `latest`
-- **Non-root user** — Running the final stage as a non-root user
-- **Layer caching** — Optimized `COPY` order for better Docker layer caching
-- **Health check** — `HEALTHCHECK` directive for container orchestration
-- **Security labels** — OCI image labels for traceability
+- **Pinned versions**, Specific Node.js and nginx image tags instead of `latest`
+- **Non-root user**, Running the final stage as a non-root user
+- **Layer caching**, Optimized `COPY` order for better Docker layer caching
+- **Health check**, `HEALTHCHECK` directive for container orchestration
+- **Security labels**, OCI image labels for traceability
 
 Again, a `.bak` backup is created before overwriting.
 
@@ -228,7 +228,7 @@ In this tutorial, you:
 
 ### Next Steps
 
-- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Build a full pipeline from zero using `plan` and `apply`
-- **[Security Audit & Remediation](/tutorials/security-audit)** — Run security scans with auto-fix
-- **[CLI Reference](/usage/cli)** — Full command documentation
-- **[DevOps Skills](/components/skills)** — All 13 built-in skills and the custom skill system
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)**, Build a full pipeline from zero using `plan` and `apply`
+- **[Security Audit & Remediation](/tutorials/security-audit)**, Run security scans with auto-fix
+- **[CLI Reference](/usage/cli)**, Full command documentation
+- **[DevOps Skills](/components/skills)**, All 13 built-in skills and the custom skill system

@@ -91,10 +91,10 @@ pnpm dojops -- serve --port=8080
 
 ## Code Style
 
-- **TypeScript** — ES2022, CommonJS modules
-- **ESLint** — Enforced across all packages
-- **Prettier** — Auto-formatting
-- **Husky + lint-staged** — Pre-commit hooks run linting and formatting
+- **TypeScript**, ES2022, CommonJS modules
+- **ESLint**, Enforced across all packages
+- **Prettier**, Auto-formatting
+- **Husky + lint-staged**, Pre-commit hooks run linting and formatting
 
 Key conventions:
 
@@ -205,17 +205,17 @@ All 13 built-in skills are `.dops` files in `packages/runtime/skills/`. To add a
    my-tool, my-domain
    ```
 
-2. **Register the skill** in `packages/runtime/src/built-in-skills.ts` — add the filename to the skill list.
+2. **Register the skill** in `packages/runtime/src/built-in-skills.ts`, add the filename to the skill list.
 
-3. **Add a specialist agent keyword** (if needed) in `packages/core/src/agents/specialists.ts` — add your tool's keywords so the `AgentRouter` can route prompts to it.
+3. **Add a specialist agent keyword** (if needed) in `packages/core/src/agents/specialists.ts`, add your tool's keywords so the `AgentRouter` can route prompts to it.
 
-4. **Write tests:** Create `packages/runtime/src/__tests__/skills/my-tool.test.ts` with mocked LLM provider — test prompt compilation, update mode, and verification.
+4. **Write tests:** Create `packages/runtime/src/__tests__/skills/my-tool.test.ts` with mocked LLM provider, test prompt compilation, update mode, and verification.
 
 ---
 
 ## Creating a Custom Skill
 
-For skills that don't need to be built into the core, use the custom skill system instead. Custom skills are declarative — no TypeScript code required.
+For skills that don't need to be built into the core, use the custom skill system instead. Custom skills are declarative, no TypeScript code required.
 
 ### Step-by-Step
 
@@ -225,9 +225,9 @@ For skills that don't need to be built into the core, use the custom skill syste
    dojops skills init my-tool
    ```
 
-   This creates `.dojops/skills/my-tool.dops` — a single `.dops` file combining YAML frontmatter with markdown prompt sections.
+   This creates `.dojops/skills/my-tool.dops`, a single `.dops` file combining YAML frontmatter with markdown prompt sections.
 
-2. **Edit** the `.dops` file — customize the prompt, input fields, output format, file specs, and permissions.
+2. **Edit** the `.dops` file, customize the prompt, input fields, output format, file specs, and permissions.
 
 3. **Validate** the skill:
 
@@ -241,7 +241,7 @@ For skills that don't need to be built into the core, use the custom skill syste
    dojops "Generate my-tool config for production"
    ```
 
-Custom skills are automatically discovered and available to the Planner, Executor, and API. See [DevOps Skills — Custom Skill System](/components/skills#custom-skill-system) for the full `.dops` format.
+Custom skills are automatically discovered and available to the Planner, Executor, and API. See [DevOps Skills, Custom Skill System](/components/skills#custom-skill-system) for the full `.dops` format.
 
 ---
 
@@ -263,7 +263,7 @@ dojops agents create --manual
 
 Custom agents are stored as structured `README.md` files in `.dojops/agents/<name>/` (project) or `~/.dojops/agents/<name>/` (global). They participate in the same keyword-based routing as built-in agents and can override built-in agents by name.
 
-See [Specialist Agents — Custom Agents](/components/agents#custom-agents) for the full README.md format and discovery rules.
+See [Specialist Agents, Custom Agents](/components/agents#custom-agents) for the full README.md format and discovery rules.
 
 ### Option 2: Built-in Agent (For Core Contributions)
 

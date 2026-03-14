@@ -1,6 +1,6 @@
 # Security Model
 
-DojOps implements defense-in-depth with seven layers between LLM output and infrastructure changes. No LLM output is trusted — every response crosses a trust boundary and is validated at every subsequent layer.
+DojOps implements defense-in-depth with seven layers between LLM output and infrastructure changes. No LLM output is trusted, every response crosses a trust boundary and is validated at every subsequent layer.
 
 ---
 
@@ -68,9 +68,9 @@ This prevents free-text responses and ensures the LLM produces parseable JSON.
 
 All LLM responses pass through `parseAndValidate()`:
 
-1. **Markdown stripping** — Removes code fences that LLMs sometimes add
-2. **JSON parsing** — `JSON.parse()` with error handling
-3. **Zod validation** — `safeParse()` against the expected schema
+1. **Markdown stripping**, Removes code fences that LLMs sometimes add
+2. **JSON parsing**, `JSON.parse()` with error handling
+3. **Zod validation**, `safeParse()` against the expected schema
 
 If validation fails, the response is rejected before any execution occurs. This applies to:
 
@@ -110,22 +110,22 @@ Path traversal (`..`) in scope patterns is rejected at parse time by the Zod sch
 
 `ExecutionPolicy` provides fine-grained control:
 
-- **Write permissions** — `allowWrite` must be `true` for any file operations
-- **DevOps write allowlist** — When no explicit `allowedPaths` are set, only DevOps files (CI configs, Dockerfiles, Terraform, Kubernetes manifests, etc.) can be written. This prevents LLM-generated code from mutating application source files. Bypass with `--allow-all-paths`
-- **Path allowlists** — `allowedPaths` restricts where files can be written (takes precedence over DevOps allowlist)
-- **Path denylists** — `deniedPaths` blocks specific paths (takes precedence over everything)
-- **Environment isolation** — `allowEnvVars` declares allowed environment variables (advisory — not enforced at runtime; use `filterEnvVars(policy)` to apply manually)
-- **Network access** — `allowNetwork` declares network permission intent (advisory — not enforced at runtime; reserved for future OS-level sandboxing)
-- **Timeouts** — `timeoutMs` prevents runaway operations
-- **Size limits** — `maxFileSize` prevents oversized file writes
+- **Write permissions**, `allowWrite` must be `true` for any file operations
+- **DevOps write allowlist**, When no explicit `allowedPaths` are set, only DevOps files (CI configs, Dockerfiles, Terraform, Kubernetes manifests, etc.) can be written. This prevents LLM-generated code from mutating application source files. Bypass with `--allow-all-paths`
+- **Path allowlists**, `allowedPaths` restricts where files can be written (takes precedence over DevOps allowlist)
+- **Path denylists**, `deniedPaths` blocks specific paths (takes precedence over everything)
+- **Environment isolation**, `allowEnvVars` declares allowed environment variables (advisory, not enforced at runtime; use `filterEnvVars(policy)` to apply manually)
+- **Network access**, `allowNetwork` declares network permission intent (advisory, not enforced at runtime; reserved for future OS-level sandboxing)
+- **Timeouts**, `timeoutMs` prevents runaway operations
+- **Size limits**, `maxFileSize` prevents oversized file writes
 
 ### Layer 5: Approval Workflows
 
 Before any write operation, the `ApprovalHandler` is invoked:
 
-- **Interactive mode** — Shows a diff preview and prompts the user for confirmation
-- **Auto-approve** — For `--yes` flag and automated pipelines
-- **Auto-deny** — For `--dry-run` and testing
+- **Interactive mode**, Shows a diff preview and prompts the user for confirmation
+- **Auto-approve**, For `--yes` flag and automated pipelines
+- **Auto-deny**, For `--dry-run` and testing
 
 The approval context includes file paths, content preview, and tool name.
 
@@ -135,7 +135,7 @@ The approval context includes file paths, content preview, and tool name.
 
 - Path validation against the execution policy (`checkWriteAllowed`)
 - File size validation before writes (`checkFileSize`)
-- Atomic write operations (temp-file + `fs.renameSync` — POSIX atomic rename prevents partial writes on crash)
+- Atomic write operations (temp-file + `fs.renameSync`, POSIX atomic rename prevents partial writes on crash)
 - Read-path validation against denied paths (with symlink resolution)
 
 `SafeExecutor` also performs pre-execution path checks on declared output files and post-hoc validation on actually written files. Per-file audit logging (files written/modified, timestamps, duration) is recorded in execution audit entries.
@@ -146,11 +146,11 @@ All 13 built-in skills and custom skills also use `atomicWriteFileSync()` from `
 
 Every operation produces a hash-chained audit entry:
 
-- **Append-only** — Entries are appended to `.dojops/history/audit.jsonl` (JSONL format, SIEM-compatible)
-- **Hash chain** — Each entry's hash includes the previous entry's hash (SHA-256)
-- **Tamper detection** — `dojops history verify` recomputes all hashes and detects any modifications
-- **Structured entries** — Each entry includes seq, timestamp, command, tool, status, verification result
-- **Random entry IDs** — `HistoryStore` uses `crypto.randomUUID()`-based 12-char hex IDs instead of sequential counters, preventing ID prediction and reuse on restart
+- **Append-only**, Entries are appended to `.dojops/history/audit.jsonl` (JSONL format, SIEM-compatible)
+- **Hash chain**, Each entry's hash includes the previous entry's hash (SHA-256)
+- **Tamper detection**, `dojops history verify` recomputes all hashes and detects any modifications
+- **Structured entries**, Each entry includes seq, timestamp, command, tool, status, verification result
+- **Random entry IDs**, `HistoryStore` uses `crypto.randomUUID()`-based 12-char hex IDs instead of sequential counters, preventing ID prediction and reuse on restart
 
 ---
 
@@ -158,13 +158,13 @@ Every operation produces a hash-chained audit entry:
 
 The REST API supports optional API key authentication:
 
-- **Key generation** — `dojops serve credentials` generates a `crypto.randomBytes(32)` base64url key and saves it to `~/.dojops/server.json` (mode `0o600`)
-- **Key loading** — Server loads key from `DOJOPS_API_KEY` env var or `~/.dojops/server.json` at startup
-- **Timing-safe comparison** — All key comparisons use `crypto.timingSafeEqual` to prevent timing attacks
-- **Dual header support** — Accepts `Authorization: Bearer <key>` or `X-API-Key: <key>`
-- **Health endpoint info-leak prevention** — Unauthenticated callers to `/api/health` receive only `{ status, authRequired, timestamp }`; full diagnostic payload (provider, tools, memory, uptime) requires authentication
-- **autoApprove guard** — The `POST /api/plan` endpoint's `autoApprove` flag requires server authentication to be configured (`403` if no server key exists), preventing blind auto-approval via unauthenticated API calls
-- **Dashboard login flow** — The web dashboard stores the API key in `sessionStorage`, injects `X-API-Key` headers on all API calls, and shows a login overlay on 401/403 responses
+- **Key generation**, `dojops serve credentials` generates a `crypto.randomBytes(32)` base64url key and saves it to `~/.dojops/server.json` (mode `0o600`)
+- **Key loading**, Server loads key from `DOJOPS_API_KEY` env var or `~/.dojops/server.json` at startup
+- **Timing-safe comparison**, All key comparisons use `crypto.timingSafeEqual` to prevent timing attacks
+- **Dual header support**, Accepts `Authorization: Bearer <key>` or `X-API-Key: <key>`
+- **Health endpoint info-leak prevention**, Unauthenticated callers to `/api/health` receive only `{ status, authRequired, timestamp }`; full diagnostic payload (provider, tools, memory, uptime) requires authentication
+- **autoApprove guard**, The `POST /api/plan` endpoint's `autoApprove` flag requires server authentication to be configured (`403` if no server key exists), preventing blind auto-approval via unauthenticated API calls
+- **Dashboard login flow**, The web dashboard stores the API key in `sessionStorage`, injects `X-API-Key` headers on all API calls, and shows a login overlay on 401/403 responses
 
 ---
 
@@ -172,13 +172,13 @@ The REST API supports optional API key authentication:
 
 Several API-layer input validation measures prevent abuse:
 
-- **Session ID format** — Chat session IDs are validated against `/^chat-[a-f0-9]{8,16}$/` with a `.max(64)` Zod constraint to prevent log injection and resource abuse
-- **Log injection prevention** — Session IDs in log output are sanitized (strip `\r\n\t`, cap at 64 chars) to prevent log forging
-- **Session hydration validation** — When loading sessions from disk at startup, each session's `id` is validated against `isValidSessionId()` to prevent corrupted data from entering memory
-- **parseInt NaN guards** — History route query parameters (`limit`, `offset`) use `Number.isFinite()` guards to prevent `NaN` propagation from malformed input
-- **Scan timeout** — Scan operations are wrapped in `Promise.race` with a configurable timeout (`DOJOPS_SCAN_TIMEOUT_MS`, default 120s) to prevent unbounded execution
-- **MetricsAggregator bounds** — File reads skip files >10MB, audit entries are capped at the last 10,000 lines, and `topIssues` is capped at 100 entries to prevent memory exhaustion
-- **Atomic session persistence** — Chat session writes use atomic file operations (write `.tmp` then `fs.renameSync`) to prevent partial writes on crash
+- **Session ID format**, Chat session IDs are validated against `/^chat-[a-f0-9]{8,16}$/` with a `.max(64)` Zod constraint to prevent log injection and resource abuse
+- **Log injection prevention**, Session IDs in log output are sanitized (strip `\r\n\t`, cap at 64 chars) to prevent log forging
+- **Session hydration validation**, When loading sessions from disk at startup, each session's `id` is validated against `isValidSessionId()` to prevent corrupted data from entering memory
+- **parseInt NaN guards**, History route query parameters (`limit`, `offset`) use `Number.isFinite()` guards to prevent `NaN` propagation from malformed input
+- **Scan timeout**, Scan operations are wrapped in `Promise.race` with a configurable timeout (`DOJOPS_SCAN_TIMEOUT_MS`, default 120s) to prevent unbounded execution
+- **MetricsAggregator bounds**, File reads skip files >10MB, audit entries are capped at the last 10,000 lines, and `topIssues` is capped at 100 entries to prevent memory exhaustion
+- **Atomic session persistence**, Chat session writes use atomic file operations (write `.tmp` then `fs.renameSync`) to prevent partial writes on crash
 
 ---
 
@@ -200,10 +200,10 @@ LLM output is treated as untrusted external input. The trust boundary is at the 
 
 PID-based execution locking prevents concurrent mutations:
 
-- **Lock file** — `.dojops/lock.json` containing `{ pid, command, timestamp }`
-- **Mutual exclusion** — Only one `apply`, `destroy`, or `rollback` operation at a time
-- **Stale lock cleanup** — If the locking PID is dead, the lock is automatically removed
-- **Exit code 4** — Returned when a lock conflict is detected
+- **Lock file**, `.dojops/lock.json` containing `{ pid, command, timestamp }`
+- **Mutual exclusion**, Only one `apply`, `destroy`, or `rollback` operation at a time
+- **Stale lock cleanup**, If the locking PID is dead, the lock is automatically removed
+- **Exit code 4**, Returned when a lock conflict is detected
 
 ---
 
@@ -251,7 +251,7 @@ This ensures custom skills cannot execute shell commands unless they explicitly 
 
 ### Path Traversal Prevention
 
-File paths in `files[].path` and `detector.path` are validated at schema level — any segment containing `..` is rejected. This prevents custom skills from writing to or detecting files outside the project directory (e.g., `../../etc/passwd`).
+File paths in `files[].path` and `detector.path` are validated at schema level, any segment containing `..` is rejected. This prevents custom skills from writing to or detecting files outside the project directory (e.g., `../../etc/passwd`).
 
 ### Skill Hash Integrity
 
@@ -273,9 +273,9 @@ If any check fails, replay is aborted unless `--force` overrides the check. The 
 
 Plans are automatically classified into risk levels based on tool types and keyword analysis:
 
-- **LOW** — CI/CD and monitoring tools (GitHub Actions, GitLab CI, Makefile, Prometheus)
-- **MEDIUM** — Infrastructure tools (Terraform, Dockerfile, Kubernetes, Helm, Docker Compose, Ansible, Nginx, Systemd)
-- **HIGH** — Any task mentioning IAM, security groups, production, secrets, credentials, RBAC, roles, or permissions
+- **LOW**, CI/CD and monitoring tools (GitHub Actions, GitLab CI, Makefile, Prometheus)
+- **MEDIUM**, Infrastructure tools (Terraform, Dockerfile, Kubernetes, Helm, Docker Compose, Ansible, Nginx, Systemd)
+- **HIGH**, Any task mentioning IAM, security groups, production, secrets, credentials, RBAC, roles, or permissions
 
 HIGH risk plans require explicit confirmation even with `--yes` (unless `--force` is also set), adding a safety gate before potentially dangerous operations.
 
@@ -289,7 +289,7 @@ risk:
   rationale: "Infrastructure changes may affect cloud resources"
 ```
 
-This metadata is exposed via `DopsRuntime.metadata.riskLevel` and can be consumed by planners and approval workflows. The declared risk level complements the CLI's keyword-based classifier — the CLI classifies plans, while `.dops` skills classify individual tools. When both are present, the higher risk level takes precedence.
+This metadata is exposed via `DopsRuntime.metadata.riskLevel` and can be consumed by planners and approval workflows. The declared risk level complements the CLI's keyword-based classifier, the CLI classifies plans, while `.dops` skills classify individual tools. When both are present, the higher risk level takes precedence.
 
 ---
 
@@ -303,9 +303,9 @@ Before execution, `apply` displays informational warnings for stateful tools (Te
 
 Plans capture an execution context snapshot at creation time:
 
-- **DojOps version** — Detects version mismatches between plan creation and execution
-- **Policy hash** — SHA-256 of the execution policy, detecting policy changes
-- **Tool versions** — Per-tool version metadata for reproducibility
+- **DojOps version**, Detects version mismatches between plan creation and execution
+- **Policy hash**, SHA-256 of the execution policy, detecting policy changes
+- **Tool versions**, Per-tool version metadata for reproducibility
 
 In `--replay` mode, version mismatches are blocking errors. In normal `apply` mode, mismatches produce informational warnings.
 
@@ -315,10 +315,10 @@ In `--replay` mode, version mismatches are blocking errors. In normal `apply` mo
 
 DojOps stores API tokens encrypted at rest using AES-256-GCM:
 
-- **Key derivation** — User passphrase → scrypt (N=2^14, r=8, p=1) → 256-bit key
-- **Encryption** — Random 16-byte IV, AES-256-GCM with 16-byte auth tag
-- **Storage** — Encrypted tokens in `~/.dojops/vault.json` (mode `0o600`)
-- **Environment variable** — `DOJOPS_VAULT_KEY` for CI/CD and non-interactive use
+- **Key derivation**, User passphrase → scrypt (N=2^14, r=8, p=1) → 256-bit key
+- **Encryption**, Random 16-byte IV, AES-256-GCM with 16-byte auth tag
+- **Storage**, Encrypted tokens in `~/.dojops/vault.json` (mode `0o600`)
+- **Environment variable**, `DOJOPS_VAULT_KEY` for CI/CD and non-interactive use
 
 This eliminates plaintext API token storage, which is a common credential exposure vector.
 
@@ -332,4 +332,4 @@ This eliminates plaintext API token storage, which is a common credential exposu
 4. **Use `--dry-run`** to preview changes before applying
 5. **Restrict `allowedPaths`** in execution policies to limit blast radius
 6. **Run `dojops scan`** after applying changes to check for introduced vulnerabilities
-7. **Enable the encrypted vault** for API token storage — avoid plaintext tokens in config files
+7. **Enable the encrypted vault** for API token storage, avoid plaintext tokens in config files

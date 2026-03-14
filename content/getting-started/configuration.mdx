@@ -19,7 +19,7 @@ DojOps supports 6 LLM providers with flexible configuration via CLI flags, envir
 
 ## Provider Management
 
-DojOps includes a dedicated `provider` command for managing LLM providers — adding, removing, switching, and listing them.
+DojOps includes a dedicated `provider` command for managing LLM providers, adding, removing, switching, and listing them.
 
 ### Adding Providers
 
@@ -37,10 +37,10 @@ dojops provider add ollama
 ### Switching Providers
 
 ```bash
-# Interactive picker — shows only configured providers
+# Interactive picker - shows only configured providers
 dojops provider switch
 
-# Direct — set by name
+# Direct - set by name
 dojops provider default anthropic
 
 # Shortcut flag
@@ -163,12 +163,12 @@ dojops --model=deepseek-reasoner "Analyze this Terraform plan"
 
 When running `dojops config`, DojOps calls the provider's `listModels()` API to fetch available models:
 
-- **OpenAI** — Lists models from the OpenAI API
-- **Anthropic** — Lists supported Claude models
-- **Ollama** — Lists locally installed models
-- **DeepSeek** — Lists available DeepSeek models
-- **Gemini** — Lists available Gemini models
-- **GitHub Copilot** — Lists models available to your Copilot subscription tier
+- **OpenAI**, Lists models from the OpenAI API
+- **Anthropic**, Lists supported Claude models
+- **Ollama**, Lists locally installed models
+- **DeepSeek**, Lists available DeepSeek models
+- **Gemini**, Lists available Gemini models
+- **GitHub Copilot**, Lists models available to your Copilot subscription tier
 
 ---
 

@@ -89,7 +89,7 @@ Summary:
 Results saved to .dojops/scan-history/scan-<id>.json
 ```
 
-DojOps runs whichever of its 10 scanners are installed. Missing scanners are skipped with a note — you don't need all of them installed.
+DojOps runs whichever of its 10 scanners are installed. Missing scanners are skipped with a note, you don't need all of them installed.
 
 ---
 
@@ -164,15 +164,15 @@ DojOps sends the scan findings to your LLM provider and generates targeted fixes
 ```
 Auto-Remediation
 
-Finding: hadolint DL3008 — Pin versions in apt-get install
+Finding: hadolint DL3008 - Pin versions in apt-get install
   Fix: Updated Dockerfile apt-get line with pinned versions
   Apply? (y/n): y
 
-Finding: hadolint DL3018 — Pin versions in apk add
+Finding: hadolint DL3018 - Pin versions in apk add
   Fix: Updated Dockerfile apk add line with pinned versions
   Apply? (y/n): y
 
-Finding: npm-audit — moderate severity in dependency
+Finding: npm-audit - moderate severity in dependency
   Fix: Updated package.json with patched version
   Apply? (y/n): y
 
@@ -240,7 +240,7 @@ fix-001    fix     remediation   completed  2025-01-15 10:10
 scan-003   scan    multi-scan    completed  2025-01-15 10:15
 ```
 
-The audit trail provides a tamper-evident record of every scan, fix, and operation — useful for compliance and incident response.
+The audit trail provides a tamper-evident record of every scan, fix, and operation, useful for compliance and incident response.
 
 ---
 
@@ -257,7 +257,7 @@ In this tutorial, you:
 
 ### Next Steps
 
-- **[Enhance a Next.js Project](/tutorials/enhance-nextjs-project)** — Improve DevOps configs with AI
-- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Build a full pipeline using plan and apply
-- **[Security Scanning](/components/security-scanning)** — Deep dive into all 10 scanners
-- **[Execution Engine](/components/execution-engine)** — Policies, sandboxing, and audit trails
+- **[Enhance a Next.js Project](/tutorials/enhance-nextjs-project)**, Improve DevOps configs with AI
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)**, Build a full pipeline using plan and apply
+- **[Security Scanning](/components/security-scanning)**, Deep dive into all 10 scanners
+- **[Execution Engine](/components/execution-engine)**, Policies, sandboxing, and audit trails

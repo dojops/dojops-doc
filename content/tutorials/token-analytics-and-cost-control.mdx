@@ -102,7 +102,7 @@ Export usage data for dashboards or billing systems:
 dojops tokens --output json
 ```
 
-This outputs structured JSON with per-provider, per-command, and per-skill breakdowns — useful for feeding into cost monitoring tools.
+This outputs structured JSON with per-provider, per-command, and per-skill breakdowns, useful for feeding into cost monitoring tools.
 
 ---
 
@@ -128,15 +128,15 @@ Smart compression activates automatically in `debug-ci`, `scan --fix`, and verif
 dojops --debug-ci "$(cat ci-log-raw.txt)"
 
 # With compression (automatic): ~1,200 tokens sent to LLM
-# Same command — compression happens internally
+# Same command - compression happens internally
 ```
 
 The compression pipeline:
 
-1. **Strip ANSI** — Remove all color/formatting escape codes
-2. **Remove success lines** — Filter out lines matching pass/ok/success patterns
-3. **Deduplicate** — Collapse repeated lines into `(message) ×N` format
-4. **Truncate** — Keep the most relevant sections within token budget
+1. **Strip ANSI**, Remove all color/formatting escape codes
+2. **Remove success lines**, Filter out lines matching pass/ok/success patterns
+3. **Deduplicate**, Collapse repeated lines into `(message) ×N` format
+4. **Truncate**, Keep the most relevant sections within token budget
 
 ### Step 7: See Compression Stats
 
@@ -262,6 +262,6 @@ In this tutorial, you:
 
 ### Next Steps
 
-- **[Model Aliases & Thinking Levels](/tutorials/model-aliases-and-thinking)** — Optimize model selection per task
-- **[CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis)** — Deep dive into CI failure diagnosis
-- **[Security Audit & Remediation](/tutorials/security-audit)** — Full scanning walkthrough
+- **[Model Aliases & Thinking Levels](/tutorials/model-aliases-and-thinking)**, Optimize model selection per task
+- **[CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis)**, Deep dive into CI failure diagnosis
+- **[Security Audit & Remediation](/tutorials/security-audit)**, Full scanning walkthrough

@@ -56,7 +56,7 @@ abstract class BaseSkill<TInput> {
   // Zod validation of raw input
   validate(input: unknown): TInput;
 
-  // LLM generation — returns structured data
+  // LLM generation - returns structured data
   abstract generate(input: TInput): Promise<Result>;
 
   // Optional: write generated files to disk
@@ -83,7 +83,7 @@ Verification runs by default in CLI commands. Use `--skip-verify` to disable. Bu
 
 #### Auto-Install of Missing Binaries
 
-When a verification command requires an external binary that is not installed, DojOps automatically installs it into the sandboxed toolchain (`~/.dojops/toolchain/`) before running verification. This means you don't need to manually install `terraform`, `hadolint`, `actionlint`, or other verification tools — DojOps handles it transparently on first use.
+When a verification command requires an external binary that is not installed, DojOps automatically installs it into the sandboxed toolchain (`~/.dojops/toolchain/`) before running verification. This means you don't need to manually install `terraform`, `hadolint`, `actionlint`, or other verification tools, DojOps handles it transparently on first use.
 
 #### `{entryFile}` Placeholder
 
@@ -140,8 +140,8 @@ Backups are only created when updating existing files, not when creating new one
 
 All tool `execute()` methods return `filesWritten` and `filesModified` arrays in the `SkillOutput`:
 
-- `filesWritten` — All files written during execution (both new and updated)
-- `filesModified` — Files that existed before and were overwritten (have `.bak` backups)
+- `filesWritten`, All files written during execution (both new and updated)
+- `filesModified`, Files that existed before and were overwritten (have `.bak` backups)
 
 This metadata flows through the executor into audit entries and execution logs, enabling precise rollback (delete new files, restore `.bak` for modified files).
 
@@ -177,7 +177,7 @@ Generates GitHub Actions workflow files (`.github/workflows/ci.yml`).
 
 - **Serialization:** `js-yaml`
 - **Detector:** Finds existing workflow files in `.github/workflows/`
-- **Verifier:** Built-in structure lint — validates `on` trigger, `jobs` section, `runs-on` per job (skipped for reusable workflow jobs with `uses`), step `run`/`uses` presence. Optional binary verification via `actionlint` (skipped if not installed)
+- **Verifier:** Built-in structure lint, validates `on` trigger, `jobs` section, `runs-on` per job (skipped for reusable workflow jobs with `uses`), step `run`/`uses` presence. Optional binary verification via `actionlint` (skipped if not installed)
 - **Output:** Complete workflow YAML with jobs, steps, triggers
 
 ### Terraform
@@ -186,7 +186,7 @@ Generates Terraform HCL configurations.
 
 - **Serialization:** Custom HCL builder
 - **Detector:** Detects existing `.tf` files
-- **Verifier:** `terraform validate` — checks HCL syntax and provider requirements
+- **Verifier:** `terraform validate`, checks HCL syntax and provider requirements
 - **Output:** `main.tf` (resources), `variables.tf` (input variables)
 
 ### Kubernetes
@@ -194,7 +194,7 @@ Generates Terraform HCL configurations.
 Generates Kubernetes manifests (Deployments, Services, ConfigMaps, etc.).
 
 - **Serialization:** `js-yaml`
-- **Verifier:** `kubectl --dry-run=client` — validates manifest structure
+- **Verifier:** `kubectl --dry-run=client`, validates manifest structure
 - **Output:** YAML manifests
 
 ### Helm
@@ -225,7 +225,7 @@ Generates optimized Dockerfiles with multi-stage builds.
 
 - **Serialization:** Custom string builder
 - **Detector:** Checks for existing Dockerfile
-- **Verifier:** `hadolint` — lints Dockerfile for best practices
+- **Verifier:** `hadolint`, lints Dockerfile for best practices
 - **Output:** `Dockerfile`, `.dockerignore`
 
 ### Nginx
@@ -249,7 +249,7 @@ Generates GitLab CI pipeline configurations.
 
 - **Serialization:** `js-yaml`
 - **Detector:** Checks for existing `.gitlab-ci.yml`
-- **Verifier:** Built-in structure lint — validates `stages` is an array, jobs have `script` (or `trigger`/`extends`), stage references are declared, hidden jobs (`.prefix`) are skipped. Optional binary verification via `yamllint -d relaxed` (skipped if not installed)
+- **Verifier:** Built-in structure lint, validates `stages` is an array, jobs have `script` (or `trigger`/`extends`), stage references are declared, hidden jobs (`.prefix`) are skipped. Optional binary verification via `yamllint -d relaxed` (skipped if not installed)
 - **Output:** `.gitlab-ci.yml`
 
 ### Prometheus
@@ -276,7 +276,7 @@ To add a new built-in skill, create a `.dops` file in `packages/runtime/skills/`
 
 ## DOPS Skill Format
 
-Built-in skills are defined as `.dops` skill files — a declarative format combining YAML frontmatter with markdown prompt sections. The `@dojops/runtime` package processes these skills through `DopsRuntime`.
+Built-in skills are defined as `.dops` skill files, a declarative format combining YAML frontmatter with markdown prompt sections. The `@dojops/runtime` package processes these skills through `DopsRuntime`.
 
 ### Frontmatter Sections
 
@@ -287,7 +287,7 @@ All sections are defined in YAML between `---` delimiters:
 | `meta`         | Yes      | Skill name, version, description, author, license, tags, repository    |
 | `context`      | Yes      | Technology context, output guidance, best practices, Context7 libs     |
 | `files`        | Yes      | Output file specs (path templates, format)                             |
-| `scope`        | No       | Write boundary — explicit list of allowed write paths                  |
+| `scope`        | No       | Write boundary, explicit list of allowed write paths                   |
 | `risk`         | No       | Skill risk self-classification (`LOW` / `MEDIUM` / `HIGH` + rationale) |
 | `execution`    | No       | Mutation semantics (mode, deterministic, idempotent flags)             |
 | `update`       | No       | Structured update behavior (strategy, inputSource, injectAs)           |
@@ -337,15 +337,15 @@ The `DocProvider` interface enables Context7 integration for v2 tools, fetching 
 
 Each entry in the `files` array defines an output file:
 
-| Field         | Type    | Default | Description                                                   |
-| ------------- | ------- | ------- | ------------------------------------------------------------- |
-| `path`        | string  | —       | Output path (supports `{var}` templates)                      |
-| `format`      | string  | `raw`   | Output format (always `raw` — LLM generates content directly) |
-| `conditional` | boolean | —       | Only write if LLM produces content for this file              |
+| Field         | Type    | Default | Description                                                  |
+| ------------- | ------- | ------- | ------------------------------------------------------------ |
+| `path`        | string  | ,       | Output path (supports `{var}` templates)                     |
+| `format`      | string  | `raw`   | Output format (always `raw`, LLM generates content directly) |
+| `conditional` | boolean | ,       | Only write if LLM produces content for this file             |
 
 The LLM generates raw file content directly, and `DopsRuntime` strips code fences via `stripCodeFences()` before writing.
 
-### Scope — Write Boundary Enforcement
+### Scope, Write Boundary Enforcement
 
 The `scope` section declares which files a skill is allowed to write. Paths use the same `{var}` template syntax as `files[].path`:
 
@@ -358,7 +358,7 @@ At execution time, resolved file paths are validated against the expanded scope 
 
 When `scope` is omitted, the skill can write to any path.
 
-### Risk — Skill Self-Classification
+### Risk, Skill Self-Classification
 
 Skills declare their own risk level:
 
@@ -376,7 +376,7 @@ risk:
 
 Default when not declared: `LOW` with rationale "No risk classification declared". The risk level is exposed via `DopsRuntime.metadata.riskLevel` for use by planners and approval workflows.
 
-### Execution — Mutation Semantics
+### Execution, Mutation Semantics
 
 ```yaml
 execution:
@@ -387,7 +387,7 @@ execution:
 
 All fields have defaults: `mode: "generate"`, `deterministic: false`, `idempotent: false`.
 
-### Update — Structured Update Behavior
+### Update, Structured Update Behavior
 
 ```yaml
 update:
@@ -402,8 +402,8 @@ When `strategy` is `preserve_structure`, the prompt compiler injects additional 
 
 After the closing `---` delimiter, markdown sections define prompts:
 
-- `## Prompt` (required) — Main generation prompt with `{var}` template substitution
-- `## Keywords` (required) — Comma-separated keywords for agent routing
+- `## Prompt` (required), Main generation prompt with `{var}` template substitution
+- `## Keywords` (required), Comma-separated keywords for agent routing
 
 ### Built-in Skill Risk Levels
 
@@ -426,7 +426,7 @@ After the closing `---` delimiter, markdown sections define prompts:
 
 ## Custom Skill System
 
-DojOps supports custom skills via the `@dojops/skill-registry` custom skill system. Custom skills are discovered automatically and behave exactly like built-in skills — they go through the same Planner, Executor, verification, and audit pipeline.
+DojOps supports custom skills via the `@dojops/skill-registry` custom skill system. Custom skills are discovered automatically and behave exactly like built-in skills, they go through the same Planner, Executor, verification, and audit pipeline.
 
 ### Custom Skill Discovery
 
@@ -435,7 +435,7 @@ Custom skills are discovered from two locations (in priority order):
 1. **Project skills:** `.dojops/skills/<name>.dops` (highest priority)
 2. **Global skills:** `~/.dojops/skills/<name>.dops`
 
-Custom skill discovery happens automatically on every command — no manual registration needed.
+Custom skill discovery happens automatically on every command, no manual registration needed.
 
 ### Custom Skill CLI Commands
 
@@ -465,17 +465,17 @@ dojops skills search k8s --output json
 
 ### Hub Integration
 
-The `publish` and `install` commands connect to the [DojOps Hub](https://hub.dojops.ai) — a skill marketplace where users share `.dops` skills.
+The `publish` and `install` commands connect to the [DojOps Hub](https://hub.dojops.ai), a skill marketplace where users share `.dops` skills.
 
 #### Authentication Setup
 
-Publishing skills to the Hub requires an API token. Tokens follow the GitHub PAT model — shown once at creation, stored as SHA-256 hashes.
+Publishing skills to the Hub requires an API token. Tokens follow the GitHub PAT model, shown once at creation, stored as SHA-256 hashes.
 
-**1. Sign in to the Hub** — Go to [hub.dojops.ai](https://hub.dojops.ai) and sign in with your GitHub account.
+**1. Sign in to the Hub**, Go to [hub.dojops.ai](https://hub.dojops.ai) and sign in with your GitHub account.
 
-**2. Generate a token** — Navigate to **Settings → API Tokens** (`/settings/tokens`), or click "Settings" in the navbar.
+**2. Generate a token**, Navigate to **Settings → API Tokens** (`/settings/tokens`), or click "Settings" in the navbar.
 
-**3. Create a named token** — Give your token a descriptive name (e.g. "My laptop", "CI/CD pipeline") and choose an expiration:
+**3. Create a named token**, Give your token a descriptive name (e.g. "My laptop", "CI/CD pipeline") and choose an expiration:
 
 | Expiration    | Duration | Use Case            |
 | ------------- | -------- | ------------------- |
@@ -483,7 +483,7 @@ Publishing skills to the Hub requires an API token. Tokens follow the GitHub PAT
 | 3 months      | 90 days  | Regular development |
 | No expiration | Never    | CI/CD pipelines     |
 
-**4. Copy the token** — The raw token (format: `dojops_` + 40 hex chars) is displayed **once**. Copy it immediately — you won't be able to see it again.
+**4. Copy the token**, The raw token (format: `dojops_` + 40 hex chars) is displayed **once**. Copy it immediately, you won't be able to see it again.
 
 **5. Set the environment variable:**
 
@@ -511,11 +511,11 @@ dojops skills publish my-skill
 
 **What happens during publish:**
 
-1. **Local validation** — The `.dops` file is parsed and validated against the .dops v2 spec (frontmatter, sections, Zod schemas)
-2. **SHA-256 hash** — The CLI computes a SHA-256 hash of the file as a **publisher attestation**
-3. **Upload** — The file and hash are sent to the Hub via `POST /api/packages` with `Authorization: Bearer <token>`
-4. **Server verification** — The Hub recomputes the hash and compares it against the client-provided hash. Mismatches are rejected
-5. **Storage** — The Hub stores the file and the publisher's hash for download integrity verification
+1. **Local validation**, The `.dops` file is parsed and validated against the .dops v2 spec (frontmatter, sections, Zod schemas)
+2. **SHA-256 hash**, The CLI computes a SHA-256 hash of the file as a **publisher attestation**
+3. **Upload**, The file and hash are sent to the Hub via `POST /api/packages` with `Authorization: Bearer <token>`
+4. **Server verification**, The Hub recomputes the hash and compares it against the client-provided hash. Mismatches are rejected
+5. **Storage**, The Hub stores the file and the publisher's hash for download integrity verification
 
 **Example output:**
 
@@ -531,7 +531,7 @@ dojops skills publish my-skill
 └
 ```
 
-**Publishing a new version** of an existing skill uses the same command — the Hub detects the existing package and adds the new version:
+**Publishing a new version** of an existing skill uses the same command, the Hub detects the existing package and adds the new version:
 
 ```bash
 # Update version in .dops frontmatter, then:
@@ -555,11 +555,11 @@ dojops skills install nginx-config --global
 
 **What happens during install:**
 
-1. **Fetch metadata** — The CLI queries `GET /api/packages/<slug>` to resolve the latest version (unless `--version` is specified)
-2. **Download** — The `.dops` file is downloaded from `GET /api/download/<slug>/<version>` with the publisher's SHA-256 hash in the `X-Checksum-Sha256` response header
-3. **Integrity check** — The CLI recomputes the SHA-256 hash locally and compares it against the publisher's hash. **Mismatches abort the install** with a tampering warning
-4. **Validation** — The downloaded file is parsed and validated as a `.dops` skill
-5. **Write** — The file is saved to `.dojops/skills/<name>.dops` (project) or `~/.dojops/skills/<name>.dops` (global)
+1. **Fetch metadata**, The CLI queries `GET /api/packages/<slug>` to resolve the latest version (unless `--version` is specified)
+2. **Download**, The `.dops` file is downloaded from `GET /api/download/<slug>/<version>` with the publisher's SHA-256 hash in the `X-Checksum-Sha256` response header
+3. **Integrity check**, The CLI recomputes the SHA-256 hash locally and compares it against the publisher's hash. **Mismatches abort the install** with a tampering warning
+4. **Validation**, The downloaded file is parsed and validated as a `.dops` skill
+5. **Write**, The file is saved to `.dojops/skills/<name>.dops` (project) or `~/.dojops/skills/<name>.dops` (global)
 
 **Example output:**
 
@@ -571,7 +571,7 @@ dojops skills install nginx-config --global
 │  Path:    .dojops/skills/nginx-config.dops
 │  Scope:   project
 │  SHA256:  f9e8d7c6b5a4...
-│  Verify:  OK — matches publisher hash
+│  Verify:  OK - matches publisher hash
 └
 ```
 
@@ -589,13 +589,13 @@ dojops skills install nginx-config --global
 | Variable           | Description                                                | Default                 |
 | ------------------ | ---------------------------------------------------------- | ----------------------- |
 | `DOJOPS_HUB_URL`   | Hub API base URL                                           | `https://hub.dojops.ai` |
-| `DOJOPS_HUB_TOKEN` | API token for publishing (generated at `/settings/tokens`) | —                       |
+| `DOJOPS_HUB_TOKEN` | API token for publishing (generated at `/settings/tokens`) | ,                       |
 
 #### Full Example: Creating and Publishing a Skill
 
-Here's a complete walkthrough — creating a `.dops` skill from scratch, publishing it to the Hub, and installing it.
+Here's a complete walkthrough, creating a `.dops` skill from scratch, publishing it to the Hub, and installing it.
 
-**1. Create the `.dops` file** — `docker-compose-generator.dops`:
+**1. Create the `.dops` file**, `docker-compose-generator.dops`:
 
 ```yaml
 ---
@@ -689,7 +689,7 @@ dojops skills install docker-compose-generator
 dojops "Generate a docker-compose for node-api, postgres, redis"
 ```
 
-**5. Publish a new version** — bump `meta.version` in the frontmatter and publish again:
+**5. Publish a new version**, bump `meta.version` in the frontmatter and publish again:
 
 ```bash
 # After updating version to 1.1.0 in the .dops file:
@@ -715,17 +715,17 @@ blockedSkills:
 
 Custom skills are sandboxed with the same guardrails as built-in skills, plus additional controls:
 
-- **Verification command whitelist** — Only 33 known DevOps binaries are allowed (terraform, kubectl, helm, ansible-lint, ansible-playbook, docker, hadolint, yamllint, jsonlint, shellcheck, tflint, kubeval, conftest, checkov, trivy, kube-score, polaris, nginx, promtool, systemd-analyze, make, actionlint, caddy, haproxy, nomad, podman, fluentd, opa, vault, circleci, npx, tsc, cfn-lint). Non-whitelisted commands are rejected at runtime
-- **Permission enforcement** — The `permissions.child_process` field must be `"required"` for verification commands to execute. Omitted or `"none"` means the command is silently skipped (default-safe)
-- **Path traversal prevention** — File paths in `files[].path` and `detector.path` cannot contain `..` segments, preventing writes outside the project directory
-- **Execution guardrails** — Custom skills execute through the same `SafeExecutor` pipeline as built-in skills, inheriting `maxFileSize` (1MB default), `timeoutMs` (30s default), DevOps write allowlist enforcement, and per-file audit logging
+- **Verification command whitelist**, Only 33 known DevOps binaries are allowed (terraform, kubectl, helm, ansible-lint, ansible-playbook, docker, hadolint, yamllint, jsonlint, shellcheck, tflint, kubeval, conftest, checkov, trivy, kube-score, polaris, nginx, promtool, systemd-analyze, make, actionlint, caddy, haproxy, nomad, podman, fluentd, opa, vault, circleci, npx, tsc, cfn-lint). Non-whitelisted commands are rejected at runtime
+- **Permission enforcement**, The `permissions.child_process` field must be `"required"` for verification commands to execute. Omitted or `"none"` means the command is silently skipped (default-safe)
+- **Path traversal prevention**, File paths in `files[].path` and `detector.path` cannot contain `..` segments, preventing writes outside the project directory
+- **Execution guardrails**, Custom skills execute through the same `SafeExecutor` pipeline as built-in skills, inheriting `maxFileSize` (1MB default), `timeoutMs` (30s default), DevOps write allowlist enforcement, and per-file audit logging
 
 ### Custom Skill Audit Trail
 
 Custom skill executions include additional audit metadata:
 
-- `toolType: "custom"` — distinguishes from built-in skills
-- `toolSource: "global" | "project"` — where the custom skill was discovered
-- `toolVersion` — version from the manifest
-- `toolHash` — SHA-256 hash of `.dops` file for integrity verification
-- `systemPromptHash` — SHA-256 hash of the custom skill's system prompt for reproducibility tracking
+- `toolType: "custom"`, distinguishes from built-in skills
+- `toolSource: "global" | "project"`, where the custom skill was discovered
+- `toolVersion`, version from the manifest
+- `toolHash`, SHA-256 hash of `.dops` file for integrity verification
+- `systemPromptHash`, SHA-256 hash of the custom skill's system prompt for reproducibility tracking

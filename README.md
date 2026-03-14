@@ -5,7 +5,7 @@
 <h1 align="center">DojOps Documentation</h1>
 
 <p align="center">
-  <strong>Official documentation for <a href="https://github.com/dojops/dojops">DojOps</a></strong> — the AI DevOps Automation Engine.
+  <strong>Official documentation for <a href="https://github.com/dojops/dojops">DojOps</a></strong>, the AI DevOps Automation Engine.
 </p>
 
 <p align="center">
@@ -67,7 +67,7 @@ Configured in `app/layout.tsx`:
 - **Sidebar**: Collapsible, first level expanded by default
 - **Footer**: MIT license + copyright
 - **Edit link**: "Edit this page on GitHub" pointing to this repo
-- **Metadata**: Title template `%s — DojOps Docs`, favicon
+- **Metadata**: Title template `%s, DojOps Docs`, favicon
 
 ## Development
 
@@ -121,11 +121,11 @@ Multi-stage build (node:20-slim): deps -> builder -> runner. Non-root user (`nex
 
 ## Related Repos
 
-| Repo                                                      | Description                                       |
-| --------------------------------------------------------- | ------------------------------------------------- |
-| [dojops/dojops](https://github.com/dojops/dojops)         | Main monorepo — CLI, API, all @dojops/\* packages |
-| [dojops/dojops.ai](https://github.com/dojops/dojops.ai)   | Marketing website                                 |
-| [dojops/dojops-hub](https://github.com/dojops/dojops-hub) | Tool marketplace                                  |
+| Repo                                                      | Description                                      |
+| --------------------------------------------------------- | ------------------------------------------------ |
+| [dojops/dojops](https://github.com/dojops/dojops)         | Main monorepo, CLI, API, all @dojops/\* packages |
+| [dojops/dojops.ai](https://github.com/dojops/dojops.ai)   | Marketing website                                |
+| [dojops/dojops-hub](https://github.com/dojops/dojops-hub) | Tool marketplace                                 |
 
 ## License
 

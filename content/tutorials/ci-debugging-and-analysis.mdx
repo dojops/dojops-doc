@@ -50,12 +50,12 @@ npm ERR! peer react@'^17.0.0' from react-beautiful-dnd@13.1.1"
 │
 │  CI Fix:
 │  Add to your workflow: npm ci --legacy-peer-deps
-│  (Not recommended long-term — migrate to @hello-pangea/dnd)
+│  (Not recommended long-term - migrate to @hello-pangea/dnd)
 │
 └  Diagnosis complete
 ```
 
-Works with any CI log — GitHub Actions, GitLab CI, Jenkins, CircleCI, etc:
+Works with any CI log, GitHub Actions, GitLab CI, Jenkins, CircleCI, etc:
 
 ```bash
 # TypeScript compilation failure
@@ -97,7 +97,7 @@ terraform plan -no-color | dojops analyze diff
 │    to public (0.0.0.0/0). This exposes port 443 to the entire internet.
 │
 │  Cost Impact:
-│  ↓ aws_instance.app destroyed — saves ~$30/month (t3.medium)
+│  ↓ aws_instance.app destroyed - saves ~$30/month (t3.medium)
 │
 │  Operational:
 │  ⚠ Instance destruction is irreversible. Ensure data is backed up.
@@ -126,7 +126,7 @@ dojops check
 │  Score: 72/100
 │
 │  Findings:
-│  ├  HIGH: Dockerfile uses latest tag — pin to specific version
+│  ├  HIGH: Dockerfile uses latest tag - pin to specific version
 │  ├  HIGH: No dependency caching in GitHub Actions workflow
 │  ├  MEDIUM: Missing health check in docker-compose.yml
 │  ├  MEDIUM: No artifact upload step in CI pipeline
@@ -171,16 +171,16 @@ dojops check --fix
 ```
 
 ```
-┌  DevOps Quality Check — Auto-Remediation
+┌  DevOps Quality Check - Auto-Remediation
 │
 │  Score: 72/100
 │
 │  Remediating HIGH findings...
 │
-│  ✓ Fixed: Dockerfile — pinned base image to node:20.11-slim
+│  ✓ Fixed: Dockerfile - pinned base image to node:20.11-slim
 │    Created backup: Dockerfile.bak
 │
-│  ✓ Fixed: .github/workflows/ci.yml — added dependency caching step
+│  ✓ Fixed: .github/workflows/ci.yml - added dependency caching step
 │    Created backup: .github/workflows/ci.yml.bak
 │
 │  Skipped: MEDIUM findings (use --fix with lower threshold for these)
@@ -267,7 +267,7 @@ dojops explain plan-a1b2c3d4
 
 ## What's Next?
 
-- [Security Audit & Remediation](/tutorials/security-audit) — Scanning, SBOM, and auto-fix
-- [Advanced Plan Execution](/tutorials/advanced-plan-execution) — Resume, retry, replay, and rollback
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a complete pipeline
-- [CLI Reference](/usage/cli) — Full command reference
+- [Security Audit & Remediation](/tutorials/security-audit), Scanning, SBOM, and auto-fix
+- [Advanced Plan Execution](/tutorials/advanced-plan-execution), Resume, retry, replay, and rollback
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch), Build a complete pipeline
+- [CLI Reference](/usage/cli), Full command reference
