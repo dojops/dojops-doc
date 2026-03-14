@@ -48,11 +48,24 @@ interface TaskGraph {
 interface TaskNode {
   id: string; // Unique task identifier (e.g. "1", "2")
   tool: string; // Tool name (e.g. "github-actions", "terraform")
+  agent?: string; // Specialist agent for domain context (e.g. "terraform-specialist")
   description: string; // Human-readable task description
   input: object; // Tool-specific input (validated by tool's inputSchema)
   deps: string[]; // Task IDs this task depends on
 }
 ```
+
+---
+
+## Agent Delegation
+
+The planner supports **agent-aware decomposition** — the LLM assigns a specialist agent to each task based on domain relevance. This enriches each task's LLM generation with the agent's domain expertise.
+
+1. **Decomposition** — Available specialist agents are listed in the system prompt. The LLM assigns the best-matching agent to each task via the optional `agent` field.
+2. **Context injection** — During execution, the assigned agent's system prompt is injected as domain context into the skill's LLM call.
+3. **Prompt prepending** — The agent's system prompt is prepended to the skill's compiled prompt, giving the LLM both domain expertise and skill-specific generation instructions.
+
+Agent assignment is optional and backward-compatible — tasks without a matching specialist omit the `agent` field and execute without additional domain context. Both built-in and custom agents participate in delegation.
 
 ---
 
