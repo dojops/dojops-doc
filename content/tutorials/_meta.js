@@ -12,4 +12,5 @@ export default {
   "token-analytics-and-cost-control": "Token Analytics & Cost Control",
   "config-management-advanced": "Advanced Config Management",
   "observability-and-learning": "Observability & Learning",
+  "autonomous-agent": "Autonomous Agent Mode",
 };
