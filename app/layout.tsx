@@ -7,13 +7,41 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://doc.dojops.ai"),
   title: {
     default: "DojOps Documentation",
-    template: "%s DojOps Docs",
+    template: "%s — DojOps Docs",
   },
   description:
-    "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI.",
+    "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI. Guides for 13 DevOps skills, 17 agents, and 6 LLM providers.",
   icons: "/dojops-favicon.png",
+  openGraph: {
+    title: "DojOps Documentation",
+    description:
+      "Guides, tutorials, and API reference for DojOps — the AI DevOps automation engine.",
+    url: "https://doc.dojops.ai",
+    siteName: "DojOps Docs",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/dojops-favicon.png",
+        width: 128,
+        height: 128,
+        alt: "DojOps Documentation",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "DojOps Documentation",
+    description:
+      "Guides, tutorials, and API reference for DojOps — the AI DevOps automation engine.",
+    images: ["/dojops-favicon.png"],
+  },
+  alternates: {
+    canonical: "https://doc.dojops.ai",
+  },
 };
 
 const banner = (
