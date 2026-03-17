@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://doc.dojops.ai"),
   title: {
     default: "DojOps Documentation",
-    template: "%s — DojOps Docs",
+    template: "%s DojOps Docs",
   },
   description:
     "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI. Guides for 13 DevOps skills, 17 agents, and 6 LLM providers.",
