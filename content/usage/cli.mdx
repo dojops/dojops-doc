@@ -8,26 +8,27 @@ Complete reference for the `dojops` command-line interface.
 
 ### Generation & Planning
 
-| Command                           | Description                                                 |
-| --------------------------------- | ----------------------------------------------------------- |
-| `dojops <prompt>`                 | Generate DevOps config (default command)                    |
-| `dojops generate <prompt>`        | Explicit generation (same as default)                       |
-| `dojops plan <prompt>`            | Decompose goal into dependency-aware task graph             |
-| `dojops plan --voice`             | Use voice input as plan prompt (requires whisper.cpp + sox) |
-| `dojops plan --execute <prompt>`  | Plan + execute with approval workflow                       |
-| `dojops apply [<plan-id>]`        | Execute a saved plan                                        |
-| `dojops apply --skip-verify`      | Skip external config verification (on by default)           |
-| `dojops apply --allow-all-paths`  | Bypass DevOps file write allowlist                          |
-| `dojops apply --resume`           | Resume a partially-failed plan                              |
-| `dojops apply --replay`           | Deterministic replay: temp=0, validate env match            |
-| `dojops apply --dry-run`          | Preview changes without writing files                       |
-| `dojops apply --force`            | Skip git dirty check, HIGH risk gate, and replay validation |
-| `dojops apply --task <id>`        | Run only a single task from the plan                        |
-| `dojops apply --timeout <sec>`    | Per-task timeout in seconds (default: 60)                   |
-| `dojops apply --install-packages` | Run package manager install after successful apply          |
-| `dojops apply --retry`            | Retry failed tasks when used with `--resume`                |
-| `dojops validate [<plan-id>]`     | Validate plan against schemas                               |
-| `dojops explain [<plan-id>]`      | LLM explains a plan in plain language                       |
+| Command                            | Description                                                 |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `dojops <prompt>`                  | Generate DevOps config (default command)                    |
+| `dojops generate <prompt>`         | Explicit generation (same as default)                       |
+| `dojops plan <prompt>`             | Decompose goal into dependency-aware task graph             |
+| `dojops plan --voice`              | Use voice input as plan prompt (requires whisper.cpp + sox) |
+| `dojops plan --execute <prompt>`   | Plan + execute with approval workflow                       |
+| `dojops apply [<plan-id>]`         | Execute a saved plan                                        |
+| `dojops apply --skip-verify`       | Skip external config verification (on by default)           |
+| `dojops apply --allow-all-paths`   | Bypass DevOps file write allowlist                          |
+| `dojops apply --resume`            | Resume a partially-failed plan                              |
+| `dojops apply --replay`            | Deterministic replay: temp=0, validate env match            |
+| `dojops apply --dry-run`           | Preview changes without writing files                       |
+| `dojops apply --force`             | Skip git dirty check, HIGH risk gate, and replay validation |
+| `dojops apply --task <id>`         | Run only a single task from the plan                        |
+| `dojops apply --timeout <ms>`      | Per-task timeout in milliseconds                            |
+| `dojops apply --parallel=N`        | Max parallel tasks during wave execution                    |
+| `dojops apply --repair-attempts=N` | Max self-repair attempts per task (default: 3)              |
+| `dojops apply --install-packages`  | Run package manager install after successful apply          |
+| `dojops validate [<plan-id>]`      | Validate plan against schemas                               |
+| `dojops explain [<plan-id>]`       | LLM explains a plan in plain language                       |
 
 ### Diagnostics & Analysis
 
@@ -51,14 +52,30 @@ Complete reference for the `dojops` command-line interface.
 
 ### Autonomous Agent
 
-| Command                          | Description                                                    |
-| -------------------------------- | -------------------------------------------------------------- |
-| `dojops auto <prompt>`           | Autonomous agent mode, iterative tool-use loop (ReAct pattern) |
-| `dojops auto --max-iterations=N` | Set max loop iterations (default: 20)                          |
-| `dojops auto --voice`            | Use voice input as task prompt (requires whisper.cpp + sox)    |
-| `dojops auto --allow-all-paths`  | Bypass DevOps file write allowlist                             |
+| Command                           | Description                                                    |
+| --------------------------------- | -------------------------------------------------------------- |
+| `dojops auto <prompt>`            | Autonomous agent mode, iterative tool-use loop (ReAct pattern) |
+| `dojops auto --max-iterations=N`  | Set max loop iterations (default: 50)                          |
+| `dojops auto --background`        | Run in background, return run ID immediately                   |
+| `dojops auto --voice`             | Use voice input as task prompt (requires whisper.cpp + sox)    |
+| `dojops auto --allow-all-paths`   | Bypass DevOps file write allowlist                             |
+| `dojops auto --skip-verify`       | Skip external config verification                              |
+| `dojops auto --force`             | Skip safety checks (git dirty, HIGH risk gates)                |
+| `dojops auto --commit`            | Auto-commit changes on success                                 |
+| `dojops auto --repair-attempts=N` | Max self-repair attempts (default: 4)                          |
+| `dojops auto --timeout=<ms>`      | Per-iteration timeout in milliseconds                          |
 
 The autonomous agent reads files, makes targeted changes, runs commands, and verifies, all iteratively. It uses 7 tools: `read_file`, `write_file`, `edit_file`, `run_command`, `run_skill`, `search_files`, and `done`.
+
+### Background Runs
+
+| Command                 | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `dojops runs list`      | List all background runs with status and duration |
+| `dojops runs show <id>` | Show full detail + output log for a run           |
+| `dojops runs clean`     | Remove completed runs older than 7 days           |
+
+Use `dojops auto --background <prompt>` to start a background agent run. The CLI returns immediately with a run ID. Check progress with `dojops runs show <id>`.
 
 ### MCP (Model Context Protocol)
 
@@ -173,6 +190,8 @@ Chat supports slash commands: `/exit`, `/agent <name>`, `/voice`, `/plan <goal>`
 | `dojops memory add <text>`     | Add a project note (`--category`, `--keywords`)             |
 | `dojops memory remove <id>`    | Remove a note by ID (alias: `rm`)                           |
 | `dojops memory search <query>` | Search notes by keyword                                     |
+| `dojops memory auto [on\|off]` | Toggle auto-enrichment from agent runs                      |
+| `dojops memory errors`         | List learned error patterns with occurrence counts          |
 
 ### Scheduled Jobs
 
@@ -576,6 +595,14 @@ dojops memory add "Terraform state in S3" --category=convention --keywords=terra
 dojops memory list
 dojops memory search terraform
 dojops memory remove 3
+
+# Auto-enrichment (memory from dojops auto runs)
+dojops memory auto              # Check status
+dojops memory auto on           # Enable
+dojops memory auto off          # Disable
+
+# Learned error patterns
+dojops memory errors
 ```
 
 ### Scheduled Jobs

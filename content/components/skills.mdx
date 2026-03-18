@@ -22,6 +22,7 @@ DojOps includes 13 built-in DevOps skills covering CI/CD, infrastructure-as-code
 | GitLab CI      | YAML (raw)        | `.gitlab-ci.yml`                    | Yes      | Structure lint + `yamllint`   |
 | Prometheus     | YAML (raw)        | `prometheus.yml`, `alert-rules.yml` | --       | --                            |
 | Systemd        | INI (raw)         | `{name}.service`                    | --       | --                            |
+| Jenkinsfile    | Groovy (raw)      | `Jenkinsfile`                       | Yes      | --                            |
 
 ---
 
@@ -266,6 +267,14 @@ Generates systemd service unit files.
 - **Serialization:** Custom string builder (INI format)
 - **Output:** `{name}.service`
 
+### Jenkinsfile
+
+Generates Jenkins pipeline files (declarative or scripted).
+
+- **Serialization:** Custom string builder (Groovy)
+- **Detector:** Checks for existing `Jenkinsfile`
+- **Output:** `Jenkinsfile`
+
 ---
 
 ## Creating a New Skill
@@ -421,6 +430,7 @@ After the closing `---` delimiter, markdown sections define prompts:
 | gitlab-ci      | LOW    | CI/CD pipeline changes require MR review              |
 | makefile       | LOW    | Build automation changes are local                    |
 | prometheus     | LOW    | Monitoring config changes are observable              |
+| jenkinsfile    | LOW    | CI/CD pipeline changes require PR review              |
 
 ---
 
