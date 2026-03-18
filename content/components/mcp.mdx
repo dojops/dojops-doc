@@ -1,0 +1,183 @@
+# MCP (Model Context Protocol)
+
+DojOps supports the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) — a Linux Foundation standard for connecting LLMs to external tool servers. MCP enables the autonomous agent (`dojops auto`) to call tools from databases, cloud APIs, GitHub, and any MCP-compatible server.
+
+---
+
+## Overview
+
+MCP extends the agent loop beyond the 7 built-in tools (`read_file`, `write_file`, `edit_file`, `run_command`, `run_skill`, `search_files`, `done`) with tools from external servers. The `@dojops/mcp` package handles server lifecycle, tool discovery, and dispatch.
+
+**Key concepts:**
+
+- **Transports**: `stdio` (spawn a local process) or `streamable-http` (connect to a remote endpoint)
+- **Tool namespacing**: MCP tools appear as `mcp__<server>__<tool>` (e.g., `mcp__github__create_issue`)
+- **Non-fatal**: MCP is optional — connection failures are silently skipped, and the agent continues with built-in tools
+
+---
+
+## Configuration
+
+MCP servers are configured in JSON files at two levels:
+
+- **Project**: `.dojops/mcp.json` — scoped to the current project
+- **Global**: `~/.dojops/mcp.json` — shared across all projects
+
+Project config overrides global by server name when both define the same server.
+
+### Config Format
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "env": {}
+    },
+    "remote-api": {
+      "transport": "streamable-http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {}
+    }
+  }
+}
+```
+
+### Stdio Transport
+
+Spawns a local process that communicates over stdin/stdout:
+
+| Field       | Type                     | Required | Description                                       |
+| ----------- | ------------------------ | -------- | ------------------------------------------------- |
+| `transport` | `"stdio"`                | Yes      | Transport type                                    |
+| `command`   | `string`                 | Yes      | Command to run (e.g., `npx`, `node`)              |
+| `args`      | `string[]`               | No       | Command arguments                                 |
+| `env`       | `Record<string, string>` | No       | Environment variables (merged over `process.env`) |
+
+### Streamable HTTP Transport
+
+Connects to a remote MCP server over HTTP:
+
+| Field       | Type                     | Required | Description         |
+| ----------- | ------------------------ | -------- | ------------------- |
+| `transport` | `"streamable-http"`      | Yes      | Transport type      |
+| `url`       | `string`                 | Yes      | Server endpoint URL |
+| `headers`   | `Record<string, string>` | No       | HTTP headers        |
+
+---
+
+## CLI Commands
+
+### List Servers
+
+```bash
+dojops mcp list
+```
+
+Shows all configured servers with transport type and connection details. Tests connections and reports available tool count.
+
+### Add a Server
+
+```bash
+dojops mcp add
+```
+
+Interactive prompts for:
+
+1. Server name (lowercase alphanumeric, hyphens, underscores)
+2. Transport type (stdio or streamable-http)
+3. Command and arguments (stdio) or URL (HTTP)
+
+### Remove a Server
+
+```bash
+dojops mcp remove [name]
+```
+
+Removes a server from `.dojops/mcp.json`. If no name is provided, shows an interactive picker.
+
+---
+
+## Agent Integration
+
+When `dojops auto` starts, it:
+
+1. Loads MCP config from `.dojops/mcp.json` and `~/.dojops/mcp.json`
+2. Connects to all configured servers (failures silently skipped)
+3. Discovers tools from each server via `listTools()`
+4. Merges MCP tools with the 7 built-in agent tools
+5. Passes the `McpToolDispatcher` to `ToolExecutor`
+6. Disconnects all servers in a `finally` block on completion
+
+The `ToolExecutor` dispatch chain:
+
+```
+built-in tools → skill resolution → MCP dispatcher → "Unknown tool" error
+```
+
+### Example
+
+```bash
+# Configure a filesystem MCP server
+cat > .dojops/mcp.json << 'EOF'
+{
+  "mcpServers": {
+    "memory": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+EOF
+
+# The agent can now use memory tools
+dojops auto "Store a note about our deployment process and retrieve it"
+# Agent discovers: mcp__memory__read_memory, mcp__memory__write_memory
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│  dojops auto "prompt"                           │
+└────────────────────┬────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────┐
+│  AgentLoop                                      │
+│  LLM sees: 7 built-in tools + N MCP tools       │
+└────────┬──────────────────────┬─────────────────┘
+         │                      │
+         ▼                      ▼
+┌────────────────┐    ┌──────────────────────────┐
+│ Built-in tools │    │ McpToolDispatcher         │
+│ (ToolExecutor) │    │ ─ Parses mcp__srv__tool   │
+│                │    │ ─ Routes to McpClientMgr  │
+└────────────────┘    └──────────┬───────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    │   McpClientManager      │
+                    │   ─ stdio transport     │
+                    │   ─ HTTP transport      │
+                    │   ─ Tool discovery      │
+                    └─────────────────────────┘
+```
+
+---
+
+## Popular MCP Servers
+
+| Server                                    | Transport | Description            |
+| ----------------------------------------- | --------- | ---------------------- |
+| `@modelcontextprotocol/server-filesystem` | stdio     | File system access     |
+| `@modelcontextprotocol/server-memory`     | stdio     | Key-value memory store |
+| `@modelcontextprotocol/server-github`     | stdio     | GitHub API integration |
+| `@modelcontextprotocol/server-postgres`   | stdio     | PostgreSQL queries     |
+| `@modelcontextprotocol/server-slack`      | stdio     | Slack messaging        |
+
+Browse more at [modelcontextprotocol.io/servers](https://modelcontextprotocol.io/servers).

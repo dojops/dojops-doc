@@ -34,17 +34,18 @@ Execution Engine (Sandboxed, policy-enforced, approval-gated, audit-logged)
 
 DojOps is a pnpm monorepo with Turbo build orchestration. TypeScript (ES2022, CommonJS). All packages use the `@dojops/*` scope.
 
-### 11 Packages
+### 12 Packages
 
 ```
 @dojops/cli            CLI entry point + rich TUI (@clack/prompts)
 @dojops/api            REST API (Express) + web dashboard + factory functions
-@dojops/skill-registry  Skill registry + custom skill system (discovers built-in + custom skills)
+@dojops/skill-registry Skill registry + custom skill system (discovers built-in + custom skills)
 @dojops/planner        TaskGraph decomposition + topological executor
 @dojops/executor       SafeExecutor: sandbox + policy engine + approval + audit log
+@dojops/mcp            MCP (Model Context Protocol) client — server lifecycle, tool discovery, dispatcher
 @dojops/runtime        13 built-in DevOps skills as .dops files (DopsRuntime)
 @dojops/scanner        10 security scanners + remediation engine
-@dojops/session        Chat session management + memory + context injection
+@dojops/session        Chat session management + autonomous agent loop (AgentLoop) + memory + context injection
 @dojops/context        Context7 documentation augmentation for skills
 @dojops/core           LLM abstraction + 6 providers + 17 specialist agents + CI debugger + infra diff + DevOps checker
 @dojops/sdk            BaseSkill<T> abstract class with Zod validation + optional verify() + file-reader utilities
@@ -77,7 +78,8 @@ DojOps is a pnpm monorepo with Turbo build orchestration. TypeScript (ES2022, Co
 cli -> api -> skill-registry -> runtime -> core -> sdk
           -> planner -> executor
           -> scanner
-          -> session -> core
+          -> session -> executor -> core
+cli -> mcp -> core (optional, dynamic import)
 ```
 
 ---
@@ -214,6 +216,20 @@ The `ToolExecutor` dispatches tool calls to sandboxed operations enforced by `Ex
 
 Available via `dojops auto <prompt>` (CLI), `POST /api/auto` (API), and `/auto <prompt>` (chat).
 
+### 8c. MCP Support (`@dojops/mcp`)
+
+The MCP (Model Context Protocol) package enables the autonomous agent to call tools from external servers — databases, cloud APIs, GitHub, etc. MCP is a Linux Foundation standard supported by Claude Code, Codex, Gemini CLI, and Copilot CLI.
+
+- `McpClientManager` — Manages server lifecycle (connect all at agent start, disconnect on completion). Supports `stdio` (local subprocess) and `streamable-http` (remote endpoint) transports.
+- `McpToolDispatcher` — Bridges MCP tools into the `ToolExecutor` dispatch chain. Parses `mcp__<server>__<tool>` names and routes to the correct server.
+- Config: `.dojops/mcp.json` (project) + `~/.dojops/mcp.json` (global). Project config overrides global by server name.
+
+See [MCP](/components/mcp) for configuration and usage details.
+
+### 8d. Streaming Output
+
+All 6 LLM providers support `generateStream()` for real-time token streaming. The `LLMProvider` interface includes an optional `generateStream?(request, onChunk)` method. Streaming is used in `dojops "prompt"` for agent-routed generation commands. Structured output (schema/skill requests) falls back to spinner mode.
+
 ### 9. REST API & Dashboard (`@dojops/api`)
 
 Express-based API with dependency injection via `createApp(deps)`. Uses `@dojops/skill-registry` to load all built-in + custom skills. 21 endpoints exposing all capabilities over HTTP with API v1 versioning (`/api/v1/` prefix with backward-compatible `/api/` alias, `X-API-Version: 1` header on v1 routes). Vanilla web dashboard with 5 tabs (Overview, Security, Audit, Agents, History). Health endpoint reports `customSkillCount`. Per-route rate limiting and token budget tracking via `TokenTracker`.
@@ -257,6 +273,7 @@ DojOps stores project state in the `.dojops/` directory:
   agents/                Project-scoped custom agents (<name>/README.md)
   memory/
     dojops.db            SQLite database (WAL mode): tasks_history, notes, error_patterns
+  mcp.json               MCP server configuration (project-scoped)
   policy.yaml            Skill policy (allowedSkills / blockedSkills)
   history/
     audit.jsonl          Hash-chained audit log (append-only)
@@ -269,4 +286,5 @@ DojOps stores project state in the `.dojops/` directory:
   skills/                Global custom skills (shared across projects)
   toolchain/             System binary sandbox (installed verification binaries)
   agents/                Global custom agents (shared across projects)
+  mcp.json               Global MCP server configuration
 ```

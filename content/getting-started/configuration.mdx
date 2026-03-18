@@ -349,6 +349,21 @@ dojops inspect config
 
 ---
 
+## MCP Configuration
+
+MCP (Model Context Protocol) servers are configured separately from LLM providers. See [MCP](/components/mcp) for full documentation.
+
+```bash
+# Add an MCP server interactively
+dojops mcp add
+
+# Or create .dojops/mcp.json manually
+```
+
+MCP servers extend the autonomous agent (`dojops auto`) with external tools from databases, cloud APIs, and other services.
+
+---
+
 ## `.env` File
 
 For development, create a `.env` file in the project root:
