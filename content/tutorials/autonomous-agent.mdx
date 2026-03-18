@@ -265,12 +265,14 @@ All file operations are enforced by the execution policy, the agent cannot write
 2. The agent uses 7 tools to interact with your project: read, write, edit, run, skill, search, done
 3. All operations are sandboxed by the execution policy
 4. Use `--max-iterations` for complex tasks and `--allow-all-paths` for non-DevOps edits
-5. Available via CLI, chat (`/auto`), and REST API (`POST /api/auto`)
+5. Use `--voice` to speak tasks instead of typing them (see [Voice Input tutorial](/tutorials/voice-input))
+6. Available via CLI, chat (`/auto`), and REST API (`POST /api/auto`)
 
 ### Next Steps
 
-- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)**, Compare the plan-based approach for greenfield projects
-- **[Custom Agents & Skills](/tutorials/custom-agents-and-skills)**, Create skills the agent can invoke via `run_skill`
-- **[API Server & Dashboard](/tutorials/api-server-and-dashboard)**, Use the auto endpoint programmatically
-- **[Architecture Overview](/architecture/overview)**, Understand the AgentLoop and ToolExecutor internals
-- **[CLI Reference](/usage/cli)**, Full command reference for `dojops auto`
+- **[Voice Input](/tutorials/voice-input)** — Speak tasks instead of typing them
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Compare the plan-based approach for greenfield projects
+- **[Custom Agents & Skills](/tutorials/custom-agents-and-skills)** — Create skills the agent can invoke via `run_skill`
+- **[API Server & Dashboard](/tutorials/api-server-and-dashboard)** — Use the auto endpoint programmatically
+- **[Architecture Overview](/architecture/overview)** — Understand the AgentLoop and ToolExecutor internals
+- **[CLI Reference](/usage/cli)** — Full command reference for `dojops auto`

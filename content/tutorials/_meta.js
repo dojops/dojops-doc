@@ -13,4 +13,5 @@ export default {
   "config-management-advanced": "Advanced Config Management",
   "observability-and-learning": "Observability & Learning",
   "autonomous-agent": "Autonomous Agent Mode",
+  "voice-input": "Voice Input",
 };

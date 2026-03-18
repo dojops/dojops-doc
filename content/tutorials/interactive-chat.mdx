@@ -57,18 +57,19 @@ The chat maintains conversation history, so follow-up questions have full contex
 
 ## Step 2: Use Slash Commands
 
-Chat supports 8 slash commands for in-session actions:
+Chat supports 9 slash commands for in-session actions:
 
-| Command         | Description                        |
-| --------------- | ---------------------------------- |
-| `/exit`         | End the chat session               |
-| `/agent <name>` | Switch to a specialist agent       |
-| `/plan <goal>`  | Decompose a goal into a task graph |
-| `/apply`        | Execute the most recent plan       |
-| `/scan`         | Run a security scan                |
-| `/history`      | Show execution history             |
-| `/clear`        | Clear conversation history         |
-| `/save`         | Save the current session           |
+| Command         | Description                                           |
+| --------------- | ----------------------------------------------------- |
+| `/exit`         | End the chat session                                  |
+| `/agent <name>` | Switch to a specialist agent                          |
+| `/voice`        | Push-to-talk voice input (requires whisper.cpp + sox) |
+| `/plan <goal>`  | Decompose a goal into a task graph                    |
+| `/apply`        | Execute the most recent plan                          |
+| `/scan`         | Run a security scan                                   |
+| `/history`      | Show execution history                                |
+| `/clear`        | Clear conversation history                            |
+| `/save`         | Save the current session                              |
 
 Try planning from within chat:
 
@@ -219,7 +220,8 @@ dojops chat --agent=security -m "Analyze the latest scan findings and prioritize
 
 ## What's Next?
 
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch), Build a full pipeline using plan + apply
-- [Security Audit & Remediation](/tutorials/security-audit), Scanning, SBOM, and auto-fix
-- [Custom Agents & Skills](/tutorials/custom-agents-and-skills), Create your own specialist agents
-- [CLI Reference](/usage/cli), Full command reference
+- [Voice Input](/tutorials/voice-input) — Speak commands instead of typing them
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a full pipeline using plan + apply
+- [Security Audit & Remediation](/tutorials/security-audit) — Scanning, SBOM, and auto-fix
+- [Custom Agents & Skills](/tutorials/custom-agents-and-skills) — Create your own specialist agents
+- [CLI Reference](/usage/cli) — Full command reference
