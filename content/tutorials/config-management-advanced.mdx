@@ -51,7 +51,7 @@ That key is readable by any process that can read your home directory. If you ev
 
 ### Step 2: Store a secret in the vault
 
-The `dojops secrets set` command encrypts your key using AES-256-GCM and writes it to `.dojops/vault.enc`. The original key is never stored anywhere in plaintext after this point.
+The `dojops secrets set` command encrypts your key using AES-256-GCM and writes it to `.dojops/secrets.json`. The original key is never stored anywhere in plaintext after this point.
 
 ```bash
 dojops secrets set OPENAI_API_KEY sk-proj-abc123...
@@ -62,12 +62,12 @@ dojops secrets set OPENAI_API_KEY sk-proj-abc123...
 │
 │  Key:        OPENAI_API_KEY
 │  Encryption: AES-256-GCM
-│  Storage:    ~/.dojops/vault.enc
+│  Storage:    .dojops/secrets.json
 │
 └  Encrypted and saved
 ```
 
-The encryption key is derived from your machine identity and stored separately from the vault — which means a copy of `vault.enc` alone is useless without the corresponding machine.
+The encryption key is derived from a random key stored at `~/.dojops/vault-key` (or from the `DOJOPS_VAULT_KEY` env var if set). The secrets file alone is useless without the corresponding key.
 
 Now store your other provider keys if you have them:
 
@@ -134,7 +134,7 @@ dojops secrets list
 │  DEEPSEEK_API_KEY    set  (sk-...)
 │  GEMINI_API_KEY      set  (AIza...)
 │
-└  4 secrets stored in ~/.dojops/vault.enc
+└  4 secrets stored in .dojops/secrets.json
 ```
 
 ---
@@ -269,7 +269,7 @@ Notice `temperature: 0`. This is intentional for team configs — zero temperatu
 Something went wrong after applying the team config. Roll back to your pre-change snapshot:
 
 ```bash
-dojops restore backup-2026-03-17-091500
+dojops backup restore backup-2026-03-17-091500
 ```
 
 ```

@@ -231,8 +231,10 @@ Terraform will perform the following actions:
 Plan: 0 to add, 2 to change, 1 to destroy.
 EOF
 
-dojops analyze diff --file plan.txt
+dojops analyze diff --diff-file plan.txt
 ```
+
+> Both `--diff-file` and `--file` work. Use `--diff-file` to avoid ambiguity with the global `--file` flag that reads a prompt from a file.
 
 ```
 ┌  Infrastructure Diff Analysis
@@ -291,7 +293,7 @@ One command surfaced a security regression that would have exposed port 443 to t
 Get JSON output for automated review gates:
 
 ```bash
-dojops analyze diff --file plan.txt --output json
+dojops analyze diff --diff-file plan.txt --output json
 ```
 
 ```json
@@ -539,7 +541,7 @@ dojops explain plan-b2c3d4e5
 
 **Challenge 1 — Diagnose from a file.** Save a real CI failure log from one of your projects to `ci.log`. Run `dojops debug ci --file ci.log`. Compare the diagnosis to what you already know about the failure — is the root cause analysis accurate?
 
-**Challenge 2 — Gate on diff risk.** Write a shell script that runs `dojops analyze diff --file plan.txt --output json`, extracts `riskLevel` with `jq`, and exits with code 1 if it's `HIGH` or `CRITICAL`. Add it as a CI step before `terraform apply`.
+**Challenge 2 — Gate on diff risk.** Write a shell script that runs `dojops analyze diff --diff-file plan.txt --output json`, extracts `riskLevel` with `jq`, and exits with code 1 if it's `HIGH` or `CRITICAL`. Add it as a CI step before `terraform apply`.
 
 **Challenge 3 — Track quality over time.** Run `dojops check --output json` and save the score to a file. Make a few improvements using `dojops check --fix`, then run it again. Compare the JSON outputs. Automate this comparison as a weekly CI job that fails if the score drops below last week's value.
 

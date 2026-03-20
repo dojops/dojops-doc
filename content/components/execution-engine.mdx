@@ -81,7 +81,8 @@ kubernetes/**           manifests/**         *.tf
 playbook*.yaml          nginx/**             nginx.conf
 prometheus/**           alertmanager/**      Makefile
 makefile                systemd/**           *.service
-*.timer
+*.timer                 packer/**            *.pkr.hcl
+*.pkr.json
 ```
 
 Override with `--allow-all-paths` on the `apply` command to bypass the allowlist for advanced use cases.

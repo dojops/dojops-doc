@@ -25,7 +25,22 @@ Run a full security audit on your project with scanning, SBOM generation, and au
 - DojOps installed: `npm i -g @dojops/cli`
 - An API key from a supported LLM provider
 
-Optional but recommended for full scanner coverage: install some or all of these tools — `trivy`, `gitleaks`, `checkov`, `hadolint`, `shellcheck`, `semgrep`. DojOps runs whichever scanners it finds on your PATH and skips the rest. You don't need all ten to get meaningful results.
+Optional but recommended for full scanner coverage: install some or all of these tools. DojOps runs whichever scanners it finds on your PATH and skips the rest. You don't need all ten to get meaningful results, but `npm-audit` alone gives limited coverage.
+
+Install on Debian/Ubuntu:
+
+```bash
+# trivy — container and filesystem vulnerability scanner
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+# gitleaks — secrets detection (download from GitHub releases)
+# hadolint — Dockerfile linter (download from GitHub releases)
+# checkov — IaC scanner: pip3 install checkov
+# shellcheck — shell script linter: apt-get install -y shellcheck
+# semgrep — static analysis: pip3 install semgrep
+```
+
+> **Note:** If no external scanners are installed, `dojops scan` runs only `npm-audit` (for Node.js projects) and may report "No security issues found" — which can be misleadingly reassuring. Install at least `trivy` and `gitleaks` for meaningful coverage.
 
 ---
 

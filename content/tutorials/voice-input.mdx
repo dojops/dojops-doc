@@ -100,6 +100,8 @@ dojops toolchain install whisper-cpp
 
 The build duration depends on your hardware. On a modern machine it's about 90 seconds. The model download depends on your connection speed.
 
+> **Build requirements:** whisper.cpp compiles from C/C++ source, which requires `gcc`/`g++` (or `clang`), `make`, and about 512 MB of RAM during compilation. On minimal containers or CI runners, install `build-essential` (Debian/Ubuntu) or `base-devel` (Arch) first. The resulting binary is small (~2 MB).
+
 The whisper.cpp installation is global to your user account, not per-project. You only need to do this once.
 
 ---
