@@ -1,6 +1,6 @@
 # DevOps Skills
 
-DojOps includes 18 built-in DevOps skills covering CI/CD, infrastructure-as-code, containers, monitoring, and system services. All skills follow a consistent pattern built on the `BaseSkill<T>` abstract class. A custom skill system lets you extend DojOps with your own skills via declarative `.dops` files.
+DojOps includes 19 built-in DevOps skills covering CI/CD, infrastructure-as-code, containers, monitoring, and system services. All skills follow a consistent pattern built on the `BaseSkill<T>` abstract class. A custom skill system lets you extend DojOps with your own skills via declarative `.dops` files.
 
 > **As of v2.0.0, only `.dops v2` format is supported.** The legacy v1 format and `tool.yaml` manifests have been removed.
 
@@ -12,6 +12,7 @@ DojOps includes 18 built-in DevOps skills covering CI/CD, infrastructure-as-code
 | ----------------------- | ------------------------------- | ----------------------------------- | -------- | ----------------------------- |
 | GitHub Actions          | YAML (raw)                      | `.github/workflows/ci.yml`          | Yes      | Structure lint + `actionlint` |
 | Terraform               | HCL (raw)                       | `main.tf`, `variables.tf`           | Yes      | `terraform validate`          |
+| Packer                  | HCL2 (raw)                      | `main.pkr.hcl`, `variables.pkr.hcl` | Yes      | `packer validate`             |
 | Kubernetes              | YAML (raw)                      | K8s manifests                       | --       | `kubectl --dry-run`           |
 | Helm                    | YAML (raw)                      | `Chart.yaml`, `values.yaml`         | --       | --                            |
 | Ansible                 | YAML (raw)                      | `{name}.yml`                        | --       | --                            |
@@ -33,12 +34,13 @@ DojOps includes 18 built-in DevOps skills covering CI/CD, infrastructure-as-code
 
 ## Skill Pattern
 
-All 18 built-in skills are defined as `.dops v2` skill files in `packages/runtime/skills/`. Each skill is processed by `DopsRuntime`, which compiles prompts, calls the LLM, and writes raw file content directly (no JSON→serialize step).
+All 19 built-in skills are defined as `.dops v2` skill files in `packages/runtime/skills/`. Each skill is processed by `DopsRuntime`, which compiles prompts, calls the LLM, and writes raw file content directly (no JSON→serialize step).
 
 ```
 packages/runtime/skills/
   github-actions.dops    GitHub Actions workflow generator
   terraform.dops         Terraform HCL generator
+  packer.dops            Packer machine image builder
   kubernetes.dops        Kubernetes manifest generator
   helm.dops              Helm chart generator
   ansible.dops           Ansible playbook generator
@@ -80,6 +82,7 @@ Optional validation of generated output. Five tools implement verification:
 | Tool           | Verification Method                             | Verification Command / Check                                                          |
 | -------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Terraform      | External binary (`terraform`)                   | `terraform validate`                                                                  |
+| Packer         | External binary (`packer`)                      | `packer init . && packer validate .`                                                  |
 | Dockerfile     | External binary (`hadolint`)                    | `hadolint Dockerfile`                                                                 |
 | Kubernetes     | External binary (`kubectl`)                     | `kubectl --dry-run=client`                                                            |
 | GitHub Actions | Structure lint + external binary (`actionlint`) | Checks `on` trigger, `jobs`, `runs-on`, step `run`/`uses` + `actionlint workflow.yml` |
@@ -104,7 +107,7 @@ The `{entryFile}` value is resolved from the first entry in the skill's `files` 
 
 ### Existing Config Auto-Detection
 
-All 18 tools auto-detect existing config files and switch to update mode when found. Each tool knows its output file path and reads existing content automatically:
+All 19 tools auto-detect existing config files and switch to update mode when found. Each tool knows its output file path and reads existing content automatically:
 
 | Tool           | Auto-Detect Path                                                       |
 | -------------- | ---------------------------------------------------------------------- |
@@ -194,6 +197,15 @@ Generates Terraform HCL configurations.
 - **Detector:** Detects existing `.tf` files
 - **Verifier:** `terraform validate`, checks HCL syntax and provider requirements
 - **Output:** `main.tf` (resources), `variables.tf` (input variables)
+
+### Packer
+
+Generates Packer HCL2 machine image templates.
+
+- **Serialization:** HCL2 (raw)
+- **Detector:** Detects existing `.pkr.hcl` files
+- **Verifier:** `packer init . && packer validate .`, checks HCL2 syntax and plugin requirements
+- **Output:** `main.pkr.hcl` (build blocks), `variables.pkr.hcl` (input variables), `source.pkr.hcl` (source blocks)
 
 ### Kubernetes
 
@@ -424,6 +436,7 @@ After the closing `---` delimiter, markdown sections define prompts:
 | Skill          | Risk   | Rationale                                             |
 | -------------- | ------ | ----------------------------------------------------- |
 | terraform      | MEDIUM | Infrastructure changes may affect cloud resources     |
+| packer         | MEDIUM | Machine image builds may affect cloud resources       |
 | kubernetes     | MEDIUM | Cluster configuration changes affect running services |
 | helm           | MEDIUM | Chart changes affect Kubernetes deployments           |
 | dockerfile     | MEDIUM | Build image changes may affect production runtime     |
@@ -730,7 +743,7 @@ blockedSkills:
 
 Custom skills are sandboxed with the same guardrails as built-in skills, plus additional controls:
 
-- **Verification command whitelist**, Only 33 known DevOps binaries are allowed (terraform, kubectl, helm, ansible-lint, ansible-playbook, docker, hadolint, yamllint, jsonlint, shellcheck, tflint, kubeval, conftest, checkov, trivy, kube-score, polaris, nginx, promtool, systemd-analyze, make, actionlint, caddy, haproxy, nomad, podman, fluentd, opa, vault, circleci, npx, tsc, cfn-lint). Non-whitelisted commands are rejected at runtime
+- **Verification command whitelist**, Only 34 known DevOps binaries are allowed (terraform, packer, kubectl, helm, ansible-lint, ansible-playbook, docker, hadolint, yamllint, jsonlint, shellcheck, tflint, kubeval, conftest, checkov, trivy, kube-score, polaris, nginx, promtool, systemd-analyze, make, actionlint, caddy, haproxy, nomad, podman, fluentd, opa, vault, circleci, npx, tsc, cfn-lint). Non-whitelisted commands are rejected at runtime
 - **Permission enforcement**, The `permissions.child_process` field must be `"required"` for verification commands to execute. Omitted or `"none"` means the command is silently skipped (default-safe)
 - **Path traversal prevention**, File paths in `files[].path` and `detector.path` cannot contain `..` segments, preventing writes outside the project directory
 - **Execution guardrails**, Custom skills execute through the same `SafeExecutor` pipeline as built-in skills, inheriting `maxFileSize` (1MB default), `timeoutMs` (30s default), DevOps write allowlist enforcement, and per-file audit logging

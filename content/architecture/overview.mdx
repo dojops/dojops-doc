@@ -1,6 +1,6 @@
 # Architecture
 
-DojOps is a modular DevOps agent system with 18 built-in skills, a custom skill system, 17 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails. Every LLM output is schema-validated and policy-checked before anything gets written.
+DojOps is a modular DevOps agent system with 19 built-in skills, a custom skill system, 17 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails. Every LLM output is schema-validated and policy-checked before anything gets written.
 
 ---
 
@@ -19,7 +19,7 @@ Agent Router (17 specialist agents, keyword confidence scoring)
 Planner Engine (LLM -> TaskGraph -> topological execution)
  |
  v
-Skill Registry (18 built-in skills + custom skills, unified discovery)
+Skill Registry (19 built-in skills + custom skills, unified discovery)
  |
  v
 Skill SDK Layer (BaseSkill<T>, Zod validation)
@@ -43,7 +43,7 @@ DojOps is a pnpm monorepo with Turbo build orchestration. TypeScript (ES2022, Co
 @dojops/planner        TaskGraph decomposition + topological executor
 @dojops/executor       SafeExecutor: sandbox + policy engine + approval + audit log
 @dojops/mcp            MCP (Model Context Protocol) client — server lifecycle, tool discovery, dispatcher
-@dojops/runtime        18 built-in DevOps skills as .dops files (DopsRuntime)
+@dojops/runtime        19 built-in DevOps skills as .dops files (DopsRuntime)
 @dojops/scanner        10 security scanners + remediation engine
 @dojops/session        Chat session management + autonomous agent loop (AgentLoop) + memory + context injection
 @dojops/context        Context7 documentation augmentation for skills
@@ -175,19 +175,19 @@ The DOPS runtime processes `.dops` skill files, a declarative format combining Y
 
 ### 5. DevOps Skills (`@dojops/runtime`)
 
-18 built-in skills covering CI/CD, IaC, containers, monitoring, and system services. All 18 are `.dops` skills in `packages/runtime/skills/`, processed by `DopsRuntime`, generating raw file content directly via LLM with Context7 documentation augmentation. All skills support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
+19 built-in skills covering CI/CD, IaC, containers, monitoring, and system services. All 19 are `.dops` skills in `packages/runtime/skills/`, processed by `DopsRuntime`, generating raw file content directly via LLM with Context7 documentation augmentation. All skills support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
 
 See [DevOps Skills](/components/skills) for the full skill list.
 
 ### 5b. Skill Registry (`@dojops/skill-registry`)
 
-Unified registry layer between consumers (Planner, Executor, CLI, API) and skill implementations. Combines all 18 built-in skills with custom skills discovered from disk:
+Unified registry layer between consumers (Planner, Executor, CLI, API) and skill implementations. Combines all 19 built-in skills with custom skills discovered from disk:
 
 - **`.dops` skill discovery**, Discovers `.dops` skills from `.dojops/skills/` (project) and `~/.dojops/skills/` (global)
 - **Skill validation**, Zod schema validates `.dops` frontmatter
 - **Skill policy**, `.dojops/policy.yaml` supports `allowedSkills` and `blockedSkills` lists
 - **Audit enrichment**, Custom skill executions include `toolType`, `toolSource`, `toolVersion`, `toolHash`, and `systemPromptHash` in audit entries
-- **Skill isolation**, Verification commands restricted to a whitelist of 33 allowed binaries, `child_process` permission must be `"required"` for execution, path traversal (`..`) blocked in file paths and detector paths
+- **Skill isolation**, Verification commands restricted to a whitelist of 34 allowed binaries, `child_process` permission must be `"required"` for execution, path traversal (`..`) blocked in file paths and detector paths
 - **Unified interface**, `SkillRegistry.getAll()` returns `DevOpsSkill[]`, so Planner, Executor, and API remain unchanged
 
 ### 6. Execution Engine (`@dojops/executor`)
