@@ -167,7 +167,7 @@ The `.dojops/context.json` file is what every subsequent command reads from. It 
 
 ### Step 5: Check DevOps maturity
 
-Here's where it gets interesting. Run the quality check:
+Run the quality check:
 
 ```bash
 dojops check
@@ -314,11 +314,11 @@ Every operation is hash-chained. `dojops history verify` confirms the chain is i
 
 ## Try it yourself
 
-1. **Add Docker Compose.** Run `dojops "Create a Docker Compose file for local development with hot reloading"` and look at the volume mount strategy it picks for Next.js.
+1. Run `dojops "Create a Docker Compose file for local development with hot reloading"` and look at the volume mount strategy it picks for Next.js.
 
-2. **Push past 90.** Three `info` items remain. Use DojOps to generate `SECURITY.md` and `renovate.json`, then re-run `dojops check`. See how high the score goes.
+2. Three `info` items remain. Use DojOps to generate `SECURITY.md` and `renovate.json`, then re-run `dojops check`. See how high the score goes.
 
-3. **Inspect the audit trail.** Run `dojops history verify`, then `dojops history show exec-001`. The hash-chain format is how the audit log stays tamper-evident.
+3. Run `dojops history verify`, then `dojops history show exec-001`. The hash-chain format is how the audit log stays tamper-evident.
 
 ---
 

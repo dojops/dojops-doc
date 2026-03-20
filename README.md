@@ -2,10 +2,10 @@
   <img src="public/icon.png" alt="DojOps Docs" width="80" />
 </p>
 
-<h1 align="center">DojOps Documentation</h1>
+<h1 align="center">DojOps documentation</h1>
 
 <p align="center">
-  <strong>Official documentation for <a href="https://github.com/dojops/dojops">DojOps</a></strong>, the AI DevOps Automation Engine.
+  Docs site for <a href="https://github.com/dojops/dojops">DojOps</a>. Built with Next.js and Nextra.
 </p>
 
 <p align="center">
@@ -19,15 +19,15 @@
   <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" />
 </p>
 
-## Tech Stack
+## Stack
 
-- **Next.js 15.1** (App Router, standalone output)
-- **Nextra 4.2** + **nextra-theme-docs** (MDX documentation framework)
-- **React 19** + **TypeScript 5.7**
+- Next.js 15.1 (App Router, standalone output)
+- Nextra 4.2 + nextra-theme-docs (MDX documentation framework)
+- React 19 + TypeScript 5.7
 
 ## Content
 
-18 MDX pages organized into 6 sections:
+18 MDX pages in 6 sections:
 
 ```
 content/
@@ -60,22 +60,11 @@ Navigation is controlled by `_meta.js` files in each directory.
 
 ## Theme
 
-Configured in `app/layout.tsx`:
-
-- **Navbar**: DojOps logo + GitHub project link
-- **Banner**: Promotional link to [dojops.ai](https://dojops.ai) (dismissible)
-- **Sidebar**: Collapsible, first level expanded by default
-- **Footer**: MIT license + copyright
-- **Edit link**: "Edit this page on GitHub" pointing to this repo
-- **Metadata**: Title template `%s, DojOps Docs`, favicon
+Configured in `app/layout.tsx`. DojOps logo in the navbar with a GitHub project link. Dismissible banner linking to [dojops.ai](https://dojops.ai). Sidebar collapses at the first level by default. Edit links point back to this repo on GitHub.
 
 ## Development
 
-### Prerequisites
-
-- Node.js >= 20
-
-### Setup
+Requires Node.js >= 20.
 
 ```bash
 git clone https://github.com/dojops/dojops-doc.git
@@ -94,19 +83,19 @@ npm run format         # Prettier write
 npm run format:check   # Prettier check
 ```
 
-### Adding a Page
+### Adding a page
 
 1. Create an MDX file in the appropriate `content/` subdirectory
-2. Add the page to the corresponding `_meta.js` file
+2. Add it to the corresponding `_meta.js` file
 3. Use relative links for cross-references
 
 ## Routing
 
-Dynamic catch-all route at `app/[[...mdxPath]]/page.tsx`. Every MDX file in `content/` automatically gets a corresponding URL:
+Dynamic catch-all route at `app/[[...mdxPath]]/page.tsx`. Every MDX file in `content/` gets a URL automatically:
 
-- `/` -> `content/index.mdx`
-- `/getting-started/installation` -> `content/getting-started/installation.mdx`
-- `/components/tools` -> `content/components/tools.mdx`
+- `/` → `content/index.mdx`
+- `/getting-started/installation` → `content/getting-started/installation.mdx`
+- `/components/tools` → `content/components/tools.mdx`
 
 Static params are generated at build time via Nextra's `generateStaticParamsFor()`.
 
@@ -117,15 +106,15 @@ docker build -t dojops-doc .
 docker run -p 3000:3000 dojops-doc
 ```
 
-Multi-stage build (node:20-slim): deps -> builder -> runner. Non-root user (`nextjs:1001`), standalone output, port 3000.
+Multi-stage build (node:20-slim): deps → builder → runner. Non-root user (`nextjs:1001`), standalone output, port 3000.
 
-## Related Repos
+## Related repos
 
-| Repo                                                      | Description                                      |
-| --------------------------------------------------------- | ------------------------------------------------ |
-| [dojops/dojops](https://github.com/dojops/dojops)         | Main monorepo, CLI, API, all @dojops/\* packages |
-| [dojops/dojops.ai](https://github.com/dojops/dojops.ai)   | Marketing website                                |
-| [dojops/dojops-hub](https://github.com/dojops/dojops-hub) | Tool marketplace                                 |
+| Repo                                                      | What it is                                        |
+| --------------------------------------------------------- | ------------------------------------------------- |
+| [dojops/dojops](https://github.com/dojops/dojops)         | Main monorepo — CLI, API, all @dojops/\* packages |
+| [dojops/dojops.ai](https://github.com/dojops/dojops.ai)   | Marketing website                                 |
+| [dojops/dojops-hub](https://github.com/dojops/dojops-hub) | Skill marketplace                                 |
 
 ## License
 
