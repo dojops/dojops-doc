@@ -1,33 +1,33 @@
-# Provider & Configuration Management
+# Provider & configuration management
 
-Configure LLM providers, manage configuration profiles, install toolchain binaries, and keep DojOps up to date.
+Set up your LLM providers, build environment profiles, manage verification toolchain binaries, and keep your installation healthy.
 
----
-
-## Overview
-
-In this tutorial, you'll learn to:
-
-- Add, switch, and remove LLM providers
-- Create and use configuration profiles for different environments
-- Install and manage system toolchain binaries
-- Run system health diagnostics
-- Check for and install CLI updates
-
-**Time estimate:** ~10 minutes
-
-**Prerequisites:**
-
-- DojOps installed (`npm i -g @dojops/cli`)
-- API keys for your LLM providers
+> **Difficulty:** Beginner
+> **Duration:** 25 minutes
+> **What you'll build:** A multi-provider setup with named profiles for production, staging, and local development — plus a verification toolchain ready for CI use
 
 ---
 
-## Part 1: Provider Management
+## What you'll learn
 
-### Step 1: List Providers
+- How to add, switch, and configure fallback providers
+- Why named profiles exist and how to use them to isolate environments
+- How the toolchain works and when to pre-install binaries vs. let DojOps auto-install them
+- How to read `dojops status` output to diagnose setup issues
+- Which environment variables override which config settings
 
-See all configured providers and their status:
+## Prerequisites
+
+- DojOps 1.1.6 installed: `npm i -g @dojops/cli`
+- API keys for the providers you want to use
+
+---
+
+## Workshop steps
+
+### Step 1: Check what's currently configured
+
+Before adding anything, see the current provider state:
 
 ```bash
 dojops provider
@@ -36,28 +36,30 @@ dojops provider
 ```
 ┌  LLM Providers
 │
-│  openai       ✓ configured (default)
-│  anthropic    ✓ configured
-│  ollama       ✗ not configured
-│  deepseek     ✗ not configured
-│  gemini       ✗ not configured
+│  openai          ✓ configured (default)
+│  anthropic       ✗ not configured
+│  ollama          ✗ not configured
+│  deepseek        ✗ not configured
+│  gemini          ✗ not configured
 │  github-copilot  ✗ not configured
 │
-└  2 configured, 1 default
+└  1 configured, 1 default
 ```
 
-Get JSON output for scripting:
+DojOps supports 6 providers. Each maps to a different API authentication scheme and different model naming conventions. You only need to configure the ones you plan to use.
+
+Get JSON output when scripting:
 
 ```bash
 dojops provider list --output json
 ```
 
-### Step 2: Add a Provider
+### Step 2: Add a provider
 
-Add a new provider with its API key:
+Add Anthropic using its API key:
 
 ```bash
-dojops provider add anthropic --token sk-ant-api03-...
+dojops provider add anthropic --token sk-ant-api03-yourkey
 ```
 
 ```
@@ -66,20 +68,22 @@ dojops provider add anthropic --token sk-ant-api03-...
 │  Provider: anthropic
 │  Status: ✓ configured
 │
-└  Token saved
+└  Token saved to ~/.dojops/config.json
 ```
 
-You can also use environment variables:
+The token is written to `~/.dojops/config.json` — your global DojOps configuration. Environment variables take precedence over this file, so you can override per-session:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-api03-...
-export DEEPSEEK_API_KEY=sk-...
-export GEMINI_API_KEY=AI...
+export ANTHROPIC_API_KEY=sk-ant-api03-yourkey
+export DEEPSEEK_API_KEY=sk-deepseek-yourkey
+export GEMINI_API_KEY=AIzaSy-yourkey
 ```
 
-### Step 3: Switch the Default Provider
+After adding Anthropic, check the provider list again — it should now show both OpenAI and Anthropic as configured.
 
-Use the interactive picker:
+### Step 3: Switch the default provider
+
+Use the interactive picker to change which provider runs by default:
 
 ```bash
 dojops provider switch
@@ -92,54 +96,71 @@ dojops provider switch
 │  ○ ollama
 ```
 
-Or set directly:
+Or set it directly without the prompt:
 
 ```bash
 dojops provider default anthropic
 ```
 
-Shortcut flag:
+From this point, every `dojops` command uses Anthropic unless you override it. Verify:
 
 ```bash
-dojops provider --as-default anthropic
+dojops provider
 ```
 
-### Step 4: Override Per-Command
+```
+┌  LLM Providers
+│
+│  openai     ✓ configured
+│  anthropic  ✓ configured (default)
+│  ...
+│
+└  2 configured, 1 default
+```
 
-Use any provider for a single command without changing defaults:
+### Step 4: Override the provider for a single command
+
+Switching the default changes every future command. For a one-off override without changing defaults, use the `--provider` flag:
 
 ```bash
-# Use Anthropic for this generation only
-dojops --provider=anthropic "Create a Terraform config for S3"
+dojops --provider=openai "Create a Terraform config for S3"
+dojops --provider=anthropic "Create a Dockerfile for Python"
+dojops --model=gpt-4o-mini "Create a simple .gitignore"
+```
 
-# Use a specific model
-dojops --model=gpt-4o-mini "Create a simple Dockerfile"
+Temperature works the same way — set it globally in config or override per-command:
 
-# Set temperature for reproducibility
+```bash
 dojops --temperature=0 "Create a Kubernetes deployment"
 ```
 
-### Step 5: Configure a Fallback Provider
+`--temperature=0` is useful when you want deterministic output for review or testing.
 
-Set a fallback provider that's used when the primary fails:
+### Step 5: Configure a fallback provider
+
+A fallback provider activates when the primary fails — rate limits, network errors, API outages. Set it per-command or globally:
 
 ```bash
-# Via CLI flag
+# Per-command fallback
 dojops --fallback-provider=ollama "Create a CI workflow"
 
-# Via environment variable
+# Global fallback via environment variable
 export DOJOPS_FALLBACK_PROVIDER=ollama
 ```
 
-### Step 6: Remove a Provider
+When a fallback triggers, DojOps logs a warning and proceeds:
 
-```bash
-dojops provider remove deepseek
+```
+⚠ Primary provider (anthropic) failed: rate limit exceeded
+  Falling back to: ollama
+  Retrying...
 ```
 
-### Step 7: Authenticate with GitHub Copilot
+Ollama works well as a local fallback because it has no API costs and no rate limits. Set it up with `dojops provider add ollama` and point `OLLAMA_HOST` at your local Ollama instance.
 
-GitHub Copilot uses OAuth Device Flow authentication:
+### Step 6: Authenticate with GitHub Copilot
+
+GitHub Copilot uses OAuth Device Flow instead of an API key. Trigger the flow:
 
 ```bash
 dojops auth login --provider github-copilot
@@ -154,22 +175,26 @@ dojops auth login --provider github-copilot
 │  Enter code: ABCD-1234
 │
 │  Waiting for authorization...
-│  ✓ Authenticated as @username
+│  ✓ Authenticated as @your-username
 │
 └  Token saved to ~/.dojops/copilot-token.json
 ```
 
-Check authentication status:
+The token is persisted to `~/.dojops/copilot-token.json` and auto-refreshed on expiry. In CI environments where the browser flow isn't possible, bypass it with:
+
+```bash
+export GITHUB_COPILOT_TOKEN=your-oauth-token
+```
+
+Check authentication status at any time:
 
 ```bash
 dojops auth status
 ```
 
----
+### Step 7: View the active configuration
 
-## Part 2: Configuration Profiles
-
-### Step 8: View Current Configuration
+See the full picture of your current settings:
 
 ```bash
 dojops config show
@@ -178,8 +203,8 @@ dojops config show
 ```
 ┌  Configuration
 │
-│  Provider: openai
-│  Model: gpt-4o (default)
+│  Provider: anthropic
+│  Model: claude-sonnet-4-6 (default for provider)
 │  Temperature: (not set)
 │  Fallback: ollama
 │  Profile: (default)
@@ -187,40 +212,43 @@ dojops config show
 └  Active configuration
 ```
 
-### Step 9: Create a Profile
+When `Temperature` shows `(not set)`, the provider's default is used — typically around 0.7 for most providers.
 
-Save current configuration as a named profile:
+### Step 8: Create environment profiles
+
+Profiles let you save a complete configuration state — provider, model, temperature, fallback — and switch between them by name. They're most useful when you work across multiple environments that need different LLM setups.
+
+With Anthropic as your current default, save a staging profile:
 
 ```bash
-dojops config profile create production
+dojops config profile create staging
 ```
 
 ```
 ┌  Profile Created
 │
-│  Name: production
-│  Provider: openai
-│  Model: gpt-4o
+│  Name: staging
+│  Provider: anthropic
+│  Model: claude-sonnet-4-6
 │
-└  Saved - use `dojops config profile use production` to activate
+└  Saved - use `dojops config profile use staging` to activate
 ```
 
-Create profiles for different environments:
+Switch to OpenAI and save a production profile:
 
 ```bash
-# Switch to Anthropic, then save
-dojops provider default anthropic
-dojops config profile create staging
-
-# Switch to Ollama for local dev
-dojops provider default ollama
-dojops config profile create local-dev
-
-# Return to default profile
-dojops config profile use default
+dojops provider default openai
+dojops config profile create production
 ```
 
-### Step 10: List and Switch Profiles
+Switch to Ollama for local development:
+
+```bash
+dojops provider default ollama
+dojops config profile create local-dev
+```
+
+Now you have three profiles:
 
 ```bash
 dojops config profile list
@@ -229,13 +257,15 @@ dojops config profile list
 ```
 ┌  Configuration Profiles
 │
-│  default     openai / gpt-4o (active)
+│  default     openai / gpt-4o
 │  production  openai / gpt-4o
 │  staging     anthropic / claude-sonnet-4-6
 │  local-dev   ollama / llama3.1
 │
-└  4 profiles
+└  4 profiles (default is active)
 ```
+
+### Step 9: Activate and use profiles
 
 Switch to a profile:
 
@@ -243,19 +273,34 @@ Switch to a profile:
 dojops config profile use staging
 ```
 
-Use a profile for a single command:
+All subsequent commands now use Anthropic. Switch back to the default:
+
+```bash
+dojops config profile use default
+```
+
+For one-off profile use without changing the active profile:
 
 ```bash
 dojops --profile=production "Create a Terraform config"
+dojops --profile=local-dev "Create a Dockerfile"
 ```
 
----
+This is useful in scripts that need to test output from multiple providers without changing global state.
 
-## Part 3: System Toolchain
+### Step 10: Remove a provider
 
-### Step 11: List Toolchain Binaries
+When you no longer need a provider:
 
-DojOps can install verification binaries into a sandboxed toolchain:
+```bash
+dojops provider remove deepseek
+```
+
+The token is removed from `~/.dojops/config.json`. If you had `DEEPSEEK_API_KEY` set as an environment variable, it still works — environment variables aren't touched by this command.
+
+### Step 11: Explore the toolchain
+
+DojOps can verify generated configs using external tools — `terraform validate`, `actionlint`, `hadolint`, etc. These run after generation, before writing files. See what's available:
 
 ```bash
 dojops toolchain list
@@ -264,69 +309,68 @@ dojops toolchain list
 ```
 ┌  System Toolchain (~/.dojops/toolchain/)
 │
-│  terraform    ✗ not installed  (v1.9.8)
-│  kubectl      ✗ not installed  (v1.31.4)
-│  helm         ✗ not installed  (v3.17.3)
-│  hadolint     ✗ not installed  (v2.12.0)
-│  trivy        ✗ not installed  (v0.58.2)
-│  gitleaks     ✗ not installed  (v8.22.1)
-│  ansible      ✗ not installed  (v11.1.0)
-│  shellcheck   ✗ not installed  (v0.10.0)
-│  actionlint   ✗ not installed  (v1.7.7)
-│  promtool     ✗ not installed  (v2.55.1)
-│  circleci     ✗ not installed  (v0.1.31364)
-│  gh           ✗ not installed  (v2.63.2)
+│  terraform   ✗ not installed  (v1.9.8)
+│  kubectl     ✗ not installed  (v1.31.4)
+│  helm        ✗ not installed  (v3.17.3)
+│  hadolint    ✗ not installed  (v2.12.0)
+│  trivy       ✗ not installed  (v0.58.2)
+│  gitleaks    ✗ not installed  (v8.22.1)
+│  ansible     ✗ not installed  (v11.1.0)
+│  shellcheck  ✗ not installed  (v0.10.0)
+│  actionlint  ✗ not installed  (v1.7.7)
+│  promtool    ✗ not installed  (v2.55.1)
+│  circleci    ✗ not installed  (v0.1.31364)
+│  gh          ✗ not installed  (v2.63.2)
 │
 └  0 installed, 12 available
 ```
 
-### Step 12: Install Toolchain Binaries
+All binaries install to `~/.dojops/toolchain/` — they don't touch your system PATH unless you add that directory yourself.
 
-Install verification tools for your infrastructure:
+### Step 12: Install toolchain binaries
+
+Install the tools you use most often. For a CI/CD-focused setup:
 
 ```bash
-# Install individual binaries
-dojops toolchain install terraform
+dojops toolchain install actionlint
 dojops toolchain install hadolint
 dojops toolchain install shellcheck
-
-# Install for CI validation
-dojops toolchain install actionlint
 ```
 
 ```
-┌  Installing: terraform v1.9.8
+┌  Installing: actionlint v1.7.7
 │
-│  Downloading from releases.hashicorp.com...
-│  Extracting to ~/.dojops/toolchain/terraform
-│  ✓ Installed: terraform v1.9.8
+│  Downloading from github.com/rhysd/actionlint...
+│  Extracting to ~/.dojops/toolchain/actionlint
+│  ✓ Installed: actionlint v1.7.7
 │
-└  Ready - used for config verification in apply
+└  Ready - used for CI workflow verification in apply
 ```
 
-> **Auto-install:** You can also skip manual installation entirely. When DojOps runs verification during `apply` and a required binary is missing, it automatically installs it into the toolchain on first use. Manual installation is useful when you want to pre-populate the toolchain (e.g., in CI environments or air-gapped setups).
+For infrastructure-focused work, install Terraform and Helm:
 
-### Step 13: Manage Toolchain
+```bash
+dojops toolchain install terraform
+dojops toolchain install helm
+```
 
-Remove a specific binary:
+You don't have to pre-install anything. When `dojops apply` runs a verification step and the required binary is missing, it installs it automatically on first use. Manual pre-installation is useful for CI environments where you want to control what gets downloaded during the build, or for air-gapped setups where you need to pre-populate the toolchain.
+
+Remove a binary you no longer need:
 
 ```bash
 dojops toolchain remove terraform
 ```
 
-Remove all toolchain binaries:
+Wipe the entire toolchain to start fresh:
 
 ```bash
 dojops toolchain clean
 ```
 
----
+### Step 13: Run system diagnostics
 
-## Part 4: System Health & Updates
-
-### Step 14: Run System Diagnostics
-
-Check your DojOps setup for issues:
+Get a complete health report of your DojOps installation:
 
 ```bash
 dojops status
@@ -335,51 +379,52 @@ dojops status
 ```
 ┌  DojOps Status
 │
-│  Version: v1.0.5
+│  Version: v1.1.6
 │  Node.js: v20.11.0
 │
-│  Provider: openai ✓ connected
-│  Model: gpt-4o
+│  Provider: anthropic ✓ connected
+│  Model: claude-sonnet-4-6
+│  Fallback: ollama
 │
 │  Project: ✓ initialized (.dojops/)
-│  Plans: 5 saved
-│  Audit: 47 entries, chain intact
+│  Plans: 8 saved
+│  Audit: 63 entries, chain intact
 │
 │  Toolchain:
-│  ├  terraform ✓ v1.9.8
-│  ├  hadolint  ✓ v2.12.0
-│  └  trivy     ✗ not installed
+│  ├  actionlint  ✓ v1.7.7
+│  ├  hadolint    ✓ v2.12.0
+│  ├  shellcheck  ✓ v0.10.0
+│  └  terraform   ✗ not installed
 │
 └  System healthy
 ```
 
-> **Note:** `dojops doctor` is an alias for `dojops status`.
+`dojops doctor` is an alias for `dojops status`. Both give the same output.
 
-### Step 15: Check for Updates
+### Step 14: Check for and install updates
+
+Check if a newer version is available without installing:
 
 ```bash
-# Check only (don't install)
 dojops upgrade --check
 ```
 
 ```
 ┌  Update Check
 │
-│  Current: v1.0.5
-│  Latest:  v1.0.6
+│  Current: v1.1.6
+│  Latest:  v1.1.6
 │
-│  Run `dojops upgrade` to install
-│
-└  Update available
+└  Already up to date
 ```
 
-Install the update:
+When an update is available, install it:
 
 ```bash
 dojops upgrade
 ```
 
-Auto-approve:
+For unattended updates in scripts:
 
 ```bash
 dojops upgrade --yes
@@ -387,29 +432,45 @@ dojops upgrade --yes
 
 ---
 
-## Environment Variable Reference
+## Try it yourself
 
-| Variable                         | Description                                   |
-| -------------------------------- | --------------------------------------------- |
-| `OPENAI_API_KEY`                 | OpenAI API key                                |
-| `ANTHROPIC_API_KEY`              | Anthropic API key                             |
-| `DEEPSEEK_API_KEY`               | DeepSeek API key                              |
-| `GEMINI_API_KEY`                 | Gemini API key                                |
-| `GITHUB_COPILOT_TOKEN`           | GitHub Copilot OAuth token (skip Device Flow) |
-| `DOJOPS_PROVIDER`                | Default LLM provider                          |
-| `DOJOPS_MODEL`                   | Default LLM model                             |
-| `DOJOPS_TEMPERATURE`             | LLM temperature (0-2)                         |
-| `DOJOPS_FALLBACK_PROVIDER`       | Fallback provider name                        |
-| `DOJOPS_HUB_URL`                 | Hub API base URL                              |
-| `DOJOPS_HUB_TOKEN`               | Hub API token for publishing                  |
-| `OLLAMA_HOST`                    | Ollama server URL                             |
-| `OLLAMA_TLS_REJECT_UNAUTHORIZED` | Skip Ollama TLS cert verification             |
+1. **Profile switching in a script.** Write a shell script that generates a Kubernetes deployment using each of your configured profiles (`production`, `staging`, `local-dev`) and saves each output to a separate file. Compare the differences between providers.
+
+2. **Fallback stress test.** Set your primary provider to a made-up API key so it fails, configure Ollama as the fallback, and run a generation. Watch the fallback trigger and confirm the output is still generated.
+
+3. **CI toolchain pre-population.** Write a `Makefile` target called `setup-toolchain` that installs `actionlint`, `hadolint`, and `shellcheck` using `dojops toolchain install`. Run it in a fresh environment and verify all three tools are available before running `dojops apply`.
 
 ---
 
-## What's Next?
+## Troubleshooting
 
-- [Getting Started](/getting-started/quickstart), First-time setup
-- [Provider Management](/getting-started/providers), Detailed provider guide
-- [Configuration](/getting-started/configuration), Full config reference
-- [CLI Reference](/usage/cli), All commands and flags
+**`dojops provider add` succeeds but the provider still shows "not configured"**
+
+Check that `~/.dojops/config.json` is writable. If you installed DojOps globally with `sudo npm install -g`, the config directory may have incorrect permissions. Fix with `sudo chown -R $USER ~/.dojops`.
+
+**Profile switch doesn't persist between terminal sessions**
+
+Profile state is stored in `~/.dojops/config.json`. If you're seeing the wrong profile, check whether an environment variable like `DOJOPS_PROVIDER` is overriding it — environment variables always win over config file settings.
+
+**Toolchain install fails with network errors**
+
+DojOps downloads toolchain binaries from GitHub Releases. If you're behind a proxy, set `HTTP_PROXY` and `HTTPS_PROXY` before running the install. For air-gapped environments, download the binaries manually and copy them to `~/.dojops/toolchain/`.
+
+**`dojops status` shows "chain broken" in the audit log**
+
+The audit chain breaks when entries are deleted or manually edited. Run `dojops history repair` to rebuild the chain pointers from the existing entries. Repair rebuilds pointers — it can't recover deleted entries.
+
+---
+
+## What you learned
+
+Provider configuration in DojOps has three layers: the `~/.dojops/config.json` file (written by CLI commands), environment variables (which override the config file), and per-command flags (which override both). Profiles snapshot the config file state and let you switch environments with one command — useful when you work across projects with different cost or latency requirements. The toolchain installs to an isolated directory so verification binaries don't pollute your system PATH, and they auto-install on first use if you skip pre-installation.
+
+---
+
+## Next steps
+
+- [Getting Started](/getting-started/quickstart) — First-time setup from scratch
+- [Provider Guide](/getting-started/providers) — Detailed per-provider configuration and model lists
+- [Configuration Reference](/getting-started/configuration) — Every config option documented
+- [CLI Reference](/usage/cli) — Full `provider`, `config`, and `toolchain` command reference

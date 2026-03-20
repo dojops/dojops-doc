@@ -1,73 +1,96 @@
-# CI/CD from Scratch
+# CI/CD from scratch
 
 Build a full CI/CD pipeline from zero using DojOps plan and apply.
 
+> **Difficulty:** Intermediate
+> **Duration:** 35 minutes
+> **What you'll build:** A complete CI/CD pipeline for a Node.js app — GitHub Actions workflow, multi-stage Dockerfile, and Docker Compose config — generated from a single high-level goal and executed with per-step approval.
+
 ---
 
-## Overview
+## What you'll learn
 
-In this tutorial, you'll start with a bare Node.js project that has zero DevOps files and use DojOps to:
+- How the task planner decomposes a goal into a dependency-aware task graph
+- Why topological execution order matters and how it works in practice
+- How to review and validate a plan before any files are touched
+- How to use the interactive approval workflow to control each generated file
+- How to verify the audit trail and confirm chain integrity after execution
 
-- Plan a complete CI/CD pipeline using task graph decomposition
-- Review and validate the plan before execution
-- Execute the plan with approval workflows
-- Verify the results with a quality check and audit trail
+---
 
-**Time estimate:** ~20 minutes
+## Prerequisites
 
-**Prerequisites:**
-
-- Node.js >= 20 installed
-- An API key from a supported LLM provider
+- Node.js >= 20 ([nodejs.org](https://nodejs.org))
 - Git installed
+- DojOps installed: `npm i -g @dojops/cli`
+- An API key from a supported LLM provider
+
+This tutorial starts from a completely empty project — no CI, no Docker, nothing. Starting from zero lets you see the full planning and execution flow without any existing context getting in the way.
 
 ---
 
-## Step 1: Setup
+## Workshop steps
 
-Install DojOps and create a minimal project:
+### Step 1: Install DojOps and create a project
+
+If you haven't installed DojOps yet:
 
 ```bash
 npm i -g @dojops/cli
 ```
 
-Create a fresh Node.js project to work with:
+Verify the version:
 
 ```bash
-mkdir my-app && cd my-app
+dojops --version
+```
+
+```
+@dojops/cli v1.1.6
+```
+
+Create a fresh Node.js project. This represents the bare minimum: an app that builds and runs, but has zero DevOps infrastructure:
+
+```bash
+mkdir my-node-app && cd my-node-app
 git init
 npm init -y
 ```
 
-Add a simple build script to `package.json`:
+Add minimal scripts to `package.json` so the CI workflow has something real to run:
 
 ```json
 {
+  "name": "my-node-app",
+  "version": "1.0.0",
   "scripts": {
-    "build": "echo 'Building...'",
-    "test": "echo 'Tests passed'",
+    "build": "echo 'Build complete'",
+    "test": "echo 'All tests passed'",
+    "lint": "echo 'No lint errors'",
     "start": "node index.js"
   }
 }
 ```
 
-Create a minimal `index.js`:
+Create a minimal entry point:
 
 ```bash
-echo 'console.log("Hello from my-app")' > index.js
+echo 'console.log("my-node-app running")' > index.js
 ```
 
-Configure your LLM provider if you haven't already:
+Configure your LLM provider:
 
 ```bash
 dojops provider add openai --token sk-...
 ```
 
+Your project now has exactly two files: `package.json` and `index.js`. Everything that follows starts from here.
+
 ---
 
-## Step 2: Initialize
+### Step 2: Initialize
 
-Run `dojops init` to scan the project:
+Run `dojops init` so DojOps understands what it's working with:
 
 ```bash
 dojops init
@@ -96,134 +119,192 @@ Recommended agents:
 Project context saved to .dojops/context.json
 ```
 
-DojOps correctly identifies this as a bare project with no CI/CD or container infrastructure.
+DojOps correctly identifies this as a bare project. No CI, no containers, no infrastructure. That context gets saved to `.dojops/context.json` — every subsequent command reads it, so the LLM always knows the current state of your project rather than making assumptions.
 
 ---
 
-## Step 3: Plan the CI/CD
+### Step 3: Plan the CI/CD pipeline
 
-Use `dojops plan` to decompose a high-level goal into a dependency-aware task graph:
+This is where the real work starts. Instead of running separate commands for each file, you give DojOps a high-level goal and let the planner decompose it:
 
 ```bash
 dojops plan "Set up CI/CD for a Node.js app with GitHub Actions, Docker, and Docker Compose"
 ```
 
-DojOps sends your goal to the LLM along with the project context, and receives a structured task graph:
-
 ```
 Planning: "Set up CI/CD for a Node.js app with GitHub Actions, Docker, and Docker Compose"
 
+Analyzing goal...
+Identifying required skills...
+Building task graph...
+
 Task Graph (3 tasks):
-  1. [github-actions] Create GitHub Actions CI workflow
+  1. [github-actions]  Create GitHub Actions CI workflow
+     Skill:        github-actions
+     Output:       .github/workflows/ci.yml
      Dependencies: none
-  2. [dockerfile] Create multi-stage Dockerfile
+
+  2. [dockerfile]      Create multi-stage Dockerfile
+     Skill:        dockerfile
+     Output:       Dockerfile
      Dependencies: none
-  3. [docker-compose] Create Docker Compose for local development
+
+  3. [docker-compose]  Create Docker Compose for local development
+     Skill:        docker-compose
+     Output:       docker-compose.yml
      Dependencies: [2] dockerfile
 
-Execution order (topological):
-  1. github-actions + dockerfile (parallel)
-  2. docker-compose (after dockerfile)
+Execution order (topological sort):
+  Phase 1 (parallel): github-actions, dockerfile
+  Phase 2 (serial):   docker-compose
 
-Plan saved to .dojops/plans/plan-<id>.json
+Estimated files: 3
+Plan saved to .dojops/plans/plan-a1b2c3d4.json
 ```
 
-The planner decomposes your goal into individual tool-scoped tasks, identifies dependencies (Docker Compose depends on the Dockerfile), and determines the optimal execution order.
+The planner figured out that Docker Compose depends on the Dockerfile — you can't reference a Docker image in Compose before defining how to build it. Tasks 1 and 2 have no dependencies, so they can run in parallel. Task 3 waits for Task 2. That's topological sort in practice.
+
+The plan is saved locally. Nothing has been written to your project yet.
 
 ---
 
-## Step 4: Review the Plan
+### Step 4: Validate before executing
 
-Before executing, review what DojOps will generate:
+Review the plan before touching any files:
 
 ```bash
 dojops validate
 ```
 
 ```
-Validating plan plan-<id>...
+Validating plan plan-a1b2c3d4...
 
   Task 1: github-actions
-    Tool:    github-actions-tool
-    Action:  create .github/workflows/ci.yml
+    Skill:   github-actions
+    Output:  .github/workflows/ci.yml
+    Writes:  .github/workflows/ (directory will be created)
     Status:  valid
 
   Task 2: dockerfile
-    Tool:    dockerfile-tool
-    Action:  create Dockerfile
+    Skill:   dockerfile
+    Output:  Dockerfile
+    Writes:  ./Dockerfile
     Status:  valid
 
   Task 3: docker-compose
-    Tool:    docker-compose-tool
-    Action:  create docker-compose.yml
-    Depends: task 2
+    Skill:   docker-compose
+    Output:  docker-compose.yml
+    Depends: task 2 (dockerfile)
+    Writes:  ./docker-compose.yml
     Status:  valid
 
-All tasks validated successfully.
+All 3 tasks valid. No conflicts detected.
 ```
 
-You can also inspect the last plan in detail:
+Validation checks that the skill exists, the output paths are writable, and dependency ordering is consistent. Get a plain-language explanation of what the plan will actually do:
 
 ```bash
 dojops explain last
 ```
 
-This shows the full task graph with inputs, expected outputs, and the reasoning behind the decomposition.
+```
+Plan Explanation: plan-a1b2c3d4
+
+This plan builds CI/CD infrastructure for a JavaScript Node.js application.
+
+Task 1 creates a GitHub Actions workflow at .github/workflows/ci.yml. It will
+run on push and pull request events, execute your npm build, test, and lint
+scripts, cache node_modules to speed up subsequent runs, and test against
+Node.js 20 and 22.
+
+Task 2 creates a multi-stage Dockerfile. The first stage installs dependencies,
+the second builds the application, and the third creates a minimal production
+image from node:20-slim. The final image runs as a non-root user.
+
+Task 3 creates a docker-compose.yml that references the Dockerfile from Task 2.
+It exposes port 3000, mounts a volume for development hot-reloading, and sets
+up environment variables for NODE_ENV.
+
+3 tasks, 3 files to create.
+```
+
+`explain` translates the task graph into plain English. This is the moment to catch anything you didn't intend before execution. If the explanation doesn't match your goal, refine the prompt and re-plan.
 
 ---
 
-## Step 5: Execute
+### Step 5: Execute with approval workflow
 
-Apply the plan with the interactive approval workflow:
+Apply the plan. DojOps runs tasks in topological order, pausing at each step for your approval:
 
 ```bash
 dojops apply
 ```
 
-DojOps executes each task in topological order, asking for approval at each step:
-
 ```
-Executing plan plan-<id>...
+Executing plan plan-a1b2c3d4...
+
+Phase 1 (parallel execution)
+──────────────────────────────
 
 [1/3] github-actions: Create GitHub Actions CI workflow
 
-  Generated: .github/workflows/ci.yml
-    - Node.js 20/22 matrix
-    - Install, build, test, lint steps
-    - Dependency caching
-    - Security audit
+  Generating...done
 
-  Apply this file? (y/n/diff): y
-  Written: .github/workflows/ci.yml
+  Preview of .github/workflows/ci.yml:
+    - Triggers: push, pull_request (main branch)
+    - Matrix: Node.js 20, 22
+    - Steps: checkout, setup-node, npm ci, build, test, lint
+    - Caching: node_modules via actions/cache
+    - Security: npm audit on each run
+
+  Apply this file? (y/n/diff): diff
+```
+
+Type `diff` to see the full file content before deciding:
+
+```
+Apply this file? (y/n/diff): y
+
+  Created: .github/workflows/ci.yml
 
 [2/3] dockerfile: Create multi-stage Dockerfile
 
-  Generated: Dockerfile
-    - Multi-stage build (deps → builder → runner)
-    - Node 20-slim base
-    - Non-root user
-    - Optimized layer caching
+  Generating...done
+
+  Preview of Dockerfile:
+    - Stage 1 (deps):    node:20.11.1-slim, npm ci --only=production
+    - Stage 2 (builder): full build, runs npm run build
+    - Stage 3 (runner):  node:20.11.1-slim, non-root user, EXPOSE 3000
 
   Apply this file? (y/n/diff): y
-  Written: Dockerfile
+
+  Created: Dockerfile
+
+Phase 2 (serial execution)
+──────────────────────────────
 
 [3/3] docker-compose: Create Docker Compose config
 
-  Generated: docker-compose.yml
-    - App service (builds from Dockerfile)
-    - Port mapping (3000:3000)
-    - Volume mount for development
-    - Environment variables
+  Generating...done (using Dockerfile from task 2)
+
+  Preview of docker-compose.yml:
+    - Service: app (builds from ./Dockerfile)
+    - Port mapping: 3000:3000
+    - Volume: .:/app (development hot reload)
+    - Environment: NODE_ENV=development
 
   Apply this file? (y/n/diff): y
-  Written: docker-compose.yml
 
-Plan executed successfully. 3 files created.
+  Created: docker-compose.yml
+
+────────────────────────────────────────
+Plan executed successfully.
+  Files created: 3
+  Files modified: 0
+  Duration: 28s
 ```
 
-Choosing `diff` at any prompt shows the exact content that will be written, so you can review before committing.
-
-For non-interactive environments, use `--yes` to auto-approve all operations:
+The `diff` option is your escape hatch. Use it before approving anything you're unsure about. For automated pipelines where interactive prompts aren't practical, use `--yes` to approve everything automatically:
 
 ```bash
 dojops apply --yes
@@ -231,9 +312,93 @@ dojops apply --yes
 
 ---
 
-## Step 6: Verify Results
+### Step 6: Inspect the generated files
 
-Run the quality check again to see the improvement:
+Before accepting the output, read what was actually generated. Start with the workflow:
+
+```bash
+cat .github/workflows/ci.yml
+```
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+```
+
+Node version matrix, dependency caching, security audit — all present. Check the Dockerfile:
+
+```bash
+cat Dockerfile
+```
+
+```dockerfile
+# Stage 1: Install dependencies
+FROM node:20.11.1-slim AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Stage 2: Build
+FROM node:20.11.1-slim AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+# Stage 3: Production runner
+FROM node:20.11.1-slim AS runner
+WORKDIR /app
+RUN addgroup --system nodejs && adduser --system --ingroup nodejs nextjs
+COPY --from=builder /app/dist ./dist
+COPY --from=deps /app/node_modules ./node_modules
+USER nextjs
+EXPOSE 3000
+CMD ["node", "dist/index.js"]
+```
+
+Pinned base image, multi-stage build, non-root user. These aren't cosmetic — they directly reduce your attack surface and prevent subtle breakage from floating tags.
+
+---
+
+### Step 7: Verify the results
+
+Run the quality check to see where you stand:
 
 ```bash
 dojops check
@@ -255,23 +420,25 @@ Missing files:
   renovate.json or dependabot.yml
 ```
 
-The score jumped from baseline to 78, the critical CI/CD and container infrastructure is now in place.
+From 0 to 78. The critical CI/CD and container infrastructure is in place. What remains is informational — nothing that will get you paged at 2am.
 
-Check the audit trail to see what happened:
+Check the audit trail:
 
 ```bash
 dojops history list
 ```
 
 ```
-ID        Type       Tool               Status     Date
-plan-001  plan       planner            completed  2025-01-15 10:30
-exec-001  execute    github-actions     completed  2025-01-15 10:31
-exec-002  execute    dockerfile         completed  2025-01-15 10:31
-exec-003  execute    docker-compose     completed  2025-01-15 10:32
+ID         Type      Skill                      Status     Date
+init-001   init      project-scanner            completed  2026-03-20 10:00
+plan-001   plan      planner                    completed  2026-03-20 10:05
+exec-001   execute   github-actions             completed  2026-03-20 10:06
+exec-002   execute   dockerfile                 completed  2026-03-20 10:06
+exec-003   execute   docker-compose             completed  2026-03-20 10:07
+check-001  check     quality-analyst            completed  2026-03-20 10:09
 ```
 
-Each execution is recorded with a hash-chained audit entry. Verify the chain integrity:
+Verify the chain hasn't been tampered with:
 
 ```bash
 dojops history verify
@@ -279,25 +446,51 @@ dojops history verify
 
 ```
 Audit chain integrity: verified
-Entries: 4
+Entries: 6
 Chain status: valid (all hashes match)
 ```
 
+Each entry links to the previous via a SHA-256 hash. If any entry were modified after the fact, verification would fail. This is what makes the audit log useful for compliance — not just a log file anyone can edit.
+
 ---
 
-## Summary
+## Try it yourself
 
-In this tutorial, you:
+These challenges go beyond the workshop steps. Try them without guidance:
 
-1. **Created a bare project** with zero DevOps infrastructure
-2. **Planned** a full CI/CD pipeline using LLM-powered task graph decomposition
-3. **Reviewed** the plan with `validate` and `explain` before touching any files
-4. **Executed** the plan with interactive approval at each step
-5. **Verified** the results with a quality check (0 → 78 maturity score) and audit trail
+**Challenge 1 — Add Kubernetes.** Run `dojops plan "Add Kubernetes deployment and service manifests for this Node.js app"`. Watch how the planner builds a dependency graph when a Namespace must exist before a Deployment can reference it.
 
-### Next Steps
+**Challenge 2 — Push the score above 85.** The quality check identified three `info` items. Use DojOps to generate `SECURITY.md` and `renovate.json`. Run `dojops check` after each addition and watch the score climb.
 
-- **[Enhance a Next.js Project](/tutorials/enhance-nextjs-project)**, Improve an existing project's DevOps setup
-- **[Security Audit & Remediation](/tutorials/security-audit)**, Scan for vulnerabilities and auto-fix
-- **[Task Planner](/components/planner)**, Deep dive into goal decomposition and task graphs
-- **[Execution Engine](/components/execution-engine)**, Policies, sandboxing, and audit trails
+**Challenge 3 — Replay mode.** Run `dojops apply --replay exec-001`. DojOps replays the exact generation from the audit log using `temperature: 0`. Compare the output to the original — deterministic generation means you get the same file every time.
+
+---
+
+## Troubleshooting
+
+**`dojops plan` exits with "no skills matched"**
+The planner couldn't map your goal to any of the 18 built-in skills. Be more specific: include the tool names explicitly (e.g., "GitHub Actions" instead of "CI/CD"). Run `dojops skills list` to see what's available.
+
+**`dojops validate` reports a dependency conflict**
+Two tasks write to the same path, or a dependency was declared but the referenced task ID doesn't exist. Run `dojops explain last` to read the task graph — the conflict is usually visible in plain text. Re-plan with a more precise goal.
+
+**`dojops apply` hangs at the approval prompt**
+You're running in a non-interactive shell (CI, Docker, piped input). Add `--yes` to auto-approve, or use `dojops apply --yes` to skip interactive prompts entirely.
+
+**Generated Dockerfile doesn't match my framework**
+The planner inferred your setup from `package.json`. If you're using Next.js, Remix, or another framework with a custom build output, include that in your prompt: "Create a multi-stage Dockerfile for a Next.js app with standalone output." Specificity produces better output.
+
+---
+
+## What you learned
+
+You started with two files — `package.json` and `index.js` — and ended with a quality-scored CI/CD pipeline. The planner decomposed a single sentence into a dependency-aware task graph, determined execution order automatically, and generated three production-quality files. You reviewed each one before it was written. Every operation was recorded in a hash-chained audit log you can verify independently. The quality check gave you a concrete score — 78/100 — and told you exactly what's left to do.
+
+---
+
+## Next steps
+
+- **[Enhance a Next.js Project](/tutorials/enhance-nextjs-project)** — Improve an existing project's DevOps setup without starting over
+- **[Security Audit & Remediation](/tutorials/security-audit)** — Scan for vulnerabilities and auto-fix findings
+- **[Task Planner](/components/planner)** — Deep dive into goal decomposition and task graphs
+- **[Execution Engine](/components/execution-engine)** — Policies, sandboxing, and audit trails

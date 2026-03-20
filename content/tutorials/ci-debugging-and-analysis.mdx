@@ -1,120 +1,332 @@
-# CI Debugging & Infrastructure Analysis
+# CI debugging & infrastructure analysis
 
 Diagnose CI/CD failures, analyze infrastructure diffs, and auto-fix quality issues with DojOps.
 
+> **Difficulty:** Intermediate
+> **Duration:** 30 minutes
+> **What you'll build:** A working diagnostic workflow — you'll debug three different CI failure types, analyze a high-risk Terraform plan diff, auto-remediate quality findings, and integrate provider health checks into a monitoring script.
+
 ---
 
-## Overview
+## What you'll learn
 
-In this tutorial, you'll learn to use DojOps diagnostic commands to:
+- How `dojops debug ci` identifies root causes from raw CI log output
+- Which failure patterns the LLM recognizes and how to feed it the right input
+- How `dojops analyze diff` assesses risk, cost, and security impact in Terraform plans
+- How quality check auto-remediation generates targeted fixes with backup preservation
+- How to use JSON output mode for CI integration and monitoring
 
-- Debug CI/CD log failures with AI-powered root cause analysis
-- Analyze Terraform plan diffs for risk, cost, and security impact
-- Run DevOps quality checks and auto-remediate findings
-- Test LLM provider connectivity
+---
 
-**Time estimate:** ~15 minutes
-
-**Prerequisites:**
+## Prerequisites
 
 - DojOps installed and configured with an LLM provider
-- A project with DevOps configs (run `dojops init` first)
+- A project with DevOps configs (run `dojops init` first, or use the [example repo](https://github.com/dojops/example-nextjs.git))
 
 ---
 
-## Step 1: Debug a CI Failure
+## Workshop steps
 
-When a CI pipeline fails, paste the error log into `dojops debug ci` for AI-powered diagnosis:
+### Step 1: Debug a CI failure — dependency resolution
+
+The most common CI failure pattern is a dependency resolution error. Here's what it looks like in practice, and how to diagnose it fast.
+
+Paste the error log directly into `dojops debug ci`:
 
 ```bash
 dojops debug ci "npm ERR! ERESOLVE unable to resolve dependency tree
 npm ERR! While resolving: my-app@1.0.0
 npm ERR! Found: react@18.2.0
 npm ERR! Could not resolve dependency:
-npm ERR! peer react@'^17.0.0' from react-beautiful-dnd@13.1.1"
+npm ERR! peer react@'^17.0.0' from react-beautiful-dnd@13.1.1
+npm ERR! node_modules/react-beautiful-dnd
+npm ERR!   react-beautiful-dnd@'*' from the root project"
 ```
 
 ```
 ┌  CI Failure Diagnosis
 │
-│  Error Type: Dependency Resolution
+│  Error Type:    Dependency Resolution (ERESOLVE)
+│  CI Platform:   npm / package manager
+│  Confidence:    high
 │
 │  Root Cause:
-│  react-beautiful-dnd@13.1.1 requires React 17 but your project
-│  uses React 18. The peer dependency constraint is incompatible.
+│  react-beautiful-dnd@13.1.1 declares a peer dependency on React 17.
+│  Your project has React 18.2.0. npm v7+ enforces peer dependencies
+│  strictly, so the install fails rather than silently mismatching.
 │
-│  Suggested Fixes:
-│  1. Replace react-beautiful-dnd with @hello-pangea/dnd (React 18 fork)
-│  2. Use --legacy-peer-deps in your npm install step
-│  3. Pin react-beautiful-dnd to a version supporting React 18
+│  Options (ranked by recommendation):
 │
-│  CI Fix:
-│  Add to your workflow: npm ci --legacy-peer-deps
-│  (Not recommended long-term - migrate to @hello-pangea/dnd)
+│  1. Replace react-beautiful-dnd with @hello-pangea/dnd (best)
+│     This is the maintained React 18 fork with an identical API.
+│     Migration: npm uninstall react-beautiful-dnd
+│               npm install @hello-pangea/dnd
+│     Change imports: 'react-beautiful-dnd' → '@hello-pangea/dnd'
+│
+│  2. Use --legacy-peer-deps (acceptable short-term)
+│     In your workflow: npm ci --legacy-peer-deps
+│     This bypasses the peer check. The package may still work at
+│     runtime but you're operating outside the declared contract.
+│
+│  3. Pin react to 17 (not recommended)
+│     This downgrades your entire app to React 17.
+│
+│  CI Fix (immediate):
+│  Add to your workflow install step:
+│    run: npm ci --legacy-peer-deps
 │
 └  Diagnosis complete
 ```
 
-Works with any CI log, GitHub Actions, GitLab CI, Jenkins, CircleCI, etc:
-
-```bash
-# TypeScript compilation failure
-dojops debug ci "ERROR: tsc failed with exit code 1
-src/index.ts(42,5): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'."
-
-# Docker build failure
-dojops debug ci "Step 5/12 : RUN pip install -r requirements.txt
-ERROR: Could not find a version that satisfies the requirement torch==2.1.0"
-```
+The diagnosis explains why the failure occurred, not just what failed. Option 1 is the right long-term fix. Option 2 unblocks CI while you plan the migration. The distinction matters — `--legacy-peer-deps` is a debt you'll pay later.
 
 ---
 
-## Step 2: Analyze an Infrastructure Diff
+### Step 2: Debug a CI failure — TypeScript compilation
 
-When running `terraform plan` or similar tools, save the output to a file and feed it to DojOps for risk analysis:
+Type errors in CI are noisier than they look. The raw output contains file paths, line numbers, and error codes — the LLM extracts the signal.
 
 ```bash
-# Save the plan output to a file (recommended for multiline diffs)
-terraform plan -no-color > plan.diff
-
-# Analyze the diff
-dojops analyze diff --file plan.diff
+dojops debug ci "ERROR: tsc failed with exit code 1
+src/api/handlers.ts(142,5): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/api/handlers.ts(158,12): error TS18047: 'req.user' is possibly 'null'.
+src/utils/logger.ts(23,3): error TS7006: Parameter 'message' implicitly has an 'any' type."
 ```
 
-You can also pipe directly:
+```
+┌  CI Failure Diagnosis
+│
+│  Error Type:    TypeScript Compilation (tsc)
+│  Files:         handlers.ts, logger.ts (2 files, 3 errors)
+│  Confidence:    high
+│
+│  Error 1 — TS2345 (handlers.ts:142)
+│  The variable passed to a function expects string but can be undefined.
+│  Pattern: accessing an optional property without a null check.
+│  Fix: Add a non-null assertion or guard:
+│    option A: functionCall(value ?? '')  — use empty string fallback
+│    option B: if (!value) return;        — early return pattern
+│    option C: functionCall(value!)       — assert non-null (only if
+│               you're certain it can't be undefined at this point)
+│
+│  Error 2 — TS18047 (handlers.ts:158)
+│  req.user is typed as User | null (common in Express + Passport).
+│  Fix: Add a null guard before accessing it:
+│    if (!req.user) { return res.status(401).json({ error: 'Unauthorized' }); }
+│
+│  Error 3 — TS7006 (logger.ts:23)
+│  Parameter lacks a type annotation. TypeScript inferred 'any' and
+│  your tsconfig has noImplicitAny: true.
+│  Fix: Add explicit type: function log(message: string): void { ... }
+│
+│  No shared root cause — these are three independent issues.
+│
+└  Diagnosis complete
+```
+
+Three independent errors with three independent fixes. The LLM identified the pattern behind each one (optional property access, Express middleware typing, implicit any) rather than just quoting the error code back at you.
+
+---
+
+### Step 3: Debug a CI failure — Docker build
+
+Docker build failures often bury the real error in output from package managers. Feed the raw log:
+
+```bash
+dojops debug ci "Step 7/14 : RUN pip install -r requirements.txt
+ ---> Running in 8f3c2a1b4d5e
+Collecting torch==2.1.0
+  Downloading torch-2.1.0.tar.gz (856 kB)
+ERROR: Could not find a version that satisfies the requirement torch==2.1.0+cu118 (from versions: 2.0.0, 2.0.1, 2.1.0, 2.1.1, 2.1.2)
+ERROR: No matching distribution found for torch==2.1.0+cu118
+The command '/bin/sh -c pip install -r requirements.txt' returned a non-zero code: 1"
+```
+
+```
+┌  CI Failure Diagnosis
+│
+│  Error Type:    Docker Build — Python Package Resolution
+│  Step:          7/14
+│  Confidence:    high
+│
+│  Root Cause:
+│  torch==2.1.0+cu118 is a CUDA-specific build of PyTorch. The +cu118
+│  suffix specifies CUDA 11.8. This variant is not published to PyPI —
+│  it's only available from the PyTorch index at:
+│    https://download.pytorch.org/whl/cu118
+│
+│  Standard pip looks in PyPI by default and can't find +cu118 builds.
+│
+│  Fix:
+│  Add the PyTorch index URL to your pip install command:
+│
+│    RUN pip install torch==2.1.0+cu118 \
+│        --index-url https://download.pytorch.org/whl/cu118
+│
+│  Or in requirements.txt, add an index URL comment (pip 22+):
+│    --index-url https://download.pytorch.org/whl/cu118
+│    torch==2.1.0+cu118
+│
+│  Note: If you don't need GPU support in CI, use the CPU-only build:
+│    torch==2.1.0 (no suffix) — available from PyPI, much smaller image
+│
+└  Diagnosis complete
+```
+
+The LLM identified the `+cu118` suffix as the cause, explained why it fails (wrong index), and offered a CPU-only alternative for CI environments where GPU isn't needed. That last point — "you probably don't need GPU in CI" — is what makes this more useful than a Stack Overflow search.
+
+---
+
+### Step 4: Analyze a Terraform plan diff
+
+Before applying any Terraform change in a production environment, run the plan through `dojops analyze diff`. This is the part that matters most — catching security regressions and destructive changes before they become incidents.
+
+Save a Terraform plan to a file:
+
+```bash
+terraform plan -no-color > plan.txt
+```
+
+Or pipe directly:
 
 ```bash
 terraform plan -no-color | dojops analyze diff
 ```
 
+For this workshop, create a sample diff to analyze:
+
+```bash
+cat > plan.txt << 'EOF'
+Terraform will perform the following actions:
+
+  # aws_security_group.app will be updated in-place
+  ~ resource "aws_security_group" "app" {
+        id     = "sg-0abc123def456"
+        name   = "app-security-group"
+
+      ~ ingress {
+          ~ cidr_blocks = [
+              - "10.0.0.0/8",
+              + "0.0.0.0/0",
+            ]
+            from_port   = 443
+            protocol    = "tcp"
+            to_port     = 443
+        }
+    }
+
+  # aws_instance.legacy_app will be destroyed
+  - resource "aws_instance" "legacy_app" {
+      - ami           = "ami-0abcdef1234567890"
+      - instance_type = "t3.medium"
+      - tags          = { "Name" = "legacy-app" }
+    }
+
+  # aws_db_instance.main will be updated in-place
+  ~ resource "aws_db_instance" "main" {
+      ~ backup_retention_period = 0 -> 7
+    }
+
+Plan: 0 to add, 2 to change, 1 to destroy.
+EOF
+
+dojops analyze diff --file plan.txt
+```
+
 ```
 ┌  Infrastructure Diff Analysis
 │
-│  Risk Level: HIGH
+│  Risk Level:   HIGH
+│  Resources:    4 changes (0 add, 2 modify, 1 destroy)
 │
-│  Security:
-│  ⚠ CRITICAL: Security group ingress changed from private (10.0.0.0/8)
-│    to public (0.0.0.0/0). This exposes port 443 to the entire internet.
+│  ──────────────────────────────────────────────────
+│  CRITICAL — Security Regression
+│  ──────────────────────────────────────────────────
+│  aws_security_group.app — ingress cidr_blocks
+│
+│  Port 443 ingress changed from 10.0.0.0/8 (private network)
+│  to 0.0.0.0/0 (entire internet).
+│
+│  This exposes your application directly to the public internet.
+│  If this is intentional (public-facing service), document it.
+│  If it's not intentional, revert before applying.
+│
+│  Recommended action: Restrict to specific IPs or use a WAF/CloudFront
+│  in front of the security group.
+│
+│  ──────────────────────────────────────────────────
+│  DESTRUCTIVE — Irreversible Operation
+│  ──────────────────────────────────────────────────
+│  aws_instance.legacy_app — destroy
+│
+│  Instance destruction is permanent. Verify:
+│    - All data has been migrated or backed up
+│    - No other resources reference this instance
+│    - The instance is not serving live traffic
+│
+│  Add lifecycle { prevent_destroy = true } to block accidental
+│  destruction in future plans.
+│
+│  ──────────────────────────────────────────────────
+│  POSITIVE — Good Practice
+│  ──────────────────────────────────────────────────
+│  aws_db_instance.main — backup_retention_period 0 → 7
+│
+│  Enabling 7-day backup retention is the right call. Databases with
+│  backup_retention_period = 0 have no automated backups.
 │
 │  Cost Impact:
-│  ↓ aws_instance.app destroyed - saves ~$30/month (t3.medium)
+│  - aws_instance.legacy_app destroyed: ~$30/month saved (t3.medium)
+│  - RDS backup storage: minor increase (~$2-5/month for typical DB)
 │
-│  Operational:
-│  ⚠ Instance destruction is irreversible. Ensure data is backed up.
-│
-│  Recommendations:
-│  1. Restrict ingress to specific IPs or use a WAF
-│  2. Verify instance destruction is intentional
-│  3. Add lifecycle { prevent_destroy = true } for critical resources
+│  Overall recommendation: Address the security group change before
+│  applying. The instance destruction and backup change look intentional.
 │
 └  Analysis complete
 ```
 
+One command surfaced a security regression that would have exposed port 443 to the internet. The cost impact calculation is a bonus — knowing the destroyed instance saves $30/month gives you context for the change.
+
+Get JSON output for automated review gates:
+
+```bash
+dojops analyze diff --file plan.txt --output json
+```
+
+```json
+{
+  "riskLevel": "HIGH",
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "type": "security_regression",
+      "resource": "aws_security_group.app",
+      "description": "Ingress CIDR changed from private (10.0.0.0/8) to public (0.0.0.0/0)",
+      "recommendation": "Restrict to specific IPs or use WAF"
+    },
+    {
+      "severity": "HIGH",
+      "type": "destructive_change",
+      "resource": "aws_instance.legacy_app",
+      "description": "Instance will be permanently destroyed"
+    }
+  ],
+  "costDelta": {
+    "monthly": -28.8,
+    "currency": "USD",
+    "note": "t3.medium destruction offset by RDS backup storage"
+  }
+}
+```
+
+Use the JSON output in a CI step to block `terraform apply` when `riskLevel` is `HIGH` or `CRITICAL`.
+
 ---
 
-## Step 3: Run a DevOps Quality Check
+### Step 5: Run a quality check and auto-remediate
 
-Analyze your project's DevOps configuration for quality, security, and best practices:
+Run the quality check to get a scored assessment:
 
 ```bash
 dojops check
@@ -126,20 +338,20 @@ dojops check
 │  Score: 72/100
 │
 │  Findings:
-│  ├  HIGH: Dockerfile uses latest tag - pin to specific version
-│  ├  HIGH: No dependency caching in GitHub Actions workflow
-│  ├  MEDIUM: Missing health check in docker-compose.yml
+│  ├  HIGH:   Dockerfile uses node:20 (floating tag) — pin to node:20.11.1-slim
+│  ├  HIGH:   No dependency caching in GitHub Actions workflow
+│  ├  MEDIUM: Missing HEALTHCHECK in docker-compose.yml
 │  ├  MEDIUM: No artifact upload step in CI pipeline
-│  └  LOW: No .dockerignore file detected
+│  └  LOW:    No .dockerignore file detected
 │
 │  Missing Configs:
 │  ├  No Kubernetes manifests
-│  └  No monitoring configuration
+│  └  No monitoring configuration (Prometheus/Grafana)
 │
 └  Score: 72/100
 ```
 
-Get machine-readable output for CI integration:
+Get machine-readable output for CI reporting:
 
 ```bash
 dojops check --output json
@@ -148,59 +360,97 @@ dojops check --output json
 ```json
 {
   "score": 72,
+  "grade": "Good",
   "findings": [
-    { "severity": "HIGH", "message": "Dockerfile uses latest tag", "file": "Dockerfile" },
+    {
+      "severity": "HIGH",
+      "message": "Dockerfile uses floating tag node:20",
+      "file": "Dockerfile",
+      "line": 1
+    },
     {
       "severity": "HIGH",
       "message": "No dependency caching in CI workflow",
+      "file": ".github/workflows/ci.yml",
+      "line": 18
+    },
+    {
+      "severity": "MEDIUM",
+      "message": "Missing HEALTHCHECK in docker-compose.yml",
+      "file": "docker-compose.yml"
+    },
+    {
+      "severity": "MEDIUM",
+      "message": "No artifact upload step",
       "file": ".github/workflows/ci.yml"
-    }
+    },
+    { "severity": "LOW", "message": "No .dockerignore file detected", "file": null }
   ],
-  "missingConfigs": ["kubernetes", "monitoring"]
+  "missingConfigs": ["kubernetes", "monitoring"],
+  "timestamp": "2026-03-20T10:15:00Z"
 }
 ```
 
----
-
-## Step 4: Auto-Remediate Findings
-
-Let DojOps automatically fix HIGH and CRITICAL findings:
+Auto-fix the HIGH severity findings:
 
 ```bash
 dojops check --fix
 ```
 
 ```
-┌  DevOps Quality Check - Auto-Remediation
+┌  DevOps Quality Check — Auto-Remediation
 │
-│  Score: 72/100
+│  Fixing HIGH findings...
 │
-│  Remediating HIGH findings...
+│  Fix 1: Dockerfile — floating base image tag
+│    Change: node:20 → node:20.11.1-slim
+│    Backup: Dockerfile.bak
+│    Apply? (y/n/diff): y
+│    ✓ Applied
 │
-│  ✓ Fixed: Dockerfile - pinned base image to node:20.11-slim
-│    Created backup: Dockerfile.bak
+│  Fix 2: .github/workflows/ci.yml — missing dependency caching
+│    Change: Add actions/cache step before npm ci
+│    Backup: .github/workflows/ci.yml.bak
+│    Apply? (y/n/diff): diff
+```
+
+Type `diff` to review the exact workflow change:
+
+```diff
+     - name: Install dependencies
++      - name: Cache node_modules
++        uses: actions/cache@v3
++        with:
++          path: ~/.npm
++          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
++          restore-keys: |
++            ${{ runner.os }}-node-
+
+       - name: Install dependencies
+         run: npm ci
+```
+
+```
+    Apply? (y/n/diff): y
+    ✓ Applied
+
+│  2 HIGH findings fixed.
+│  MEDIUM findings skipped (pass --severity=medium to include them).
 │
-│  ✓ Fixed: .github/workflows/ci.yml - added dependency caching step
-│    Created backup: .github/workflows/ci.yml.bak
-│
-│  Skipped: MEDIUM findings (use --fix with lower threshold for these)
+│  Re-scoring...
 │
 │  New Score: 85/100 (+13)
 │
-└  2 files remediated
+└  2 files remediated. Backups in *.bak
 ```
 
-Auto-approve without interactive confirmation:
-
-```bash
-dojops check --fix --yes
-```
+From 72 to 85 in two fixes. The `.bak` files let you roll back either change individually.
 
 ---
 
-## Step 5: Test Provider Connectivity
+### Step 6: Verify provider connectivity
 
-Verify your LLM provider is working correctly:
+Before debugging or generating anything, confirm your LLM provider is reachable:
 
 ```bash
 dojops check provider
@@ -209,15 +459,16 @@ dojops check provider
 ```
 ┌  Provider Check
 │
-│  Provider: openai
-│  Status: ✓ Connected
-│  Model: gpt-4o
-│  Available Models: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo
+│  Provider:          openai
+│  Status:            connected
+│  Model:             gpt-4o
+│  Available Models:  gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo
+│  Latency:           340ms
 │
 └  Provider is ready
 ```
 
-Get JSON output for monitoring:
+Monitor provider health in scripts or dashboards:
 
 ```bash
 dojops check provider --output json
@@ -228,46 +479,97 @@ dojops check provider --output json
   "provider": "openai",
   "status": "connected",
   "model": "gpt-4o",
-  "availableModels": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
+  "latency_ms": 340,
+  "availableModels": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
+  "timestamp": "2026-03-20T10:20:00Z"
 }
 ```
 
+Use this in a health check endpoint or uptime monitor. If `status` is anything other than `connected`, downstream generation commands will fail — catching it early saves time.
+
 ---
 
-## Step 6: Explain Previous Plans
+### Step 7: Explain previous plans
 
-Use `dojops explain` to get a plain-language explanation of any saved plan:
+After running `dojops plan`, you can come back days later and get a plain-language explanation of exactly what a plan will do before re-applying it:
 
 ```bash
-# Explain the most recent plan
 dojops explain
-
-# Explain a specific plan by ID
-dojops explain plan-a1b2c3d4
 ```
 
 ```
-┌  Plan Explanation
+┌  Plan Explanation — plan-a1b2c3d4
 │
-│  This plan sets up a CI/CD pipeline for a Node.js application.
+│  This plan sets up CI/CD infrastructure for a JavaScript Node.js
+│  application from scratch.
 │
-│  It creates 3 files:
-│  1. A GitHub Actions workflow that runs tests, linting, and builds
-│     on every push and pull request to the main branch.
-│  2. A Dockerfile with a multi-stage build for production deployment.
-│  3. A docker-compose.yml for local development with hot reloading.
+│  Task 1 creates .github/workflows/ci.yml. The workflow runs on push
+│  and pull_request events targeting main. It installs dependencies
+│  with npm ci, caches node_modules, runs build, test, and lint scripts,
+│  and checks for vulnerable dependencies with npm audit.
 │
-│  The tasks execute in order: CI workflow first (no dependencies),
-│  then Dockerfile, then docker-compose (depends on Dockerfile).
+│  Task 2 creates a multi-stage Dockerfile. Stage 1 installs production
+│  dependencies. Stage 2 builds the application. Stage 3 creates a
+│  minimal node:20.11.1-slim image that runs as a non-root user on
+│  port 3000.
 │
-└  3 tasks, estimated 2 files created + 1 updated
+│  Task 3 creates docker-compose.yml referencing the Dockerfile from
+│  Task 2. It exposes port 3000, mounts the project directory as a
+│  volume for hot reloading, and sets NODE_ENV=development.
+│
+│  Execution order: Tasks 1 and 2 run in parallel, Task 3 runs after
+│  Task 2 completes.
+│
+│  3 tasks, 3 files to create, 0 files to modify.
+│
+└  Plan plan-a1b2c3d4 — saved 2026-03-20 10:05
 ```
+
+Explain a specific plan by ID:
+
+```bash
+dojops explain plan-b2c3d4e5
+```
+
+`explain` is particularly useful when reviewing plans in pull requests — paste the output as a PR description so reviewers know exactly what will be generated before they approve the merge.
 
 ---
 
-## What's Next?
+## Try it yourself
 
-- [Security Audit & Remediation](/tutorials/security-audit), Scanning, SBOM, and auto-fix
-- [Advanced Plan Execution](/tutorials/advanced-plan-execution), Resume, retry, replay, and rollback
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch), Build a complete pipeline
-- [CLI Reference](/usage/cli), Full command reference
+**Challenge 1 — Diagnose from a file.** Save a real CI failure log from one of your projects to `ci.log`. Run `dojops debug ci --file ci.log`. Compare the diagnosis to what you already know about the failure — is the root cause analysis accurate?
+
+**Challenge 2 — Gate on diff risk.** Write a shell script that runs `dojops analyze diff --file plan.txt --output json`, extracts `riskLevel` with `jq`, and exits with code 1 if it's `HIGH` or `CRITICAL`. Add it as a CI step before `terraform apply`.
+
+**Challenge 3 — Track quality over time.** Run `dojops check --output json` and save the score to a file. Make a few improvements using `dojops check --fix`, then run it again. Compare the JSON outputs. Automate this comparison as a weekly CI job that fails if the score drops below last week's value.
+
+---
+
+## Troubleshooting
+
+**`dojops debug ci` gives a generic response**
+The error log is too short or too redacted. Include at least 10-20 lines of context around the failure — package versions, the command that failed, and the full error message. Truncated logs produce generic diagnoses.
+
+**`dojops analyze diff` reports "no changes detected"**
+The diff format wasn't recognized. Terraform plan output must include `-no-color` to strip ANSI escape codes: `terraform plan -no-color > plan.txt`. Without that flag, the color codes break the parser.
+
+**`dojops check --fix` creates a `.bak` file but doesn't change the source**
+The fix was generated but you chose `n` at the approval prompt, or a validation step failed. Re-run with `--fix --yes` to auto-approve all fixes. Check `.dojops/history/` for the attempted fix content.
+
+**`dojops check provider` shows latency > 5000ms**
+High latency often means a rate limit or network issue, not an authentication problem. Wait 30 seconds and retry. If it persists, run `dojops check provider --verbose` to see the raw HTTP response headers.
+
+---
+
+## What you learned
+
+You diagnosed three distinct CI failure patterns — dependency resolution, TypeScript compilation, and Docker build — and got root-cause analysis, not just error descriptions. You ran `dojops analyze diff` against a Terraform plan and caught a security regression before it reached production. Quality check auto-remediation fixed two HIGH findings and pushed the score from 72 to 85. Every command has a `--output json` mode for CI integration and monitoring. The `explain` command makes saved plans reviewable in plain English days after they were created.
+
+---
+
+## Next steps
+
+- **[Security Audit & Remediation](/tutorials/security-audit)** — Full scanning, SBOM generation, and auto-fix
+- **[Advanced Plan Execution](/tutorials/advanced-plan-execution)** — Resume, retry, replay, and rollback
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Build a complete pipeline from zero
+- **[CLI Reference](/usage/cli)** — Full command reference

@@ -1,33 +1,34 @@
-# Custom Agents & Skills
+# Custom agents & skills
 
-Create custom specialist agents, build custom skills, and publish to the DojOps Hub.
+Build specialist agents tailored to your domain, create custom skills as `.dops` files, and publish them to the DojOps Hub for your team.
 
----
-
-## Overview
-
-In this tutorial, you'll learn to:
-
-- Create custom specialist agents (LLM-generated and manual)
-- Browse, inspect, and remove agents
-- Scaffold, validate, and test custom skills
-- Search, install, and publish skills on the DojOps Hub
-
-**Time estimate:** ~20 minutes
-
-**Prerequisites:**
-
-- DojOps installed and configured with an LLM provider
-- A project initialized (`dojops init`)
-- For publishing: a DojOps Hub account and API token
+> **Difficulty:** Intermediate
+> **Duration:** 35 minutes
+> **What you'll build:** A custom SRE specialist agent, a `.dops` skill for generating runbooks, and a published package on the DojOps Hub
 
 ---
 
-## Part 1: Custom Agents
+## What you'll learn
 
-### Step 1: List Available Agents
+- How DojOps routes prompts to agents and why keyword routing matters
+- How to scaffold, inspect, and activate custom specialist agents
+- How `.dops` v2 skill files are structured, validated, and loaded
+- How to search, install, and publish skills on the Hub with integrity verification
+- How project-scoped vs. global skills behave differently
 
-View all built-in and custom agents:
+## Prerequisites
+
+- DojOps 1.1.6 installed: `npm i -g @dojops/cli`
+- A project initialized: `dojops init` (creates the `.dojops/` directory)
+- For the Hub section: a DojOps Hub account at [hub.dojops.ai](https://hub.dojops.ai) and an API token
+
+---
+
+## Workshop steps
+
+### Step 1: Understand the routing system
+
+Before creating a custom agent, it helps to see how the built-in ones work. DojOps uses keyword-based routing to match your prompt to the most relevant agent, then injects that agent's system prompt before sending the request to your LLM.
 
 ```bash
 dojops agents list
@@ -45,17 +46,22 @@ dojops agents list
 │  ├  monitoring-specialist    - Observability (Prometheus, Grafana)
 │  ├  security-specialist      - Security scanning and hardening
 │  ├  nginx-specialist         - Web server configuration (Nginx)
-│  └  ... (8 more)
+│  ├  makefile-specialist      - Build automation (Makefiles)
+│  ├  systemd-specialist       - Systemd service management
+│  ├  jenkins-specialist       - Jenkins pipeline configurations
+│  └  ... (6 more)
 │
 │  Custom Agents (0):
 │  (none)
 │
-└  16 built-in, 0 custom
+└  17 built-in, 0 custom
 ```
 
-### Step 2: Inspect an Agent
+Custom agents you create are loaded from `.dojops/agents/` (project-scoped) or `~/.dojops/agents/` (global). They participate in keyword routing immediately — no restart required.
 
-Get detailed information about any agent (partial names are supported):
+### Step 2: Inspect an agent to see its structure
+
+Dig into an existing agent to understand what drives routing decisions:
 
 ```bash
 dojops agents info terraform
@@ -77,12 +83,14 @@ dojops agents info terraform
 └  Routes prompts containing Terraform-related keywords
 ```
 
-### Step 3: Create a Custom Agent (LLM-Generated)
+Primary keywords carry more routing weight than secondary keywords. When you build a custom agent, the quality of your keyword list determines whether DojOps routes to it correctly.
 
-Create a new specialist agent using AI:
+### Step 3: Create an LLM-generated custom agent
+
+For most use cases, let the LLM generate your agent definition. Describe the domain you want to cover:
 
 ```bash
-dojops agents create "an SRE specialist for incident response and reliability engineering"
+dojops agents create "an SRE specialist for incident response, SLOs, error budgets, and production reliability"
 ```
 
 ```
@@ -97,23 +105,39 @@ dojops agents create "an SRE specialist for incident response and reliability en
 │
 │  Keywords: sre, incident, postmortem, slo, sla, error-budget,
 │            reliability, chaos, runbook, on-call, pagerduty,
-│            observability, toil, capacity
+│            observability, toil, capacity, mttr, mtbf
+│
+│  Primary Keywords: sre, incident, runbook
 │
 │  Saved to: .dojops/agents/sre-specialist/README.md
 │
 └  Agent created - available immediately
 ```
 
-The agent is now active and participates in keyword routing:
+The agent definition lands in `.dojops/agents/sre-specialist/README.md`. Open that file — it's a Markdown document with YAML frontmatter for domain, keywords, and description. You can edit it directly to tune the keyword list.
+
+Test that routing works:
 
 ```bash
 dojops "Create a runbook for database failover incidents"
-# Routes to sre-specialist automatically
 ```
 
-### Step 4: Create a Custom Agent (Manual)
+```
+┌  DojOps v1.1.6
+│
+│  Agent: sre-specialist (confidence: 0.92)
+│  Prompt: Create a runbook for database failover incidents
+│
+│  Generating...
+│
+└  Generated: runbook-db-failover.md
+```
 
-For full control over the agent definition:
+The agent matched on "runbook" and "incidents" from your prompt, then routed to `sre-specialist` with 0.92 confidence.
+
+### Step 4: Create a custom agent manually
+
+When you need precise control over the keyword list and description, use `--manual`:
 
 ```bash
 dojops agents create --manual
@@ -124,16 +148,18 @@ dojops agents create --manual
 │
 ◆  Agent name: compliance-auditor
 ◆  Domain: compliance
-◆  Description: Expert in regulatory compliance (SOC2, HIPAA, PCI-DSS)
-◆  Keywords (comma-separated): compliance, soc2, hipaa, pci, audit,
-│    regulation, gdpr, policy, control, framework
+◆  Description: Expert in regulatory compliance (SOC2, HIPAA, PCI-DSS, GDPR)
+◆  Keywords (comma-separated): compliance, soc2, hipaa, pci, gdpr, audit,
+│    regulation, control, framework, iso27001, nist, cis-benchmark
 │
 │  Saved to: .dojops/agents/compliance-auditor/README.md
 │
 └  Agent created - available immediately
 ```
 
-### Step 5: Remove a Custom Agent
+Manual creation gives you the same end result — a `README.md` in `.dojops/agents/` — but you control every field directly.
+
+### Step 5: Remove a custom agent
 
 ```bash
 dojops agents remove sre-specialist
@@ -148,33 +174,101 @@ dojops agents remove sre-specialist
 └  Agent removed
 ```
 
----
+Removing an agent deletes its directory from `.dojops/agents/`. For the rest of this workshop, keep the `compliance-auditor` agent — you'll use it when building the custom skill.
 
-## Part 2: Custom Skills
+### Step 6: Scaffold a new `.dops` skill
 
-### Step 6: Scaffold a New Skill
+Custom skills live as `.dops` files in `.dojops/skills/`. A `.dops` file is self-contained: YAML frontmatter defines the metadata, input/output schemas, and permissions, while Markdown sections below provide the prompt template.
 
-Create a new custom skill as a `.dops` file:
+Scaffold a new skill:
 
 ```bash
-dojops skills init my-nginx-proxy
+dojops skills init compliance-checklist
 ```
 
 ```
 ┌  Skill Scaffolded
 │
-│  Created: .dojops/skills/my-nginx-proxy.dops
+│  Created: .dojops/skills/compliance-checklist.dops
 │
 │  Edit the .dops file to customize your skill.
 │
 └  Ready to customize
 ```
 
-The generated `.dops` file is a single self-contained file combining YAML frontmatter (metadata, input/output schemas, file specs, permissions) with markdown prompt sections. Open it in your editor to customize the prompt, input fields, and output format.
+Open `.dojops/skills/compliance-checklist.dops` in your editor. You'll see the scaffold structure:
 
-### Step 7: List Discovered Skills
+```yaml
+---
+dopsVersion: "2"
+name: compliance-checklist
+version: 0.1.0
+description: Generate a compliance checklist for regulatory frameworks
+author: your-username
 
-View all custom skills (global + project-scoped):
+inputFields:
+  - name: framework
+    type: string
+    description: Regulatory framework (soc2, hipaa, pci-dss, gdpr)
+    required: true
+  - name: scope
+    type: string
+    description: Systems or services in scope
+    required: false
+
+outputSpec:
+  format: markdown
+  description: Compliance checklist with controls and evidence requirements
+
+fileSpecs:
+  - path: "compliance/{{framework}}-checklist.md"
+    description: Generated compliance checklist
+
+permissions:
+  write: ["compliance/"]
+
+context:
+  outputGuidance: |
+    Generate a structured compliance checklist. Include control IDs,
+    descriptions, evidence requirements, and responsible parties.
+  bestPractices: |
+    - Map controls to actual system components
+    - Include evidence collection steps
+    - Note automated vs. manual controls
+---
+
+## Task
+
+Generate a compliance checklist for the {{framework}} framework covering
+the systems in scope: {{scope}}.
+```
+
+Edit the frontmatter to match your use case, then move to validation.
+
+### Step 7: Validate the skill
+
+Before using a skill, confirm it parses correctly:
+
+```bash
+dojops skills validate compliance-checklist
+```
+
+```
+┌  Skill Validation
+│
+│  ✓ DOPS skill is valid: compliance-checklist v0.1.0
+│  Format: .dops v2
+│  Input fields: 2 (1 required, 1 optional)
+│  Output files: 1 defined
+│
+└  Skill is valid
+```
+
+If you have a schema error in the YAML frontmatter, validation catches it here before you ever try to use the skill. Fix any reported errors and re-run.
+
+### Step 8: List all discovered skills
+
+Check that your new skill is visible:
 
 ```bash
 dojops skills list
@@ -184,7 +278,7 @@ dojops skills list
 ┌  Custom Skills
 │
 │  Project (.dojops/skills/):
-│  ├  my-nginx-proxy  v0.1.0  - (scaffold template)
+│  ├  compliance-checklist  v0.1.0  - Generate a compliance checklist
 │
 │  Global (~/.dojops/skills/):
 │  (none)
@@ -192,134 +286,175 @@ dojops skills list
 └  1 project, 0 global
 ```
 
-### Step 8: Validate a Skill
+Project-scoped skills in `.dojops/skills/` are only available in this project directory. Global skills in `~/.dojops/skills/` are available everywhere.
 
-Check that your skill is valid:
+### Step 9: Use the custom skill
 
-```bash
-dojops skills validate my-nginx-proxy
-```
-
-```
-┌  Skill Validation
-│
-│  ✓ DOPS skill is valid: my-nginx-proxy v0.1.0
-│  Format: .dops
-│  Files: 1 output file defined
-│
-└  Skill is valid
-```
-
-### Step 9: Load a Skill from Disk
-
-Import a `.dops` skill or legacy tool directory from any local path into your project:
+Test the skill by generating output:
 
 ```bash
-dojops skills load /path/to/shared-tools/redis-config/
+dojops "Generate a SOC2 compliance checklist for our API and database services" --skill compliance-checklist
+```
+
+```
+┌  DojOps v1.1.6
+│
+│  Agent: compliance-auditor (confidence: 0.88)
+│  Skill: compliance-checklist v0.1.0
+│
+│  Generating...
+│
+│  ✓ Written: compliance/soc2-checklist.md
+│
+└  Done
+```
+
+The `compliance-auditor` agent you created in Step 4 was automatically selected because the prompt matched its keywords. The skill's output template placed the file at `compliance/soc2-checklist.md`.
+
+### Step 10: Load a skill from another location
+
+If your team shares `.dops` files outside the project directory, load them directly:
+
+```bash
+dojops skills load /shared/team-skills/kubernetes-hardening.dops
 ```
 
 ```
 ┌  Skill Loaded
 │
-│  Copied to: .dojops/tools/redis-config/
+│  Copied to: .dojops/skills/kubernetes-hardening.dops
 │
 └  Skill available for use
 ```
 
----
+The file is copied into your project's `.dojops/skills/` directory, making it part of the project.
 
-## Part 3: DojOps Hub
+### Step 11: Search the DojOps Hub
 
-### Step 10: Search for Skills
-
-Search the [DojOps Hub](https://hub.dojops.ai) for community skills:
+The Hub at [hub.dojops.ai](https://hub.dojops.ai) hosts community-published skills. Search from the CLI:
 
 ```bash
-dojops skills search docker
+dojops skills search compliance
 ```
 
 ```
-┌  Hub Search: "docker"
+┌  Hub Search: "compliance"
 │
-│  docker-swarm        v1.2.0  ★ 45  ↓ 230  Docker Swarm stack configs
-│  docker-rootless     v1.0.0  ★ 23  ↓ 112  Rootless Docker daemon setup
-│  docker-registry     v2.1.0  ★ 18  ↓ 89   Private Docker registry config
+│  soc2-controls       v1.3.0  ★ 67  ↓ 412  SOC2 Type II control templates
+│  pci-hardening       v1.1.0  ★ 34  ↓ 198  PCI-DSS hardening configs
+│  gdpr-data-map       v2.0.0  ★ 28  ↓ 156  GDPR data flow diagrams
 │
 └  3 results
 ```
 
-Refine your search:
+Narrow your search or request JSON output for scripting:
 
 ```bash
 dojops skills search terraform --limit 5
 dojops skills search k8s --output json
 ```
 
-### Step 11: Install a Skill from Hub
+### Step 12: Install a skill from the Hub
 
-Install a community skill for immediate use:
+Install a community skill and verify its integrity:
 
 ```bash
-dojops skills install docker-swarm
+dojops skills install soc2-controls
 ```
 
 ```
 ┌  Skill Installed
 │
-│  Package: docker-swarm v1.2.0
-│  Integrity: SHA-256 verified ✓
-│  Location: .dojops/tools/docker-swarm.dops
+│  Package: soc2-controls v1.3.0
+│  SHA-256: 3f8a12bc...  ✓ verified
+│  Location: .dojops/skills/soc2-controls.dops
 │
 └  Skill ready to use
 ```
 
-Install a specific version globally (shared across all projects):
+DojOps downloads the `.dops` file, receives the expected SHA-256 hash via the `X-Checksum-Sha256` response header, and verifies them locally. A mismatch aborts the install. Install a specific version globally so it's available across all your projects:
 
 ```bash
-dojops skills install docker-swarm --version 1.0.0 --global
+dojops skills install soc2-controls --version 1.0.0 --global
 ```
 
-### Step 12: Publish a Skill to Hub
+### Step 13: Publish your skill to the Hub
 
-First, set up your Hub API token:
+First, generate an API token at [hub.dojops.ai/settings/tokens](https://hub.dojops.ai/settings/tokens). Tokens use the format `dojops_` followed by 40 hex characters.
 
 ```bash
-# 1. Sign in at hub.dojops.ai → Settings → API Tokens
-# 2. Generate a token (format: dojops_<40-hex-chars>)
-# 3. Set the environment variable:
 export DOJOPS_HUB_TOKEN="dojops_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
 ```
 
-Publish your `.dops` skill:
+Bump your skill's version in the frontmatter to `1.0.0`, then publish:
 
 ```bash
-dojops skills publish my-nginx-proxy.dops
+dojops skills publish .dojops/skills/compliance-checklist.dops
 ```
 
 ```
 ┌  Publishing to DojOps Hub
 │
-│  Package: my-nginx-proxy v1.0.0
-│  SHA-256: a1b2c3d4...
-│  Size: 2.4 KB
+│  Package: compliance-checklist v1.0.0
+│  SHA-256: 7d3c9f1a...
+│  Size: 1.8 KB
 │
 │  ✓ Uploaded successfully
-│  URL: https://hub.dojops.ai/packages/my-nginx-proxy
+│  URL: https://hub.dojops.ai/packages/compliance-checklist
 │
 └  Published
 ```
 
-Include a changelog with your release:
+The CLI computes the SHA-256 hash client-side and sends it alongside the file. The Hub verifies the match and stores it as a publisher attestation. Anyone who installs your skill later gets that same hash for verification.
+
+Include a changelog note when publishing updates:
 
 ```bash
-dojops skills publish my-nginx-proxy.dops --changelog "v1.1.0: Added SSL termination support"
+dojops skills publish .dojops/skills/compliance-checklist.dops \
+  --changelog "v1.1.0: Added HIPAA and PCI-DSS frameworks"
 ```
 
 ---
 
-## What's Next?
+## Try it yourself
 
-- [Enhance a Next.js Project](/tutorials/enhance-nextjs-project), Use agents to improve an existing project
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch), Build a full pipeline
-- [DevOps Skills](/components/skills), Full skill documentation including custom skill format
-- [Specialist Agents](/components/agents), Agent routing and custom agent format
+1. **Build a cost-optimization agent.** Create a custom agent for cloud cost analysis with keywords like `cost`, `billing`, `reserved-instances`, `rightsizing`, `budget`, `savings-plan`. Then prompt DojOps with "Analyze our AWS costs and recommend savings" and verify it routes to your agent.
+
+2. **Write a multi-output skill.** Scaffold a new skill that generates two files: a `docker-compose.yml` for local development and a `.env.example` file listing required environment variables. Define both in the `fileSpecs` section and test that both files are created.
+
+3. **Install and extend a Hub skill.** Search for a Terraform-related skill on the Hub, install it, open the `.dops` file, and add a `bestPractices` entry to the `context` block. Then publish your modified version under a new name.
+
+---
+
+## Troubleshooting
+
+**Agent not routing to my custom agent**
+
+Check that your keyword list overlaps with the words you're actually using in prompts. Run `dojops agents info <name>` to see the full keyword list. If the built-in agents have higher-scoring keywords for your domain, add more specific terms that only your agent covers.
+
+**Validation fails with a YAML parse error**
+
+The YAML frontmatter in `.dops` files is strict about indentation and quoting. Multi-line strings in the `context` block must use the `|` block scalar notation. Run `dojops skills validate <name>` after every edit to catch errors early.
+
+**Hub install fails with "SHA-256 mismatch"**
+
+The downloaded file doesn't match the publisher's recorded hash. Don't use the file. Report the package on the Hub. If you're publishing and seeing this error, make sure you're not modifying the file after computing the hash.
+
+**Skill not found after `skills load`**
+
+The `load` command copies the file to `.dojops/skills/`. Verify the copy exists with `ls .dojops/skills/` and that the file has a `.dops` extension. Files without the `.dops` extension are ignored by the skill registry.
+
+---
+
+## What you learned
+
+You built a full custom agent and skill from scratch. The agent creation flow — whether LLM-generated or manual — writes a `README.md` to `.dojops/agents/`, which the registry picks up immediately. Skills work the same way: `.dops` v2 files in `.dojops/skills/` are discovered automatically, validated with a Zod schema before any LLM call, and can be published to the Hub with SHA-256 integrity verification baked in. The key insight is that agents and skills are composable: a custom agent provides domain expertise through its system prompt, while a custom skill controls the output format and file structure.
+
+---
+
+## Next steps
+
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Use a custom CI agent and skill together on a real pipeline
+- [Advanced Plan Execution](/tutorials/advanced-plan-execution) — Drive multi-step plans with your custom agents
+- [Skills Reference](/components/skills) — Full `.dops` v2 format specification
+- [Specialist Agents](/components/agents) — Agent routing algorithm and confidence scoring details

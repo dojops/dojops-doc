@@ -1,32 +1,36 @@
-# Interactive Chat Sessions
+# Interactive chat sessions
 
 Use DojOps chat for multi-turn AI DevOps conversations with agent routing, slash commands, and session persistence.
 
----
-
-## Overview
-
-In this tutorial, you'll learn to use `dojops chat` to:
-
-- Start interactive DevOps conversations with AI
-- Use slash commands to plan, scan, and apply within a session
-- Pin conversations to specialist agents
-- Resume and manage named sessions
-- Send single messages for scriptable automation
-
-**Time estimate:** ~10 minutes
-
-**Prerequisites:**
-
-- DojOps installed (`npm i -g @dojops/cli`)
-- An API key configured (`dojops config` or `dojops auth login`)
-- A project directory (run `dojops init` first for full features)
+> **Difficulty:** Beginner
+> **Duration:** 25 minutes
+> **What you'll build:** A working understanding of the DojOps chat interface — you'll run scans, generate infrastructure configs, and switch between specialist agents, all from within a single persistent chat session.
 
 ---
 
-## Step 1: Start a Basic Chat Session
+## What you'll learn
 
-Launch an interactive session:
+- How the chat session maintains context across multiple turns
+- Which slash commands are available and when to use each one
+- How agent routing works and how to override it manually
+- How named sessions persist across terminal restarts
+- How to use single-message mode for scripting and CI/CD integration
+
+---
+
+## Prerequisites
+
+- DojOps installed: `npm i -g @dojops/cli`
+- An API key configured (`dojops provider add <provider> --token <token>`)
+- A project directory with `dojops init` already run (run it on any project, or use the [example repo](https://github.com/dojops/example-nextjs.git))
+
+---
+
+## Workshop steps
+
+### Step 1: Start your first chat session
+
+Launch the interactive session:
 
 ```bash
 dojops chat
@@ -34,98 +38,229 @@ dojops chat
 
 ```
 ┌  DojOps Chat
+│  Session: chat-a1b2c3
+│  Agent: auto-routing (17 specialists available)
 │
 ◆  You: _
 ```
 
-Type your DevOps question and press Enter:
+The session ID is assigned automatically. "Auto-routing" means DojOps analyzes each message and routes it to the most appropriate specialist from the 17 built-in agents. You don't need to specify which agent to use — but you can override it when you want to.
+
+Ask your first question:
 
 ```
 ◆  You: What CI/CD tools are configured in this project?
 │
-◇  DojOps: Based on the project context, I can see:
-│  - GitHub Actions workflow (.github/workflows/ci.yml)
+◇  DojOps [github-actions-specialist]:
+│  Based on the project context at .dojops/context.json, I can see:
+│
+│  - GitHub Actions workflow at .github/workflows/ci.yml
+│    Triggers: push and pull_request on main
+│    Steps: checkout, setup-node, install, build, test
+│    Missing: dependency caching, security audit step
+│
 │  - Dockerfile (multi-stage build)
-│  - No Terraform or Kubernetes configs detected
+│    Base: node:20-slim (unpinned — consider pinning the patch version)
+│
+│  No Terraform, Kubernetes, or Docker Compose detected.
 │
 ◆  You: _
 ```
 
-The chat maintains conversation history, so follow-up questions have full context. Type `/exit` to end the session.
+The bracket annotation — `[github-actions-specialist]` — shows which agent handled your message. The response references your actual project context, not generic advice. Ask a follow-up:
+
+```
+◆  You: What's missing from the CI workflow?
+│
+◇  DojOps [github-actions-specialist]:
+│  The workflow covers the basics but has two gaps worth fixing now:
+│
+│  1. No dependency caching — every run reinstalls node_modules from
+│     scratch. actions/cache for node_modules typically saves 30-60s.
+│
+│  2. No security step — npm audit isn't running, so vulnerable
+│     dependencies could reach production undetected.
+│
+│  Both are quick adds. Want me to generate an improved workflow?
+│
+◆  You: _
+```
+
+The conversation history carries across turns. The agent knows this is a follow-up about the same CI workflow from the previous message.
+
+Type `/exit` to end the session at any time.
 
 ---
 
-## Step 2: Use Slash Commands
+### Step 2: Use slash commands
 
-Chat supports 9 slash commands for in-session actions:
+Slash commands let you trigger DojOps operations from within the chat without leaving the session. Here's the full set:
 
-| Command         | Description                                           |
-| --------------- | ----------------------------------------------------- |
-| `/exit`         | End the chat session                                  |
-| `/agent <name>` | Switch to a specialist agent                          |
-| `/voice`        | Push-to-talk voice input (requires whisper.cpp + sox) |
-| `/plan <goal>`  | Decompose a goal into a task graph                    |
-| `/apply`        | Execute the most recent plan                          |
-| `/scan`         | Run a security scan                                   |
-| `/history`      | Show execution history                                |
-| `/clear`        | Clear conversation history                            |
-| `/save`         | Save the current session                              |
+| Command         | What it does                                               |
+| --------------- | ---------------------------------------------------------- |
+| `/plan <goal>`  | Decompose a goal into a task graph                         |
+| `/apply`        | Execute the most recent plan                               |
+| `/scan`         | Run a security scan and show results inline                |
+| `/agent <name>` | Switch to a specific specialist agent                      |
+| `/history`      | Show recent execution history                              |
+| `/clear`        | Clear conversation history (keeps session, resets context) |
+| `/save`         | Save the current session to disk                           |
+| `/voice`        | Push-to-talk voice input (requires whisper.cpp and sox)    |
+| `/exit`         | End the session                                            |
 
-Try planning from within chat:
+Plan and apply a Docker Compose setup from within chat:
 
 ```
-◆  You: /plan Set up Docker Compose with nginx and redis
-
-◇  DojOps: Created plan with 3 tasks:
-│  Task 1: Generate docker-compose.yml with nginx + redis services
-│  Task 2: Generate nginx.conf with reverse proxy configuration
-│  Task 3: Generate Dockerfile for the application
+◆  You: /plan Set up Docker Compose with nginx reverse proxy and redis cache
 │
-│  Run /apply to execute this plan.
+◇  DojOps:
+│  Planning goal: "Set up Docker Compose with nginx reverse proxy and redis cache"
+│
+│  Task Graph (3 tasks):
+│
+│  Task 1: docker-compose
+│    Output: docker-compose.yml
+│    Services: app, nginx, redis
+│    Dependencies: none
+│
+│  Task 2: nginx-config
+│    Skill: nginx
+│    Output: nginx/nginx.conf
+│    Dependencies: [1] docker-compose (nginx service definition)
+│
+│  Task 3: dockerfile
+│    Output: Dockerfile
+│    Dependencies: [1] docker-compose (app service build context)
+│
+│  Execution order: Task 1 → Tasks 2 + 3 (parallel)
+│
+│  Run /apply to execute.
 │
 ◆  You: /apply
+│
+◇  DojOps:
+│  Executing plan...
+│
+│  [1/3] docker-compose: Create docker-compose.yml
+│    Apply? (y/n/diff): y
+│    Created: docker-compose.yml
+│
+│  [2/3] nginx-config: Create nginx/nginx.conf
+│    Apply? (y/n/diff): y
+│    Created: nginx/nginx.conf
+│
+│  [3/3] dockerfile: Create Dockerfile
+│    Apply? (y/n/diff): y
+│    Created: Dockerfile
+│
+│  3 files created.
+│
+◆  You: _
 ```
 
-Run a security scan mid-conversation:
+Run a security scan without leaving the session:
 
 ```
 ◆  You: /scan
-
-◇  DojOps: Security Scan Results
+│
+◇  DojOps:
+│  Running security scan...
+│
+│  Scanners: npm-audit, hadolint (2 available)
+│
+│  Results:
 │  ┌─────────────┬──────────┬──────────┐
 │  │ Scanner     │ Findings │ Severity │
 │  ├─────────────┼──────────┼──────────┤
-│  │ npm-audit   │ 2        │ MEDIUM   │
-│  │ hadolint    │ 1        │ LOW      │
+│  │ npm-audit   │    2     │  MEDIUM  │
+│  │ hadolint    │    1     │  LOW     │
 │  └─────────────┴──────────┴──────────┘
+│
+│  Run `dojops scan --show` for details, or ask me to explain any finding.
+│
+◆  You: Explain the npm-audit findings
+│
+◇  DojOps [security-specialist]:
+│  The two npm-audit findings are:
+│
+│  1. semver < 7.5.2 (MEDIUM) — A regular expression denial-of-service
+│     vulnerability in older semver versions. It's a transitive dependency
+│     via next → postcss → semver. Fix: npm update semver.
+│
+│  2. next@14.0.1 (MEDIUM) — A response-splitting vulnerability patched
+│     in 14.0.4. Fix: npm install next@14.0.4.
+│
+◆  You: _
 ```
+
+The agent automatically switched to `security-specialist` when you asked about findings, without you specifying it.
 
 ---
 
-## Step 3: Pin to a Specialist Agent
+### Step 3: Pin to a specialist agent
 
-Focus a conversation on a specific domain by pinning to one of the 17 specialist agents:
+Sometimes you want to stay focused on a specific domain for an entire session. Use `--agent` at startup to pin:
 
 ```bash
 dojops chat --agent=terraform
 ```
 
 ```
-┌  DojOps Chat (Agent: terraform-specialist)
+┌  DojOps Chat
+│  Session: chat-b2c3d4
+│  Agent: terraform-specialist (pinned)
 │
-◆  You: Create an S3 bucket with versioning and encryption
-│
-◇  DojOps: Here's a Terraform configuration for an S3 bucket...
+◆  You: _
 ```
 
-You can also switch agents mid-conversation with the `/agent` command:
+Every message in this session goes to `terraform-specialist`, regardless of topic keywords:
+
+````
+◆  You: Create an S3 bucket with versioning and encryption enabled
+│
+◇  DojOps [terraform-specialist]:
+│  Here's a Terraform configuration for an S3 bucket with versioning
+│  and server-side encryption:
+│
+│  ```hcl
+│  resource "aws_s3_bucket" "main" {
+│    bucket = "${var.project_name}-${var.environment}-data"
+│  }
+│
+│  resource "aws_s3_bucket_versioning" "main" {
+│    bucket = aws_s3_bucket.main.id
+│    versioning_configuration {
+│      status = "Enabled"
+│    }
+│  }
+│
+│  resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
+│    bucket = aws_s3_bucket.main.id
+│    rule {
+│      apply_server_side_encryption_by_default {
+│        sse_algorithm = "AES256"
+│      }
+│    }
+│  }
+│  ```
+│
+◆  You: Add a bucket policy to block public access
+│
+◇  DojOps [terraform-specialist]:
+│  Adding a public access block resource...
+````
+
+Switch agents mid-session without restarting with `/agent`:
 
 ```
 ◆  You: /agent kubernetes
-
+│
 ◇  DojOps: Switched to kubernetes-specialist
-
+│
 ◆  You: Create a deployment for the app we just containerized
+│
+◇  DojOps [kubernetes-specialist]:
+│  Based on the Dockerfile in your project, here's a Kubernetes Deployment...
 ```
 
 To see all available agents:
@@ -134,37 +269,86 @@ To see all available agents:
 dojops agents list
 ```
 
+```
+Built-in Specialists (17):
+  github-actions-specialist   CI/CD workflows and GitHub Actions
+  terraform-specialist        Infrastructure as Code with Terraform
+  kubernetes-specialist       Kubernetes manifests and Helm charts
+  dockerfile-specialist       Container image best practices
+  docker-compose-specialist   Multi-service local development
+  ansible-specialist          Configuration management and automation
+  nginx-specialist            Reverse proxy and web server config
+  prometheus-specialist       Monitoring and alerting rules
+  security-specialist         Vulnerability analysis and hardening
+  gitops-specialist           GitOps workflows and ArgoCD/Flux
+  ...and 7 more
+
+Custom Agents: 0
+  (add .dojops/agents/*.json to create custom agents)
+```
+
 ---
 
-## Step 4: Named Sessions and Resume
+### Step 4: Named sessions and resume
 
-Create a named session for ongoing work:
-
-```bash
-dojops chat --session=infra-migration
-```
-
-```
-┌  DojOps Chat (Session: infra-migration)
-│
-◆  You: We're migrating from EC2 to ECS. Let's plan the Terraform changes.
-```
-
-End the session with `/exit`. Later, resume exactly where you left off:
+Named sessions let you maintain context across multiple terminal sessions. Start one with `--session`:
 
 ```bash
 dojops chat --session=infra-migration
 ```
 
 ```
-┌  DojOps Chat (Session: infra-migration) - Resumed
+┌  DojOps Chat
+│  Session: infra-migration
+│  Agent: auto-routing
 │
-│  Previous context loaded (3 messages)
+◆  You: We're migrating from EC2 to ECS. Let's plan the Terraform changes needed.
 │
-◆  You: _
+◇  DojOps [terraform-specialist]:
+│  For an EC2 to ECS migration, you'll need to create or modify:
+│
+│  1. aws_ecs_cluster — The ECS cluster replacing your EC2 Auto Scaling group
+│  2. aws_ecs_task_definition — Container definition (CPU, memory, image)
+│  3. aws_ecs_service — Service with desired count and load balancer attachment
+│  4. IAM roles — Task execution role and task role
+│
+│  What's your current EC2 setup? AMI-based, or do you have a Packer pipeline?
+│
+◆  You: AMI-based, t3.medium, behind an ALB
+│
+◇  DojOps [terraform-specialist]:
+│  Good. In that case the ALB can stay — you just swap the target group
+│  target type from instance to ip...
+│
+◆  You: /save
+│
+◇  DojOps: Session saved: infra-migration (4 messages)
+│
+◆  You: /exit
 ```
 
-Resume the most recent session without remembering the name:
+Close your terminal, come back tomorrow, and resume exactly where you left off:
+
+```bash
+dojops chat --session=infra-migration
+```
+
+```
+┌  DojOps Chat
+│  Session: infra-migration (resumed)
+│  Messages loaded: 4
+│
+◆  You: Let's continue. What about the security groups?
+│
+◇  DojOps [terraform-specialist]:
+│  Right, picking up from the ALB target group. For security groups,
+│  you'll need to update the ECS task security group to accept traffic
+│  from the ALB security group on port 3000 (or whatever your app port is)...
+```
+
+The agent has the full conversation history. You don't need to re-explain your EC2 setup.
+
+Resume the most recent session without knowing the name:
 
 ```bash
 dojops chat --resume
@@ -172,56 +356,98 @@ dojops chat --resume
 
 ---
 
-## Step 5: Single-Message Mode (Scriptable)
+### Step 5: Single-message mode
 
-Send a single message and get the response without entering interactive mode:
-
-```bash
-dojops chat --message "What tools are missing in this project?"
-```
-
-```
-Based on the project scan, the following DevOps tools are missing:
-- No IaC configuration (Terraform/Pulumi)
-- No container orchestration (Kubernetes/Helm)
-- No monitoring (Prometheus/Grafana)
-```
-
-This is useful for scripting and CI/CD pipelines. The short form `-m` also works:
+Use `--message` (or `-m`) to send one message and get the response without entering interactive mode. This is how you integrate DojOps into scripts and CI pipelines:
 
 ```bash
-# Get structured output for scripts
-dojops chat -m "List all detected DevOps files" --output json
+dojops chat --message "What DevOps files are missing from this project?"
+```
+
+```
+Based on .dojops/context.json, the following are missing:
+
+- Docker Compose file (no docker-compose.yml detected)
+- Infrastructure as Code (no Terraform or Pulumi configs)
+- Container orchestration (no Kubernetes manifests)
+- Monitoring configuration (no Prometheus or Grafana configs)
+- Dependency update automation (no Dependabot or Renovate config)
+```
+
+Get structured JSON output for downstream processing:
+
+```bash
+dojops chat -m "Summarize the project's DevOps maturity" --output json
 ```
 
 ```json
 {
-  "response": "...",
+  "response": "The project has GitHub Actions CI and a Dockerfile but lacks IaC, container orchestration, and monitoring. DevOps maturity: Basic (estimated 60-65/100).",
   "agent": "devops-generalist",
-  "session": "msg-a1b2c3"
+  "session": "msg-c3d4e5",
+  "tokensUsed": 312
 }
 ```
 
+Use this in a CI step to generate a summary comment on a pull request, or to gate deployments based on maturity score.
+
 ---
 
-## Step 6: Combine with Agent Pinning
+### Step 6: Combine agent pinning with scripts
 
-Use `--message` with `--agent` for targeted, scriptable queries:
+Pairing `--message` with `--agent` gives you targeted, repeatable queries you can automate:
 
 ```bash
-# Ask the Terraform specialist about module structure
-dojops chat --agent=terraform -m "What Terraform modules should I create for a microservices architecture?"
+# Ask the Terraform specialist about module structure for a new service
+dojops chat --agent=terraform -m "What Terraform module structure should I use for a new microservice?"
 
-# Ask the security specialist about scan results
-dojops chat --agent=security -m "Analyze the latest scan findings and prioritize fixes"
+# Ask the security specialist to prioritize the latest scan
+dojops chat --agent=security -m "Analyze .dojops/scan-history/scan-latest.json and list the top 3 fixes by impact"
+
+# Ask the Kubernetes specialist to review a manifest
+dojops chat --agent=kubernetes -m "Review my deployment.yaml for best practices" --file deployment.yaml
 ```
+
+These patterns work well in pre-commit hooks, pull request workflows, and any automation where you want a consistent expert opinion on a specific artifact.
 
 ---
 
-## What's Next?
+## Try it yourself
 
-- [Voice Input](/tutorials/voice-input) — Speak commands instead of typing them
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a full pipeline using plan + apply
-- [Security Audit & Remediation](/tutorials/security-audit) — Scanning, SBOM, and auto-fix
-- [Custom Agents & Skills](/tutorials/custom-agents-and-skills) — Create your own specialist agents
-- [CLI Reference](/usage/cli) — Full command reference
+**Challenge 1 — Multi-agent workflow.** Start a chat, use `/plan` to plan a Kubernetes deployment for the example app, switch to `kubernetes-specialist` with `/agent`, and ask it to review the plan before running `/apply`. Watch how the specialist adds opinions the generalist routing might not have surfaced.
+
+**Challenge 2 — Session archaeology.** Run `dojops history list` inside a chat session with `/history`. Then exit and run the same command from your shell. Confirm the output matches — chat sessions and CLI commands share the same audit log.
+
+**Challenge 3 — Scriptable diff.** Write a shell script that runs `dojops chat -m "Score the DevOps maturity of this project" --output json`, extracts the score with `jq`, and exits with code 1 if the score is below 70. Use it as a pre-push hook.
+
+---
+
+## Troubleshooting
+
+**Chat session shows "context not found" warnings**
+You haven't run `dojops init` in this directory. The chat works without a context file but gives generic answers. Run `dojops init` and restart the chat — responses become project-specific.
+
+**Agent routing picks the wrong specialist**
+Auto-routing uses keyword matching with confidence scoring. If your prompt is ambiguous (e.g., "create a config file" could match several agents), pin explicitly: `dojops chat --agent=terraform` or use `/agent terraform` mid-session.
+
+**`--resume` loads the wrong session**
+`--resume` loads the most recently modified session file. If you have multiple sessions and want a specific one, use `dojops chat --session=<name>`. Run `dojops chat --list-sessions` to see all saved sessions.
+
+**Voice input says "whisper.cpp not found"**
+`/voice` requires two external tools: `whisper.cpp` for transcription and `sox` for audio recording. Install `sox` via your package manager (`brew install sox` / `apt install sox`). Follow the [whisper.cpp setup guide](https://github.com/ggerganov/whisper.cpp) for the transcription binary.
+
+---
+
+## What you learned
+
+The chat session is more than a wrapper around the CLI — it's a stateful workspace where conversation history, agent routing, and project context combine. You ran scans, generated configs, and switched specialists all from a single session without losing your place. Named sessions persist across restarts, so long-running infrastructure projects can maintain context over days. Single-message mode makes the same intelligence available to scripts and CI workflows without human interaction.
+
+---
+
+## Next steps
+
+- **[Voice Input](/tutorials/voice-input)** — Speak commands instead of typing them
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Build a full pipeline using plan and apply
+- **[Security Audit & Remediation](/tutorials/security-audit)** — Scanning, SBOM, and auto-fix
+- **[Custom Agents & Skills](/tutorials/custom-agents-and-skills)** — Create your own specialist agents
+- **[CLI Reference](/usage/cli)** — Full command reference

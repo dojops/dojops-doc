@@ -1,34 +1,34 @@
-# Advanced Plan Execution
+# Advanced plan execution
 
-Master DojOps plan execution with dry runs, resume, retry, replay, rollback, and targeted task execution.
+Go beyond `dojops apply`. Learn how to preview, resume, replay, and surgically target individual tasks in a multi-step plan.
 
----
-
-## Overview
-
-In this tutorial, you'll learn the advanced `dojops apply` options:
-
-- Preview changes with `--dry-run` before writing files
-- Resume partially-failed plans with `--resume` and `--retry`
-- Run deterministic replays with `--replay`
-- Execute individual tasks with `--task`
-- Manage timeouts, force mode, and path overrides
-- Roll back and clean up generated artifacts
-- Inspect execution history and audit trails
-
-**Time estimate:** ~15 minutes
-
-**Prerequisites:**
-
-- DojOps installed and configured
-- A project initialized (`dojops init`)
-- A saved plan (run `dojops plan "your goal"` first)
+> **Difficulty:** Intermediate
+> **Duration:** 30 minutes
+> **What you'll build:** A fully executed CI/CD plan with hands-on practice using dry runs, partial failure recovery, deterministic replay, and audit trail verification
 
 ---
 
-## Step 1: Create and Preview a Plan
+## What you'll learn
 
-Start by creating a plan:
+- Why `--dry-run` is a critical safety step before any apply
+- How plan resumption and retry differ — and when to use each
+- What `--replay` mode actually does at the provider level
+- How to target a single task without re-running the whole plan
+- How to read and verify the hash-chained audit log
+
+## Prerequisites
+
+- DojOps 1.1.6 installed: `npm i -g @dojops/cli`
+- A project initialized: `dojops init`
+- An LLM provider configured: `dojops provider add openai --token sk-...`
+
+---
+
+## Workshop steps
+
+### Step 1: Create a multi-task plan
+
+Start with a realistic scenario: set up CI/CD for a Node.js app that needs a GitHub Actions workflow, a Dockerfile, and a Docker Compose file.
 
 ```bash
 dojops plan "Set up CI/CD with GitHub Actions, Dockerfile, and docker-compose for a Node.js app"
@@ -41,13 +41,21 @@ dojops plan "Set up CI/CD with GitHub Actions, Dockerfile, and docker-compose fo
 │  Tasks: 3
 │
 │  Task 1: Generate GitHub Actions CI workflow
+│           → ci-specialist
 │  Task 2: Generate multi-stage Dockerfile
-│  Task 3: Generate docker-compose.yml (depends on Task 2)
+│           → docker-specialist
+│  Task 3: Generate docker-compose.yml
+│           → docker-specialist
+│           → depends on Task 2
 │
 └  Run `dojops apply` to execute
 ```
 
-Preview what would happen without writing any files:
+The planner decomposed your goal into three tasks with a dependency relationship: Task 3 depends on Task 2, so it only runs after Task 2 succeeds. Task 1 is independent and can run in parallel with Task 2.
+
+### Step 2: Preview with `--dry-run`
+
+Before writing anything to disk, see exactly what the plan would do:
 
 ```bash
 dojops apply --dry-run
@@ -70,11 +78,11 @@ dojops apply --dry-run
 └  No files were written (dry run)
 ```
 
----
+Dry run performs the full LLM generation cycle but stops before writing to disk. Use it when working in a shared repo or when you want to inspect generated content before committing. Any existing files that would be overwritten are listed here, with `.bak` backup creation noted.
 
-## Step 2: Execute with Approval
+### Step 3: Execute with approval prompts
 
-Run the plan with the default approval workflow:
+Run the plan with the default per-file approval workflow:
 
 ```bash
 dojops apply
@@ -104,17 +112,17 @@ dojops apply
 └  Plan complete - 3/3 tasks succeeded
 ```
 
-Auto-approve all files (for CI/CD or trusted plans):
+The approval gate shows you each generated file before writing it. Answer `n` to skip a file while letting the rest of the plan continue.
+
+For CI/CD or scripted environments where you trust the output, bypass the approval prompts:
 
 ```bash
 dojops apply --yes
 ```
 
----
+### Step 4: Simulate a partial failure and resume
 
-## Step 3: Resume a Failed Plan
-
-If a plan partially fails (e.g., network timeout on task 2), resume from where it left off:
+Partial failures happen — network timeouts, LLM rate limits, transient errors mid-plan. If your plan failed partway through (say, Task 2 timed out), run:
 
 ```bash
 dojops apply --resume
@@ -123,8 +131,8 @@ dojops apply --resume
 ```
 ┌  Resuming Plan: plan-f7a2b1c3
 │
-│  Task 1/3: github-actions - ✓ already completed
-│  Task 2/3: dockerfile - retrying...
+│  Task 1/3: github-actions - ✓ already completed (skipped)
+│  Task 2/3: dockerfile - resuming...
 │  Generated: Dockerfile
 │  ✓ Written: Dockerfile
 │
@@ -135,15 +143,17 @@ dojops apply --resume
 └  Plan complete - 3/3 tasks succeeded (1 resumed)
 ```
 
-Resume skips already-completed tasks. Combine with `--yes` for unattended recovery:
+`--resume` reads the plan state from `.dojops/plans/plan-f7a2b1c3.json` and skips tasks that already have a `completed` status. Task 1 was done, so it's skipped — no extra LLM call, no file re-written.
+
+For unattended recovery in CI pipelines:
 
 ```bash
 dojops apply --resume --yes
 ```
 
-### Retry Failed Tasks
+### Step 5: Retry failed tasks
 
-By default, `--resume` skips failed tasks and continues with unblocked ones. Add `--retry` to re-attempt failed tasks:
+`--resume` alone skips failed tasks and continues with unblocked ones. To re-attempt tasks that previously errored, add `--retry`:
 
 ```bash
 dojops apply --resume --retry
@@ -152,7 +162,7 @@ dojops apply --resume --retry
 ```
 ┌  Resuming Plan: plan-f7a2b1c3 (with retry)
 │
-│  Task 1/3: github-actions - ✓ already completed
+│  Task 1/3: github-actions - ✓ already completed (skipped)
 │  Task 2/3: dockerfile - ✗ previously failed - retrying...
 │  Generated: Dockerfile
 │  ✓ Written: Dockerfile
@@ -164,11 +174,11 @@ dojops apply --resume --retry
 └  Plan complete - 3/3 tasks succeeded (1 retried)
 ```
 
----
+The distinction matters. `--resume` without `--retry` is safe for continuing after an unrelated failure. `--resume --retry` is for when you've fixed the underlying problem (rate limit lifted, timeout extended) and want to re-run what failed.
 
-## Step 4: Deterministic Replay
+### Step 6: Deterministic replay
 
-Replay a plan with `temperature: 0` for reproducible output. This validates that the environment matches the original plan:
+Replay mode locks `temperature` to `0` and validates that your current environment matches what the plan was created with. It's useful for audits, reproducing output, and verifying nothing has changed in your setup.
 
 ```bash
 dojops apply --replay
@@ -180,7 +190,7 @@ dojops apply --replay
 │  Environment Validation:
 │  ✓ Provider: openai (matches plan)
 │  ✓ Model: gpt-4o (matches plan)
-│  ✓ Tool hashes: all match
+│  ✓ Skill hashes: all match
 │
 │  Executing with temperature=0...
 │
@@ -191,7 +201,7 @@ dojops apply --replay
 └  Replay complete - deterministic execution
 ```
 
-If the environment has changed since plan creation, replay warns you:
+If your provider or model has changed since the plan was created, replay warns you before executing:
 
 ```
 ⚠ Environment mismatch:
@@ -201,17 +211,11 @@ If the environment has changed since plan creation, replay warns you:
 Use --force to proceed despite mismatches.
 ```
 
-Force replay despite mismatches:
+Take this warning seriously. A different provider or modified skill will produce different output, which defeats the purpose of replay. If you genuinely want to re-run with the new environment, use a fresh plan instead.
 
-```bash
-dojops apply --replay --yes
-```
+### Step 7: Execute a single task
 
----
-
-## Step 5: Execute a Single Task
-
-Run only one specific task from a plan:
+Sometimes you only want to regenerate one file — say, the Dockerfile after changing your base image requirement. Run a single task by its number without touching the others:
 
 ```bash
 dojops apply --task 2
@@ -227,59 +231,37 @@ dojops apply --task 2
 └  1 task completed
 ```
 
-This is useful when you want to regenerate just one file without re-running the entire plan.
+The plan state is updated: Task 2 is marked completed with the new timestamp. Tasks 1 and 3 are unchanged. This is the cleanest way to regenerate a single file without touching anything else.
 
----
+### Step 8: Timeouts, force mode, and verification
 
-## Step 6: Timeouts and Force Mode
-
-### Per-Task Timeout
-
-Set a custom timeout for LLM generation (default: 60 seconds):
+**Set a per-task timeout** when working with large files or slow models (default is 60 seconds):
 
 ```bash
 dojops apply --timeout 120
 ```
 
-### Force Mode
-
-Skip the git dirty working tree check, HIGH risk confirmation gate, and replay validation:
+**Force mode** bypasses the git dirty working tree check, the HIGH risk confirmation gate, and replay environment validation. Use it in CI where the working directory may have uncommitted changes:
 
 ```bash
 dojops apply --force
 ```
 
-This is useful in CI environments where the working directory may have uncommitted changes. Use with caution.
-
-### Skip Verification
-
-Skip external tool verification (e.g., `terraform validate`, `actionlint`):
+**Skip external verification** if you don't have tools like `terraform validate` or `actionlint` installed and don't want DojOps to auto-install them:
 
 ```bash
 dojops apply --skip-verify
 ```
 
-### Allow All Paths
-
-Bypass the DevOps file write allowlist (for non-standard output locations):
+**Allow all paths** bypasses the DevOps file write allowlist. DojOps normally restricts writes to standard DevOps output paths. Use this only when your skill needs to write to a non-standard location:
 
 ```bash
 dojops apply --allow-all-paths
 ```
 
-### Install Packages After Apply
+### Step 9: Roll back an applied plan
 
-Automatically run the package manager install after a successful apply:
-
-```bash
-dojops apply --install-packages
-```
-
----
-
-## Step 7: Rollback a Plan
-
-Reverse an applied plan, deletes created files and restores `.bak` backups:
+If you applied a plan and want to undo everything, use rollback. It deletes created files and restores any `.bak` backups that were made before overwriting:
 
 ```bash
 dojops rollback plan-f7a2b1c3
@@ -296,11 +278,11 @@ dojops rollback plan-f7a2b1c3
 └  Rollback complete - 3 files deleted, 1 restored
 ```
 
----
+Every plan that modifies an existing file keeps a `.bak` copy. Rollback uses those backups to restore your pre-apply state. If no backup exists for a file (because it was newly created), it's simply deleted.
 
-## Step 8: Clean Up Artifacts
+### Step 10: Clean up without restoring backups
 
-Remove generated artifacts from a plan without restoring backups:
+If you want to remove generated files without restoring backups — for example, after reviewing and committing them to version control — use `clean` instead:
 
 ```bash
 dojops clean plan-f7a2b1c3
@@ -316,13 +298,11 @@ dojops clean plan-f7a2b1c3
 └  3 artifacts removed
 ```
 
-> **Note:** `dojops destroy` is a deprecated alias for `clean`.
+`clean` removes the tracked output files but does not restore `.bak` files. Use `rollback` when you want to undo, and `clean` when you want to wipe the slate after the files are no longer needed.
 
----
+### Step 11: Review execution history
 
-## Step 9: Review Execution History
-
-### List History
+List all past plan executions:
 
 ```bash
 dojops history list
@@ -331,22 +311,22 @@ dojops history list
 ```
 ┌  Execution History
 │
-│  plan-f7a2b1c3  2024-01-15 14:30  3/3 tasks  ✓ completed
-│  plan-e6d5c4b2  2024-01-14 09:15  2/2 tasks  ✓ completed
-│  plan-d1a2b3c4  2024-01-13 16:45  4/4 tasks  ✗ partial (3/4)
+│  plan-f7a2b1c3  2026-03-20 14:30  3/3 tasks  ✓ completed
+│  plan-e6d5c4b2  2026-03-19 09:15  2/2 tasks  ✓ completed
+│  plan-d1a2b3c4  2026-03-18 16:45  4/4 tasks  ✗ partial (3/4)
 │
 └  3 plans
 ```
 
-### Show Plan Details
+Get the full details of a specific plan:
 
 ```bash
 dojops history show plan-f7a2b1c3
 ```
 
-### Verify Audit Trail
+### Step 12: Verify the audit trail
 
-Check the integrity of the hash-chained audit log:
+DojOps maintains a hash-chained audit log of every operation. Each entry's hash depends on the previous entry's hash, so you can detect tampering:
 
 ```bash
 dojops history verify
@@ -357,21 +337,13 @@ dojops history verify
 │
 │  Entries: 47
 │  Chain: ✓ intact (all hashes valid)
-│  First: 2024-01-10T08:00:00Z
-│  Last:  2024-01-15T14:35:00Z
+│  First: 2026-03-15T08:00:00Z
+│  Last:  2026-03-20T14:35:00Z
 │
 └  Audit log integrity verified
 ```
 
-### View Audit Entries
-
-```bash
-dojops history audit
-```
-
-### Repair Broken Chain
-
-If audit log entries are corrupted (e.g., manual edit):
+If entries have been manually edited or deleted, `verify` reports which entry broke the chain. To repair a corrupted chain (entries can't be un-tampered, but the chain pointers can be rebuilt):
 
 ```bash
 dojops history repair
@@ -379,27 +351,45 @@ dojops history repair
 
 ---
 
-## Quick Reference
+## Try it yourself
 
-| Flag                 | Description                                              |
-| -------------------- | -------------------------------------------------------- |
-| `--dry-run`          | Preview changes without writing files                    |
-| `--yes`              | Auto-approve all confirmations                           |
-| `--resume`           | Resume from last completed task                          |
-| `--retry`            | Retry failed tasks (use with `--resume`)                 |
-| `--replay`           | Deterministic: temperature=0, validate environment match |
-| `--force`            | Skip git dirty check, risk gate, replay validation       |
-| `--task <id>`        | Execute only one task from the plan                      |
-| `--timeout <sec>`    | Per-task timeout in seconds (default: 60)                |
-| `--skip-verify`      | Skip external config verification                        |
-| `--allow-all-paths`  | Bypass DevOps file write allowlist                       |
-| `--install-packages` | Run package manager install after apply                  |
+1. **Simulate a network failure.** Run a plan with `--timeout 5` (5-second timeout) on a complex prompt that will likely exceed it. Then use `--resume --retry` with a normal timeout to complete the plan.
+
+2. **Single-task regeneration.** Create a plan with 4+ tasks, apply it fully, then modify your prompt slightly and re-run only Task 1 with `--task 1`. Compare the original and new output.
+
+3. **Audit trail inspection.** After several plan executions, run `dojops history audit` to browse the raw audit entries. Locate the entry for your most recent plan and verify the hash manually with `dojops history verify`.
 
 ---
 
-## What's Next?
+## Troubleshooting
 
-- [CI/CD from Scratch](/tutorials/cicd-from-scratch), Build a pipeline using plan + apply
-- [CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis), Debug failures and analyze diffs
-- [API Server & Dashboard](/tutorials/api-server-and-dashboard), Self-host the API and dashboard
-- [CLI Reference](/usage/cli), Full command reference
+**`--resume` re-runs tasks that already completed**
+
+Plan state is stored in `.dojops/plans/<plan-id>.json`. If that file was deleted or the plan ID changed, `--resume` can't find completed tasks. Check that `.dojops/plans/` exists and contains the plan file before resuming.
+
+**Replay warns about skill hash mismatch**
+
+The `.dops` file for a skill was modified after the plan was created. If the change was intentional, create a new plan rather than replaying the old one. If the change was accidental, revert the `.dops` file to match the hash stored in the plan file.
+
+**`--force` is not writing files I expect**
+
+`--force` skips safety gates but does not change what files get written — it only bypasses the checks that would otherwise abort the run. If a file isn't being written, check the plan's task output for an LLM or schema validation error.
+
+**Rollback leaves `.bak` files behind**
+
+Rollback restores `.bak` files and deletes them after restoration. If a `.bak` file remains, a restore step failed — usually because the original path is now read-only. Fix the permissions and run rollback again.
+
+---
+
+## What you learned
+
+Plan execution in DojOps is a state machine, not a one-shot command. Every plan is persisted to `.dojops/plans/` so that `--resume` and `--retry` can pick up exactly where things failed. Replay mode adds reproducibility by pinning temperature to 0 and verifying the environment matches the plan's recorded snapshot. The audit log's hash-chaining gives you a tamper-evident record of every operation, which matters for compliance workflows. Dry run and single-task execution give you surgical control over when and what gets written to disk.
+
+---
+
+## Next steps
+
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Apply these techniques to build a complete pipeline
+- [CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis) — Debug failures in plans that include verification steps
+- [API Server & Dashboard](/tutorials/api-server-and-dashboard) — Trigger plans via the REST API
+- [CLI Reference](/usage/cli) — Full `apply`, `rollback`, and `history` flag reference

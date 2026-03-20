@@ -1,45 +1,43 @@
-# Autonomous Agent Mode
+# Autonomous agent mode
 
-Use `dojops auto` to let the AI agent iteratively read, edit, and verify your project.
+Let `dojops auto` read your project, make targeted changes, verify them, and retry if something breaks — without you doing anything after the initial prompt.
 
----
-
-## Overview
-
-In this tutorial, you'll use the autonomous agent mode to complete a multi-step DevOps task without manual intervention. Unlike `plan + apply` which generates configs in a single pass, the autonomous agent:
-
-- Reads your existing files to understand project structure
-- Makes targeted edits instead of overwriting entire files
-- Runs commands to verify changes work
-- Adapts when something fails, retries with a different approach
-
-**Time estimate:** ~15 minutes
-
-**Prerequisites:**
-
-- Node.js >= 20 installed
-- DojOps CLI installed (`npm i -g @dojops/cli`)
-- An API key from a supported LLM provider
-- A project with existing files to work on
+> **Difficulty:** Advanced
+> **Duration:** 40 minutes
+> **What you'll build:** A working understanding of the autonomous ReAct loop — including how to observe it, control it, and use it safely for tasks that require reading existing code before making changes
 
 ---
 
-## Step 1: Configure Your Provider
+## What you'll learn
 
-If you haven't set up a provider yet:
+- Understand how the ReAct (Reasoning + Acting) loop works and why it produces better results than single-pass generation
+- Run your first autonomous task and read the tool-call trace
+- Use the agent to generate configs that are tailored to your actual project structure
+- Invoke DojOps skills from inside the agent loop via `run_skill`
+- Control iteration limits, write permissions, and verification behavior
+- Use the autonomous agent via the REST API for programmatic integration
+- Know when to use `dojops auto` vs `dojops plan --execute`
 
-```bash
-dojops config
-```
+## Prerequisites
 
-Or set it directly:
+- DojOps 1.1.6 installed (`npm i -g @dojops/cli`)
+- A configured LLM provider with an API key
+- An existing project directory with real files (a `package.json` or any code works)
+
+---
+
+## Workshop steps
+
+### Step 1: Configure your provider
+
+If you haven't set one up:
 
 ```bash
 dojops provider add openai --token sk-...
 dojops provider default openai
 ```
 
-Verify connectivity:
+Verify it's working:
 
 ```bash
 dojops check provider
@@ -53,226 +51,420 @@ dojops check provider
 
 ---
 
-## Step 2: Run Your First Autonomous Task
+### Step 2: Understand the ReAct loop before running anything
 
-Start with a simple task so you can see the agent loop in action:
-
-```bash
-dojops auto "Read package.json and list all dependencies"
-```
-
-The agent will:
-
-1. Call `read_file` to read `package.json`
-2. Analyze the contents
-3. Call `done` with a summary of all dependencies
+The autonomous agent uses a **ReAct (Reasoning + Acting)** pattern. Unlike `dojops generate`, which sends your prompt once and returns a result, the agent runs a loop:
 
 ```
-◆ Autonomous agent mode - iterative tool-use (max 20 iterations)
-◇ read_file package.json
-◇ done completing...
-
-Done
-
-  Found 5 dependencies: express, cors, helmet, zod, pino
-  Found 3 devDependencies: typescript, vitest, @types/node
-
-  1 iterations · 2 tool calls · 1,250 tokens
+Prompt received
+  → LLM reasons: "What do I need to know to complete this?"
+    → Calls a tool (read_file, search_files, run_command, etc.)
+      → Observes the result
+        → Reasons about what to do next
+          → Calls another tool or calls done
 ```
+
+Each pass through the loop is one iteration. The agent can run up to 20 iterations by default (configurable with `--max-iterations`). The key difference from single-pass generation is that the agent _adapts_ — if a command fails, it reads the error and tries something different instead of just reporting failure.
 
 ---
 
-## Step 3: Make Targeted Changes
+### Step 3: Run a read-only task first
 
-Now try a task that requires reading existing code and making edits:
+Before letting the agent make any changes, run a task that only reads files. This lets you observe the tool-call trace with zero risk.
+
+```bash
+dojops auto "Read package.json and list all dependencies, grouped by type"
+```
+
+```
+◆  Autonomous agent  (max 20 iterations)
+
+◇  Iteration 1
+│  Reasoning: I need to read package.json to find the dependencies.
+│  Tool: read_file
+│  Args: { "path": "package.json" }
+
+◇  Iteration 2
+│  Reasoning: I have the file. I can now group and summarize.
+│  Tool: done
+│  Summary ready.
+
+Done
+
+  Dependencies (5):
+    express@4.18.2, cors@2.8.5, helmet@7.0.0,
+    zod@3.23.0, pino@9.1.0
+
+  Dev dependencies (3):
+    typescript@5.4.0, vitest@1.6.0, @types/node@20.0.0
+
+  2 iterations  ·  2 tool calls  ·  1,250 tokens
+```
+
+Two things to notice: the agent showed its reasoning before each tool call, and it stopped as soon as it had what it needed. It didn't loop unnecessarily.
+
+---
+
+### Step 4: Make a targeted edit
+
+Now try a task that requires reading existing code and making a precise change. The agent will find the right file rather than guessing.
 
 ```bash
 dojops auto "Add a health check endpoint at GET /health to the Express app"
 ```
 
-The agent will typically:
-
-1. **Search** for the Express app entry point using `search_files`
-2. **Read** the file to understand the existing route structure
-3. **Edit** the file to add the health check route in the right place
-4. **Run** `npm test` or `node -e "require('./app')"` to verify
-5. **Done** with a summary of changes
-
 ```
-◆ Autonomous agent mode - iterative tool-use (max 20 iterations)
-◇ search_files *.ts
-◇ read_file src/app.ts
-◇ edit_file src/app.ts
-◇ run_command npm test
-◇ done completing...
+◆  Autonomous agent  (max 20 iterations)
+
+◇  Iteration 1
+│  Reasoning: I need to find the Express app entry point.
+│  Tool: search_files
+│  Args: { "pattern": "*.ts", "content": "express()" }
+
+◇  Iteration 2
+│  Reasoning: Found src/app.ts. Reading to understand route structure.
+│  Tool: read_file
+│  Args: { "path": "src/app.ts" }
+
+◇  Iteration 3
+│  Reasoning: I see the app definition. I'll add the health route
+│  after the existing /api/v1 routes and before error handling.
+│  Tool: edit_file
+│  Args: {
+│    "path": "src/app.ts",
+│    "old": "app.use(errorHandler)",
+│    "new": "app.get('/health', (_, res) => res.json({ status: 'ok', ts: Date.now() }));\napp.use(errorHandler)"
+│  }
+
+◇  Iteration 4
+│  Reasoning: Edit applied. Verifying the app loads without errors.
+│  Tool: run_command
+│  Args: { "command": "node -e \"require('./src/app')\"" }
+
+◇  Iteration 5
+│  Tool: done
 
 Done
 
-  Added GET /health endpoint returning { status: "ok", timestamp: ... }
-
-  Created:
+  Added GET /health → { status: "ok", ts: <timestamp> }
   Modified: src/app.ts
 
-  5 iterations · 5 tool calls · 4,800 tokens
+  5 iterations  ·  5 tool calls  ·  4,800 tokens
 ```
+
+The critical steps are iterations 1–2: the agent searched for the file instead of assuming the name. At iteration 3, it placed the route in a specific location based on what it read, not a template. At iteration 4, it verified the change before calling done.
 
 ---
 
-## Step 4: Generate DevOps Configs with Context
+### Step 5: Generate context-aware DevOps configs
 
-The agent is especially powerful when it needs to read your project before generating configs:
+This is where autonomous mode distinguishes itself from `dojops generate`. When you generate from scratch, the LLM has to make assumptions about your stack. When the agent reads your project first, it doesn't have to assume anything.
 
 ```bash
 dojops auto "Create a GitHub Actions CI workflow that matches this project's tech stack"
 ```
 
-Instead of generating a generic CI config, the agent will:
+```
+◆  Autonomous agent  (max 20 iterations)
 
-1. Read `package.json` to discover the tech stack, scripts, and Node version
-2. Check for existing CI files in `.github/workflows/`
-3. Read `tsconfig.json` if present (to include TypeScript build steps)
-4. Use `run_skill` to invoke the `github-actions` skill with the discovered context
-5. Verify the generated YAML is valid
+◇  Iteration 1
+│  Tool: read_file  →  package.json
+│  Found: TypeScript 5.4, Vitest, Node >=20 engine field, pnpm lockfile
 
-This produces a CI workflow tailored to your project, not a template.
+◇  Iteration 2
+│  Tool: search_files  →  .github/workflows/
+│  Found: no existing workflow files
+
+◇  Iteration 3
+│  Tool: read_file  →  tsconfig.json
+│  Found: target ES2022, strict mode, paths configured
+
+◇  Iteration 4
+│  Reasoning: I have enough context. Running the github-actions skill
+│  with discovered parameters: pnpm, Node 20/22 matrix, tsc + vitest.
+│  Tool: run_skill
+│  Args: { "skill": "github-actions", "context": { ... } }
+
+◇  Iteration 5
+│  Tool: write_file  →  .github/workflows/ci.yml
+
+◇  Iteration 6
+│  Tool: run_command  →  npx js-yaml .github/workflows/ci.yml
+│  Result: valid YAML
+
+◇  Iteration 7
+│  Tool: done
+
+Done
+
+  Created: .github/workflows/ci.yml
+  Stack:   TypeScript + pnpm + Node 20/22 matrix + Vitest
+  Tests:   pnpm test (Vitest)
+  Build:   pnpm build (tsc)
+
+  7 iterations  ·  7 tool calls  ·  8,400 tokens
+```
+
+Open the generated `ci.yml` — it uses `pnpm` because it found a `pnpm-lock.yaml`, tests with `vitest` because that's in your `package.json`, and runs Node 20 and 22 because your `engines` field says `>=20`. A template-based generator would have produced a generic Node.js workflow with `npm` and `jest`.
 
 ---
 
-## Step 5: Use Skills from the Agent
+### Step 6: Invoke built-in skills from inside the loop
 
-The agent can invoke any of the 18 built-in skills via the `run_skill` tool:
+The `run_skill` tool gives the agent access to all 18 built-in DojOps skills. The agent discovers what's needed, then delegates to the right skill with the right parameters.
 
 ```bash
-dojops auto "Dockerize this application with a multi-stage build, then create a docker-compose for local dev"
+dojops auto "Dockerize this application with a multi-stage build, then create a docker-compose for local development"
 ```
 
-The agent will:
+```
+◆  Autonomous agent  (max 20 iterations)
 
-1. Read project files to understand the stack
-2. Call `run_skill` with the `dockerfile` skill
-3. Call `run_skill` with the `docker-compose` skill
-4. Write both files to disk
-5. Optionally run `docker build .` to verify
+◇  Iteration 1
+│  Tool: read_file  →  package.json
+│  Found: Node 20, main entry dist/index.js, build script: tsc
+
+◇  Iteration 2
+│  Tool: search_files  →  Dockerfile
+│  Found: no existing Dockerfile
+
+◇  Iteration 3
+│  Tool: run_skill
+│  Args: { "skill": "dockerfile", "opts": { "runtime": "node20", "buildCmd": "pnpm build", "startCmd": "node dist/index.js" } }
+
+◇  Iteration 4
+│  Tool: write_file  →  Dockerfile
+
+◇  Iteration 5
+│  Tool: run_skill
+│  Args: { "skill": "docker-compose", "opts": { "services": ["app"], "ports": ["3000:3000"] } }
+
+◇  Iteration 6
+│  Tool: write_file  →  docker-compose.yml
+
+◇  Iteration 7
+│  Tool: run_command  →  docker build --dry-run .
+│  Result: build steps validated
+
+◇  Iteration 8
+│  Tool: done
+
+Done
+
+  Created: Dockerfile (multi-stage: builder + runner)
+  Created: docker-compose.yml
+
+  8 iterations  ·  8 tool calls  ·  9,100 tokens
+```
+
+Each skill runs with context the agent gathered rather than with hardcoded defaults. The Dockerfile uses the right Node version, the right build command, and the right start command because the agent read your `package.json` before invoking the skill.
 
 ---
 
-## Step 6: Control Agent Behavior
+### Step 7: Control agent behavior
 
-### Increase iterations for complex tasks
+**Increase iterations for complex tasks:**
 
-```bash
-dojops auto "Refactor the entire test suite to use Vitest instead of Jest" --max-iterations=30
-```
-
-### Allow writes outside the DevOps allowlist
-
-By default, the agent can only write DevOps-related files (CI, Dockerfile, Terraform, etc.). For broader changes:
+Large refactors need more room. For anything touching more than a handful of files:
 
 ```bash
-dojops auto "Add input validation to all API endpoints" --allow-all-paths
+dojops auto "Refactor the entire test suite to use Vitest instead of Jest" --max-iterations=40
 ```
 
-### Use in chat mode
+Watch the progress in the output. If the agent approaches the iteration limit and isn't done, add `--max-iterations=60` on the next run.
 
-Inside an interactive chat session, use the `/auto` slash command:
+**Allow writes beyond the DevOps path allowlist:**
+
+By default, the agent can write DevOps-related files: CI configs, Dockerfiles, Terraform files, Kubernetes manifests, and similar. For tasks that touch application code:
+
+```bash
+dojops auto "Add input validation to all API route handlers" --allow-all-paths
+```
+
+Use `--allow-all-paths` deliberately. The default allowlist exists to prevent accidental overwrites of application logic.
+
+**Run in dry-run mode to preview what the agent would do:**
+
+```bash
+dojops auto "Add Prometheus metrics to the Express app" --dry-run
+```
+
+```
+◆  Autonomous agent  (dry-run mode — no files will be written)
+
+◇  Would read: src/app.ts
+◇  Would read: package.json
+◇  Would write: src/middleware/metrics.ts
+◇  Would edit: src/app.ts  (add require + route)
+◇  Would run: npm test (verification)
+
+  Dry run complete. Run without --dry-run to apply.
+```
+
+Dry-run mode shows the full plan before committing anything.
+
+---
+
+### Step 8: Use the agent from chat
+
+Inside an interactive chat session, trigger the agent with `/auto`:
 
 ```bash
 dojops chat
 ```
 
 ```
-> /auto Add rate limiting to the Express API
-◆ Autonomous agent mode...
+◆  You: /auto Add rate limiting to the Express API
+
+◆  Autonomous agent mode...
+
+◇  read_file src/app.ts
+◇  search_files express-rate-limit
+◇  run_command npm install express-rate-limit
+◇  edit_file src/app.ts
+◇  run_command npm test
+◇  done
+
+  Added rate limiting: 100 requests / 15 minutes per IP
+  Modified: src/app.ts
+
+◆  You: _
 ```
+
+After the agent finishes, the chat session continues normally. You can ask follow-up questions about what it did or chain another `/auto` task.
 
 ---
 
-## Step 7: Use the API Endpoint
+### Step 9: Use the REST API for programmatic automation
 
-The autonomous agent is also available via the REST API:
+The autonomous agent is available at `POST /api/auto`. Start the API server:
 
 ```bash
 dojops serve
 ```
 
+Then send a task:
+
 ```bash
 curl -X POST http://localhost:3000/api/auto \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Add a Prometheus metrics endpoint", "maxIterations": 15}'
+  -d '{
+    "prompt": "Add a Prometheus /metrics endpoint with request count and duration histograms",
+    "maxIterations": 15
+  }'
 ```
-
-The response includes the full execution trace:
 
 ```json
 {
   "success": true,
-  "summary": "Added /metrics endpoint with request count and duration histograms",
-  "iterations": 4,
-  "totalTokens": 6200,
-  "filesModified": ["src/app.ts"],
-  "toolCalls": [...]
+  "summary": "Added /metrics endpoint using prom-client. Tracks http_requests_total and http_request_duration_seconds.",
+  "iterations": 6,
+  "totalTokens": 7200,
+  "filesModified": ["src/app.ts", "src/middleware/metrics.ts"],
+  "toolCalls": [
+    { "tool": "read_file", "args": { "path": "src/app.ts" }, "status": "ok" },
+    { "tool": "run_skill", "args": { "skill": "prometheus" }, "status": "ok" },
+    { "tool": "write_file", "args": { "path": "src/middleware/metrics.ts" }, "status": "ok" },
+    { "tool": "edit_file", "args": { "path": "src/app.ts" }, "status": "ok" },
+    { "tool": "run_command", "args": { "command": "npm test" }, "status": "ok" },
+    { "tool": "done", "args": {}, "status": "ok" }
+  ]
 }
 ```
 
----
+For long-running tasks, use `background: true` to get an HTTP 202 immediately and poll for status:
 
-## How It Works
-
-The autonomous agent uses a **ReAct (Reasoning + Acting) loop**:
-
-```
-User prompt
-  → LLM reasons about what to do
-    → Calls a tool (read_file, edit_file, run_command, etc.)
-      → Observes the result
-        → Repeats until done or max iterations reached
+```bash
+curl -X POST http://localhost:3000/api/auto \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Migrate all Jest tests to Vitest", "background": true}'
 ```
 
-**7 available tools:**
+```json
+{ "runId": "auto-run-abc123", "status": "running" }
+```
 
-| Tool           | Description                                |
-| -------------- | ------------------------------------------ |
-| `read_file`    | Read a file's contents                     |
-| `write_file`   | Create or overwrite a file                 |
-| `edit_file`    | Replace a specific string in a file        |
-| `run_command`  | Execute a shell command                    |
-| `run_skill`    | Run a DojOps skill (Terraform, Docker, CI) |
-| `search_files` | Search files by name or content pattern    |
-| `done`         | Signal task completion with a summary      |
-
-All file operations are enforced by the execution policy, the agent cannot write outside allowed paths or run commands beyond the configured timeout.
+```bash
+curl http://localhost:3000/api/auto/runs/auto-run-abc123
+```
 
 ---
 
-## Auto vs Plan: When to Use Which
+### Step 10: Know the full tool set
 
-| Aspect             | `dojops auto`                     | `dojops plan --execute`            |
-| ------------------ | --------------------------------- | ---------------------------------- |
-| **Best for**       | Tasks requiring project awareness | Multi-file generation from scratch |
-| **Reads files**    | Yes, examines existing code first | No, generates based on prompt only |
-| **Edit style**     | Targeted line-level edits         | Full file generation               |
-| **Error recovery** | Retries with different approach   | Fails and reports                  |
-| **Verification**   | Runs commands mid-loop            | Post-execution verification only   |
-| **Audit trail**    | Logged as `auto` type in history  | Logged as `plan` type in history   |
+The agent has 7 tools available. Understanding what each does helps you predict what the agent will do on a given task.
 
-**Rule of thumb:** Use `auto` when you want the agent to understand your existing codebase. Use `plan` when you're generating new configs from scratch.
+| Tool           | What it does                                                     |
+| -------------- | ---------------------------------------------------------------- |
+| `read_file`    | Read any file the execution policy allows                        |
+| `write_file`   | Create or overwrite a file (subject to path allowlist)           |
+| `edit_file`    | Replace a specific string in a file (surgical, not full rewrite) |
+| `run_command`  | Execute a shell command (timeout enforced by policy)             |
+| `run_skill`    | Run one of the 18 built-in DojOps skills with custom context     |
+| `search_files` | Search files by glob pattern or content substring                |
+| `done`         | Signal completion and return a human-readable summary            |
+
+All file writes and command executions go through the `SafeExecutor` policy engine. If a command exceeds the timeout or tries to write outside allowed paths, it fails with a clear error — the agent sees that error and can adapt.
 
 ---
 
-## Summary
+## When to use `auto` vs `plan --execute`
 
-1. `dojops auto` runs an iterative agent loop that reads, edits, and verifies autonomously
-2. The agent uses 7 tools to interact with your project: read, write, edit, run, skill, search, done
-3. All operations are sandboxed by the execution policy
-4. Use `--max-iterations` for complex tasks and `--allow-all-paths` for non-DevOps edits
-5. Use `--voice` to speak tasks instead of typing them (see [Voice Input tutorial](/tutorials/voice-input))
-6. Available via CLI, chat (`/auto`), and REST API (`POST /api/auto`)
+Both commands generate and apply DevOps files, but they work differently.
 
-### Next Steps
+| Aspect         | `dojops auto`                            | `dojops plan --execute`                  |
+| -------------- | ---------------------------------------- | ---------------------------------------- |
+| Best for       | Tasks that require reading existing code | Generating new configs from scratch      |
+| Reads project  | Yes — examines files before generating   | No — generates based on the prompt alone |
+| Edit style     | Targeted edits (`edit_file`)             | Full file writes                         |
+| Error recovery | Retries with a different approach        | Reports failure and stops                |
+| Verification   | Runs commands mid-loop                   | Post-execution verification only         |
+| Token cost     | Higher (more iterations = more tokens)   | Lower (single pass)                      |
 
-- **[Voice Input](/tutorials/voice-input)** — Speak tasks instead of typing them
-- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Compare the plan-based approach for greenfield projects
+Use `auto` when project context matters. Use `plan --execute` for greenfield configs where you're generating from nothing.
+
+---
+
+## Try it yourself
+
+**Challenge 1:** Run `dojops auto "Audit this project's Dockerfile for best practice violations and fix them" --dry-run` first, review the plan, then run it for real. Check the output against what the dry-run predicted.
+
+**Challenge 2:** Set `--max-iterations=3` on a complex task and observe what happens when the agent runs out of iterations before finishing. Look at what it completed and what it left undone.
+
+**Challenge 3:** Start `dojops serve`, then write a small shell script that posts a task to `POST /api/auto` and polls `GET /api/auto/runs/:id` until `status` is `completed` or `failed`. Print the summary when it's done.
+
+---
+
+## Troubleshooting
+
+**Agent hits max iterations without completing the task**
+
+Increase `--max-iterations`. Complex refactors on large codebases may need 40–60 iterations. Check what the agent accomplished up to the limit — it often finishes most of the work and you can start a follow-up run for the remainder.
+
+**Agent keeps retrying the same failed command**
+
+The agent adapts based on error output. If the error message is ambiguous, it may retry rather than change strategy. Look at the command it's running and check whether the failure reason is visible in the output. Adding `--debug` shows the full reasoning and tool output at each step.
+
+**File writes are rejected with "path not allowed"**
+
+The default allowlist covers DevOps files: `*.yaml`, `*.yml`, `Dockerfile*`, `*.tf`, `*.conf`, `Makefile`, `Jenkinsfile`, and similar. For application code, use `--allow-all-paths`.
+
+**`run_skill` produces generic output ignoring project context**
+
+The agent passes context to skills via the `context` parameter. If the context looks wrong in the trace (visible with `--debug`), the agent may have read the wrong file or missed a file. Try a more specific prompt: "Read package.json, then create a github-actions skill that uses pnpm and vitest."
+
+---
+
+## What you learned
+
+The autonomous agent is the right tool when you need DojOps to _understand_ your project before changing it. The ReAct loop — reason, act, observe, repeat — lets the agent gather real information from your files and adapt when things don't go as expected. The `run_skill` tool inside the loop combines this awareness with the quality of DojOps's 18 built-in skills, producing tailored output instead of templates. File operations and command execution are always bounded by the execution policy, so the agent works within a defined safety envelope regardless of what the LLM decides to do.
+
+---
+
+## Next steps
+
+- **[Voice Input](/tutorials/voice-input)** — Speak tasks to `dojops auto --voice` instead of typing
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — The plan-based approach for greenfield projects
 - **[Custom Agents & Skills](/tutorials/custom-agents-and-skills)** — Create skills the agent can invoke via `run_skill`
-- **[API Server & Dashboard](/tutorials/api-server-and-dashboard)** — Use the auto endpoint programmatically
-- **[Architecture Overview](/architecture/overview)** — Understand the AgentLoop and ToolExecutor internals
-- **[CLI Reference](/usage/cli)** — Full command reference for `dojops auto`
+- **[API Server & Dashboard](/tutorials/api-server-and-dashboard)** — Use the `/api/auto` endpoint in your own tooling
+- **[Architecture Overview](/architecture/overview)** — The AgentLoop and SafeExecutor internals

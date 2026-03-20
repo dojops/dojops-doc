@@ -1,36 +1,45 @@
-# Token Analytics & Cost Control
+# Token analytics & cost control
 
-Monitor LLM token usage, reduce costs with smart output compression, and optimize scanner output.
+Monitor LLM token usage, cut costs with smart compression, and build habits that keep your bill predictable.
 
----
-
-## Overview
-
-In this tutorial, you'll learn to:
-
-- Track token usage and costs across providers and commands
-- Use smart output compression to cut LLM costs by 70-90%
-- Leverage log deduplication to eliminate redundant CI output
-- Request structured JSON from scanners for more reliable parsing
-
-**Time estimate:** ~10 minutes
-
-**Prerequisites:**
-
-- DojOps installed (`npm i -g @dojops/cli`)
-- A configured LLM provider
-- A project initialized with `dojops init`
+> **Difficulty:** Intermediate
+> **Duration:** 25 minutes
+> **What you'll build:** A full picture of your token spend by provider, command, and skill — plus a working compression strategy that reduces CI debug costs by up to 95%
 
 ---
 
-## Part 1: Token Usage Analytics
+## What you'll learn
 
-### Step 1: View Token Summary
+- Read per-provider, per-command, and per-skill token breakdowns
+- Export usage data as JSON for dashboards or billing pipelines
+- Understand why raw CI logs waste 90% of your LLM budget
+- Use smart compression and log deduplication to cut costs automatically
+- Get structured JSON from scanners for cheaper, more reliable analysis
+- Combine model selection and compression for the lowest possible cost per task
 
-Check your cumulative token usage:
+## Prerequisites
+
+- DojOps 1.1.6 installed (`npm i -g @dojops/cli`)
+- A configured LLM provider (any of the 6 supported providers)
+- A project with at least a few prior `generate`, `scan`, or `debug-ci` runs
+
+If you haven't run anything yet, run two or three quick commands first:
 
 ```bash
-dojops tokens
+dojops "Create a .gitignore for a Node.js project"
+dojops scan
+```
+
+---
+
+## Workshop steps
+
+### Step 1: View your token summary
+
+The `dojops metrics tokens` command pulls all recorded usage from your `.dojops/` history and presents a summary.
+
+```bash
+dojops metrics tokens
 ```
 
 ```
@@ -52,12 +61,16 @@ dojops tokens
 └  Since 2026-01-15
 ```
 
-### Step 2: Skill-Level Breakdown
+The "By command" breakdown is the most actionable column. If `scan --fix` is eating 30% of your budget, look at compression and JSON output (covered in Steps 6 and 9). If `generate` dominates, model selection is where you'll find the biggest savings.
 
-See which skills consume the most tokens:
+---
+
+### Step 2: Break down usage by skill
+
+Not all skills cost the same. Terraform configs are verbose. Dockerfiles are short. The `--by-skill` flag shows which skill generates the most tokens.
 
 ```bash
-dojops tokens --by-skill
+dojops metrics tokens --by-skill
 ```
 
 ```
@@ -70,141 +83,165 @@ dojops tokens --by-skill
 │  nginx                18,500 tokens  $0.09
 │  (other)              55,021 tokens  $0.28
 │
-└  6 skills used
+└  6 skills used  |  284,521 tokens total
 ```
 
-### Step 3: Visualize Trends
+Terraform and Kubernetes configurations are long by nature — they require many resource blocks, and models tend to include comments and examples. If those are your biggest cost drivers, consider using a cheaper model (`--model fast`) for straightforward infrastructure and reserving the expensive model for complex multi-resource plans.
 
-View an ASCII chart of daily token usage:
+---
+
+### Step 3: Visualize daily trends
+
+Raw totals hide whether costs are spiking or steady. The `--graph` flag renders a 14-day ASCII histogram.
 
 ```bash
-dojops tokens --graph
+dojops metrics tokens --graph
 ```
 
 ```
 ┌  Token Usage (last 14 days)
 │
-│  Mar 01  ████████████░░░░░░░░  23,400
-│  Mar 02  ██████░░░░░░░░░░░░░░  12,100
-│  Mar 03  ████████████████░░░░  31,200
-│  Mar 04  ██░░░░░░░░░░░░░░░░░░   4,800
-│  Mar 05  ████████████████████  42,500
+│  Mar 06  ████████████░░░░░░░░  23,400
+│  Mar 07  ██████░░░░░░░░░░░░░░  12,100
+│  Mar 08  ████████████████░░░░  31,200
+│  Mar 09  ██░░░░░░░░░░░░░░░░░░   4,800
+│  Mar 10  ████████████████████  42,500
+│  Mar 11  ████████░░░░░░░░░░░░  18,900
+│  Mar 12  ████████████░░░░░░░░  24,100
+│  Mar 13  ██████████░░░░░░░░░░  21,300
+│  Mar 14  ████████████████░░░░  33,700
+│  Mar 15  ████░░░░░░░░░░░░░░░░   9,200
 │  ...
 │
 └  Average: 20,321 tokens/day ($0.10/day)
 ```
 
-### Step 4: JSON Export for Automation
-
-Export usage data for dashboards or billing systems:
-
-```bash
-dojops tokens --output json
-```
-
-This outputs structured JSON with per-provider, per-command, and per-skill breakdowns, useful for feeding into cost monitoring tools.
+The Mar 10 spike is easy to spot. That's typically a day where someone ran a large `scan --fix` or sent multi-file CI logs to `debug-ci`. Correlate the spike with your audit log to find the command.
 
 ---
 
-## Part 2: Smart Output Compression
+### Step 4: Export usage data as JSON
 
-### Step 5: Understand the Problem
-
-When DojOps sends scanner output or CI logs to the LLM for analysis, raw output often contains:
-
-- ANSI color codes (invisible but consume tokens)
-- Hundreds of success lines ("PASS", "ok", "✓")
-- Duplicated warnings and errors
-- Verbose stack traces
-
-This wastes 70-90% of tokens on information the LLM doesn't need.
-
-### Step 6: Compression in Action
-
-Smart compression activates automatically in `debug-ci`, `scan --fix`, and verification steps. Compare the difference:
+The terminal view is useful for spot checks, but if you want to feed usage data into a Grafana dashboard, cost-alerting script, or billing system, you need structured output.
 
 ```bash
-# Without compression: ~8,000 tokens of raw CI output
-dojops --debug-ci "$(cat ci-log-raw.txt)"
-
-# With compression (automatic): ~1,200 tokens sent to LLM
-# Same command - compression happens internally
+dojops metrics tokens --output json
 ```
 
-The compression pipeline:
+```json
+{
+  "summary": {
+    "totalTokens": 284521,
+    "totalCostUsd": 1.42,
+    "since": "2026-01-15"
+  },
+  "byProvider": [
+    { "provider": "openai", "tokens": 198340, "costUsd": 0.99 },
+    { "provider": "deepseek", "tokens": 86181, "costUsd": 0.43 }
+  ],
+  "byCommand": [
+    { "command": "generate", "tokens": 142000, "pct": 49.9 },
+    { "command": "scan --fix", "tokens": 85200, "pct": 29.9 },
+    { "command": "debug-ci", "tokens": 42100, "pct": 14.8 },
+    { "command": "plan", "tokens": 15221, "pct": 5.3 }
+  ],
+  "bySkill": [
+    { "skill": "terraform", "tokens": 89400, "costUsd": 0.45 },
+    { "skill": "github-actions", "tokens": 52100, "costUsd": 0.26 }
+  ],
+  "daily": [
+    { "date": "2026-03-06", "tokens": 23400 },
+    { "date": "2026-03-07", "tokens": 12100 }
+  ]
+}
+```
 
-1. **Strip ANSI**, Remove all color/formatting escape codes
-2. **Remove success lines**, Filter out lines matching pass/ok/success patterns
-3. **Deduplicate**, Collapse repeated lines into `(message) ×N` format
-4. **Truncate**, Keep the most relevant sections within token budget
-
-### Step 7: See Compression Stats
-
-When compression activates, DojOps reports the savings:
+Pipe it to a file or directly to a monitoring tool:
 
 ```bash
-dojops --debug-ci "ERROR: npm test failed with exit code 1..."
+dojops metrics tokens --output json > usage-$(date +%Y-%m-%d).json
+```
+
+---
+
+### Step 5: Understand why raw CI logs are expensive
+
+Before you see the compression features in action, it helps to understand the problem they solve.
+
+A typical GitHub Actions log for a failed Node.js build contains hundreds of lines that start with `✓ passed` or `ok` — the LLM doesn't need any of these. It also has ANSI color codes embedded in every line, the same deprecation warning repeated 47 times because npm prints it once per package, and long stack traces where only the first few frames are relevant.
+
+Sending this raw to the LLM wastes 70–90% of your token budget on noise. The model spends its context window reading `PASS UserService.findOne` 200 times before reaching the actual error.
+
+---
+
+### Step 6: Watch compression in action
+
+Smart compression activates automatically in `debug-ci`, `scan --fix`, and the verification step of autonomous tasks. You don't enable it — it's always on.
+
+Run a CI debug command and watch the compression stats:
+
+```bash
+dojops --debug-ci "$(gh run view 99887766 --log-failed)"
 ```
 
 ```
 ┌  CI Debug Analysis
 │
 │  Output compression:
-│    Raw: 12,847 lines (45,200 tokens)
-│    Compressed: 234 lines (1,890 tokens)
+│    Raw:        12,847 lines  (45,200 tokens)
+│    Compressed:    234 lines   (1,890 tokens)
 │    Savings: 95.8%
 │
-│  Analysis:
-│  ...
-│
-└  Diagnosis complete
-```
-
----
-
-## Part 3: Log Deduplication
-
-### Step 8: Deduplication for CI Logs
-
-Real CI logs often contain massive repetition. DojOps collapses these before LLM analysis:
-
-```bash
-# A CI log with 47 identical deprecation warnings becomes:
-# "WARNING: deprecated API version (×47)"
-```
-
-This is especially valuable for `debug-ci` where CI providers output thousands of lines:
-
-```bash
-dojops --debug-ci "$(gh run view 12345 --log-failed)"
-```
-
-```
-┌  CI Debug Analysis
-│
 │  Log deduplication:
-│    Collapsed 47 duplicate warnings
-│    Collapsed 12 repeated "npm WARN" lines
-│    Collapsed 8 identical test timeouts
+│    Collapsed 47 duplicate "npm WARN deprecated" lines
+│    Collapsed 12 repeated "npm WARN" peer dependency lines
+│    Collapsed 8 identical test timeout messages
 │
 │  Root cause: Jest test "UserService.create" times out
-│  waiting for database connection. The test environment
+│  waiting for a database connection. The test environment
 │  is missing DATABASE_URL configuration.
 │
 │  Suggested fix:
 │    Add DATABASE_URL to your CI environment variables
-│    in .github/workflows/ci.yml
+│    in .github/workflows/ci.yml under `env:`
 │
-└  1 root cause identified
+└  1 root cause identified  ·  1,890 tokens used
 ```
+
+The compression pipeline runs in four stages: strip ANSI codes, filter out success lines, collapse duplicate messages, truncate to the most relevant sections. The LLM receives 234 lines instead of 12,847 — and the diagnosis is sharper because it isn't drowning in noise.
 
 ---
 
-## Part 4: Structured JSON from Scanners
+### Step 7: Manually compare compressed vs raw
 
-### Step 9: JSON-Native Scanner Output
+If you want to see what the LLM actually receives, pipe a log file through compression without sending it to an LLM:
 
-When scanners support JSON output, DojOps requests it directly instead of parsing human-readable text:
+```bash
+dojops compress-log ci-output.txt
+```
+
+```
+┌  Log Compression Preview
+│
+│  Input:    8,421 lines  (31,400 tokens)
+│  Output:     189 lines   (1,240 tokens)
+│  Reduction: 96.1%
+│
+│  Removed:
+│    4,200 success/pass lines
+│    2,100 ANSI escape sequences (chars)
+│    47 duplicate warning groups
+│
+└  Compressed log written to ci-output.compressed.txt
+```
+
+Open `ci-output.compressed.txt` to inspect exactly what the LLM sees. This is useful when a `debug-ci` diagnosis seems off — you can check whether the relevant error survived compression.
+
+---
+
+### Step 8: Enable JSON output from scanners
+
+The 10 built-in scanners (trivy, checkov, npm-audit, gitleaks, hadolint, and others) all support machine-readable JSON output. When DojOps requests JSON instead of human-readable text, parsing is more reliable and the output compresses better because there's no formatting overhead.
 
 ```bash
 dojops scan --json
@@ -214,54 +251,88 @@ dojops scan --json
 ┌  Security Scan (JSON mode)
 │
 │  Scanner output format:
-│    trivy         → --format json ✓
-│    checkov       → -o json ✓
-│    npm-audit     → --json ✓
-│    gitleaks      → --report-format json ✓
-│    hadolint      → -f json ✓
+│    trivy         → --format json  ✓
+│    checkov       → -o json        ✓
+│    npm-audit     → --json         ✓
+│    gitleaks      → --report-format json  ✓
+│    hadolint      → -f json        ✓
+│    semgrep       → --json         ✓
 │
-│  Benefits:
-│    More reliable parsing
-│    Better compression ratios
-│    Structured data for LLM analysis
+│  Findings: 3 HIGH, 5 MEDIUM, 12 LOW
 │
-└  5/5 scanners using JSON output
+└  6 scanners used JSON output
 ```
 
-When combined with `--fix`, structured JSON gives the LLM cleaner input for generating targeted remediation:
+Human-readable scanner output has sentence structure the model has to interpret. JSON is unambiguous, so `--fix` suggestions tend to be more accurate.
+
+---
+
+### Step 9: Combine JSON output with auto-fix
+
+With JSON output enabled, pass `--fix` to let the LLM generate targeted remediation for each finding:
 
 ```bash
 dojops scan --json --fix
 ```
 
+```
+┌  Security Scan + Auto-Fix
+│
+│  Scan complete:
+│    3 HIGH, 5 MEDIUM, 12 LOW findings
+│
+│  Remediating...
+│    [1/3] CVE-2024-48949 in elliptic@6.5.3  →  upgrade to 6.6.1
+│    [2/3] DL3008 apt packages unpinned       →  pin versions in Dockerfile
+│    [3/3] Terraform S3 bucket public ACL     →  set acl = "private"
+│
+│  Tokens used: 4,200 (JSON mode saves ~38% vs text mode)
+│
+└  3 HIGH findings remediated
+```
+
+Compared to sending human-readable scanner output, JSON mode saves roughly 20–40% in tokens for the same fix quality.
+
 ---
 
-## Cost Optimization Strategies
+## Try it yourself
 
-Combine these features for maximum cost efficiency:
+**Challenge 1:** Find your most expensive command from the last 7 days and identify one specific change that would reduce its token cost by at least 30%.
 
-| Strategy                                      | Savings   | Command                                    |
-| --------------------------------------------- | --------- | ------------------------------------------ |
-| Use `--model fast` for simple tasks           | 60-80%    | `dojops --model fast "Create .gitignore"`  |
-| Use `--thinking low` for straightforward work | 30-50%    | `dojops --thinking low "Add health check"` |
-| Smart compression on CI debug                 | 70-95%    | `dojops --debug-ci` (automatic)            |
-| JSON scanner output                           | 20-40%    | `dojops scan --json --fix`                 |
-| Token monitoring                              | Awareness | `dojops tokens --graph`                    |
+**Challenge 2:** Take a real CI failure log from your project and run it through `dojops compress-log`. Check whether the root cause error survived compression, and if not, figure out what pattern caused it to be filtered.
+
+**Challenge 3:** Set up a daily JSON export cron job that appends usage data to a running log file, then write a one-liner that shows your total spend for the current calendar month.
 
 ---
 
-## Summary
+## Troubleshooting
 
-In this tutorial, you:
+**`dojops metrics tokens` shows zero usage**
 
-1. **Tracked token usage** with `dojops tokens` across providers, commands, and skills
-2. **Visualized trends** with `--graph` for daily usage patterns
-3. **Leveraged smart compression** that automatically cuts 70-95% of tokens on CI/scanner output
-4. **Used log deduplication** to collapse repeated CI warnings and errors
-5. **Enabled structured JSON** from scanners for more reliable and token-efficient parsing
+The token tracker reads from `.dojops/history/`. If you initialized DojOps but haven't run any commands yet, run two or three `generate` commands first. If you've run commands but see zeros, check that `.dojops/` exists in your current directory.
 
-### Next Steps
+**Compression isn't reducing tokens as much as expected**
 
-- **[Model Aliases & Thinking Levels](/tutorials/model-aliases-and-thinking)**, Optimize model selection per task
-- **[CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis)**, Deep dive into CI failure diagnosis
-- **[Security Audit & Remediation](/tutorials/security-audit)**, Full scanning walkthrough
+Compression works best on CI logs with lots of repetition. A short, clean error message won't compress much — that's expected. If your specific log has low compression, inspect the output of `dojops compress-log` to see which lines survived and why.
+
+**`--json` flag causes a scanner to fail**
+
+Some older versions of system-installed tools don't support JSON output flags. Run `dojops doctor` to check scanner versions. DojOps gracefully falls back to text parsing if a scanner doesn't support `--json`, and logs a warning.
+
+**Token costs in the output don't match my provider's billing**
+
+DojOps tracks tokens reported by the provider API, but pricing calculations use fixed per-token rates that may not reflect your exact tier or discounts. Use the JSON export to cross-reference against your provider's billing dashboard.
+
+---
+
+## What you learned
+
+Token costs fall into two categories: tokens you control through model selection, and tokens you can eliminate through compression. `dojops metrics tokens` gives you the breakdown to know which category matters most for your workflow. Smart compression is automatic — it activates on `debug-ci` and `scan --fix` without any configuration — and it routinely cuts 70–95% of tokens on noisy CI logs. Requesting JSON from scanners adds another 20–40% reduction on top of that. Combined, a typical `debug-ci` run on a large log file costs less than a fraction of a cent instead of several cents.
+
+---
+
+## Next steps
+
+- **[Model Aliases & Thinking Levels](/tutorials/model-aliases-and-thinking)** — Route simple tasks to cheaper models automatically
+- **[CI Debugging & Analysis](/tutorials/ci-debugging-and-analysis)** — Deep dive into CI failure diagnosis
+- **[Security Audit & Remediation](/tutorials/security-audit)** — Full scanning walkthrough with all 10 scanners

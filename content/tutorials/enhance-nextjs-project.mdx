@@ -1,46 +1,52 @@
-# Enhance a Next.js Project
+# Enhance a Next.js project
 
-Scan, analyze, and improve an existing project's DevOps setup using DojOps.
+Scan, analyze, and improve an existing project's DevOps setup.
+
+> **Difficulty:** Beginner
+> **Duration:** 30 minutes
+> **What you'll build:** A production-ready DevOps configuration for a Next.js app, including an enhanced CI workflow with caching and security scanning, a hardened multi-stage Dockerfile, and a quality score above 85/100.
 
 ---
 
-## Overview
+## What you'll learn
 
-In this tutorial, you'll take an existing Next.js project and use DojOps to:
+- Initializing project context so DojOps knows your stack before generating anything
+- Running a quality check that gives you specific, actionable findings instead of vague advice
+- How agent routing picks the right specialist for your prompt without you choosing one
+- Enhancing existing CI workflows while keeping the steps you already have
+- Hardening a Dockerfile with pinned versions, non-root users, and health checks
 
-- Initialize project scanning and detect the existing DevOps stack
-- Run a quality check to identify gaps and improvements
-- Generate enhanced CI/CD and Dockerfile configurations with AI
+---
 
-**Time estimate:** ~15 minutes
+## Prerequisites
 
-**Prerequisites:**
-
-- Node.js >= 20 installed
-- An API key from a supported LLM provider (OpenAI, Anthropic, DeepSeek, Gemini, or a local Ollama instance)
+- Node.js >= 20 ([nodejs.org](https://nodejs.org))
 - Git installed
+- An API key from a supported LLM provider (OpenAI, Anthropic, DeepSeek, Gemini, or a local Ollama instance)
+
+No prior DevOps experience needed. Already have DojOps installed? Skip to Step 2.
 
 ---
 
-## Step 1: Install DojOps
+## Workshop steps
 
-Install the CLI globally via npm:
+### Step 1: Install DojOps
 
 ```bash
 npm i -g @dojops/cli
 ```
 
-Verify the installation:
+Check that it's working:
 
 ```bash
 dojops --version
 ```
 
 ```
-@dojops/cli v1.0.3
+@dojops/cli v1.1.6
 ```
 
-Run the doctor command to check your environment:
+Run the environment check too. If anything shows `warn` or `error` here, fix it before moving on:
 
 ```bash
 dojops doctor
@@ -48,73 +54,87 @@ dojops doctor
 
 ```
 DojOps Doctor
-  Node.js    v20.x.x    ok
-  npm        v10.x.x    ok
-  git        v2.x.x     ok
+  Node.js    v20.11.1   ok
+  npm        v10.2.4    ok
+  git        v2.43.0    ok
   Config     ~/.dojops/  ok
 ```
 
 ---
 
-## Step 2: Clone the Example Project
+### Step 2: Clone the example project
 
-We'll use a simple Next.js portfolio site designed as a tutorial example, it has a basic CI workflow and Dockerfile with intentional gaps for DojOps to find and fix:
+We're working with a minimal Next.js portfolio site. It has a GitHub Actions workflow and a Dockerfile, but both have gaps on purpose. Good enough to ship, not good enough to trust.
 
 ```bash
 git clone https://github.com/dojops/example-nextjs.git
 cd example-nextjs
 ```
 
-Take a quick look at the project structure:
+Take a look at what's there:
 
 ```bash
 ls -la
 ```
 
-You'll see a minimal Next.js app (`next.config.ts`, `package.json`, `src/` with a landing page and 2 components) plus DevOps files like `Dockerfile`, `.github/workflows/ci.yml`, and `.dockerignore`.
+```
+total 48
+drwxr-xr-x  8 user user 4096 Mar 20 10:00 .
+drwxr-xr-x 12 user user 4096 Mar 20 09:59 ..
+drwxr-xr-x  3 user user 4096 Mar 20 10:00 .github
+-rw-r--r--  1 user user  312 Mar 20 10:00 .dockerignore
+-rw-r--r--  1 user user  198 Mar 20 10:00 .gitignore
+-rw-r--r--  1 user user  743 Mar 20 10:00 Dockerfile
+-rw-r--r--  1 user user 1204 Mar 20 10:00 next.config.ts
+-rw-r--r--  1 user user 1891 Mar 20 10:00 package.json
+drwxr-xr-x  4 user user 4096 Mar 20 10:00 src
+```
+
+You've got `Dockerfile`, `.github/workflows/ci.yml`, and a Next.js app under `src/`. No Docker Compose, no Makefile. The CI and Dockerfile both have issues we'll find in a minute.
 
 ---
 
-## Step 3: Configure a Provider
+### Step 3: Configure a provider
 
-Add your LLM provider. This example uses DeepSeek, but any supported provider works:
+Pick whichever LLM provider you have access to:
 
 ```bash
+# OpenAI
+dojops provider add openai --token sk-...
+
+# Anthropic
+dojops provider add anthropic --token sk-ant-...
+
 # DeepSeek
 dojops provider add deepseek --token sk-...
 
-# Or OpenAI
-dojops provider add openai --token sk-...
-
-# Or Anthropic
-dojops provider add anthropic --token sk-ant-...
+# Local Ollama (no token needed)
+dojops provider add ollama
 ```
 
-Verify the provider is active:
+Confirm it's connected:
 
 ```bash
 dojops auth status
 ```
 
 ```
-Provider:  deepseek
-Model:     deepseek-chat
+Provider:  openai
+Model:     gpt-4o
 Status:    authenticated
 ```
 
-See [Provider Management](/getting-started/providers) for the full list of supported providers.
+If you see `unauthenticated`, double-check your token. The [Provider Management](/getting-started/providers) page has provider-specific details.
 
 ---
 
-## Step 4: Initialize the Project
+### Step 4: Initialize the project
 
-Run `dojops init` to scan the project and build a DevOps context:
+`dojops init` scans the project and records what it finds. Your source code isn't sent anywhere. DojOps only reads filenames and DevOps config structure.
 
 ```bash
 dojops init
 ```
-
-DojOps scans your repository and reports what it finds:
 
 ```
 Initializing DojOps...
@@ -141,19 +161,17 @@ Recommended agents:
 Project context saved to .dojops/context.json
 ```
 
-This creates a `.dojops/` directory with your project's context. All subsequent commands use this context to give the LLM accurate information about your stack.
+The `.dojops/context.json` file is what every subsequent command reads from. It tells the LLM what's already in your project so it won't generate things that conflict with what you have.
 
 ---
 
-## Step 5: Check DevOps Maturity
+### Step 5: Check DevOps maturity
 
-Run an LLM-powered quality check on your detected DevOps files:
+Here's where it gets interesting. Run the quality check:
 
 ```bash
 dojops check
 ```
-
-DojOps reads your DevOps files and sends them to the LLM for analysis:
 
 ```
 DevOps Quality Check
@@ -173,62 +191,162 @@ Missing files:
   renovate.json or dependabot.yml
 ```
 
-The score tells you where you stand. The findings give you specific, actionable improvements, exactly what we'll address next.
+62/100 is typical for a project that "works" but hasn't been hardened. Notice how specific the findings are. Not "improve your CI" but "CI workflow lacks caching for node_modules." You know exactly what to fix, which makes the next steps fast.
 
 ---
 
-## Step 6: Enhance the CI Workflow
+### Step 6: Enhance the CI workflow
 
-Ask DojOps to improve the GitHub Actions workflow based on the quality check findings:
+Feed the quality check findings into your prompt:
 
 ```bash
 dojops "Enhance the GitHub Actions CI workflow with dependency caching, security scanning, and Docker image building"
 ```
 
-DojOps routes this to the `github-actions-specialist` agent, reads your existing `.github/workflows/ci.yml`, and generates an enhanced version. Because DojOps detected the existing file during `init`, it preserves your current steps and adds improvements:
+```
+Routing to: github-actions-specialist
 
-- **Dependency caching**, `actions/cache` for `node_modules` and `.next/cache`
-- **Security scanning**, npm audit step
-- **Docker build**, Multi-stage build verification
-- **Matrix testing**, Node.js 20 and 22
+Reading: .github/workflows/ci.yml
+Reading: .dojops/context.json
 
-A `.bak` backup of your original workflow is created automatically before any changes are written.
+Generating enhanced workflow...
+
+Changes to .github/workflows/ci.yml:
+  + actions/cache for node_modules (saves ~45s per run)
+  + actions/cache for .next/cache (speeds up Next.js builds)
+  + npm audit step (catches vulnerable dependencies)
+  + Docker build verification step
+  + Node.js 20/22 matrix testing
+
+Backup created: .github/workflows/ci.yml.bak
+
+Apply changes? (y/n/diff): diff
+```
+
+Type `diff` to preview the exact changes before committing. You'll see a unified diff of the workflow file. When you're satisfied:
+
+```
+Apply changes? (y/n/diff): y
+
+Written: .github/workflows/ci.yml
+```
+
+Your existing steps are preserved. DojOps added the improvements around them. If anything looks wrong, `cp .github/workflows/ci.yml.bak .github/workflows/ci.yml` gets you back to where you started.
 
 ---
 
-## Step 7: Enhance the Dockerfile
+### Step 7: Enhance the Dockerfile
 
-Next, improve the Dockerfile:
+The quality check flagged unpinned base images. In practice, floating tags cause silent breakage when upstream images update. Fix it:
 
 ```bash
 dojops "Enhance the Dockerfile with pinned base image versions, security hardening, and build caching"
 ```
 
-DojOps routes this to the `dockerfile-specialist` and generates improvements such as:
+```
+Routing to: dockerfile-specialist
 
-- **Pinned versions**, Specific Node.js and nginx image tags instead of `latest`
-- **Non-root user**, Running the final stage as a non-root user
-- **Layer caching**, Optimized `COPY` order for better Docker layer caching
-- **Health check**, `HEALTHCHECK` directive for container orchestration
-- **Security labels**, OCI image labels for traceability
+Reading: Dockerfile
+Reading: .dojops/context.json
 
-Again, a `.bak` backup is created before overwriting.
+Generating hardened Dockerfile...
+
+Changes to Dockerfile:
+  + Pinned node:20.11.1-slim (was node:20-slim with floating tag)
+  + Non-root user (USER nextjs:nodejs, uid 1001)
+  + Optimized COPY order for layer cache efficiency
+  + HEALTHCHECK directive for container orchestration
+  + OCI image labels for traceability
+
+Backup created: Dockerfile.bak
+
+Apply changes? (y/n/diff): y
+
+Written: Dockerfile
+```
+
+Pinned versions prevent "works on my machine" failures. The non-root user shrinks your attack surface. The health check tells Kubernetes and Docker Compose when the container is actually ready to serve traffic, not just started.
 
 ---
 
-## Summary
+### Step 8: Verify your improvements
 
-In this tutorial, you:
+Re-run the quality check and see what changed:
 
-1. **Installed DojOps** and verified your environment with `doctor`
-2. **Initialized** a real project, detecting its languages, CI/CD, and container setup
-3. **Checked DevOps maturity** and identified specific gaps
-4. **Enhanced the CI workflow** with caching, security scanning, and matrix testing
-5. **Enhanced the Dockerfile** with pinned versions, security hardening, and health checks
+```bash
+dojops check
+```
 
-### Next Steps
+```
+DevOps Quality Check
 
-- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)**, Build a full pipeline from zero using `plan` and `apply`
-- **[Security Audit & Remediation](/tutorials/security-audit)**, Run security scans with auto-fix
-- **[CLI Reference](/usage/cli)**, Full command documentation
-- **[DevOps Skills](/components/skills)**, All 18 built-in skills and the custom skill system
+Score: 86/100 (Good)
+
+Findings:
+  info  Consider adding a SECURITY.md
+  info  Consider adding Dependabot or Renovate for dependency updates
+  info  Consider adding a Makefile for common tasks
+
+Missing files:
+  SECURITY.md
+  CODEOWNERS
+  renovate.json or dependabot.yml
+```
+
+62 to 86. The `warning`-level findings are gone. What's left are `info` items: nice-to-haves rather than real gaps. Check the audit trail to see what was recorded:
+
+```bash
+dojops history list
+```
+
+```
+ID         Type      Agent                     Status     Date
+init-001   init      project-scanner           completed  2026-03-20 10:05
+check-001  check     quality-analyst           completed  2026-03-20 10:08
+exec-001   execute   github-actions-specialist  completed  2026-03-20 10:12
+exec-002   execute   dockerfile-specialist      completed  2026-03-20 10:15
+check-002  check     quality-analyst           completed  2026-03-20 10:18
+```
+
+Every operation is hash-chained. `dojops history verify` confirms the chain is intact and nothing was tampered with.
+
+---
+
+## Try it yourself
+
+1. **Add Docker Compose.** Run `dojops "Create a Docker Compose file for local development with hot reloading"` and look at the volume mount strategy it picks for Next.js.
+
+2. **Push past 90.** Three `info` items remain. Use DojOps to generate `SECURITY.md` and `renovate.json`, then re-run `dojops check`. See how high the score goes.
+
+3. **Inspect the audit trail.** Run `dojops history verify`, then `dojops history show exec-001`. The hash-chain format is how the audit log stays tamper-evident.
+
+---
+
+## Troubleshooting
+
+**`dojops: command not found` after installation**
+Your shell's PATH probably doesn't include npm globals. Run `npm bin -g` to find the bin directory, then add it: `export PATH="$PATH:$(npm bin -g)"`.
+
+**`dojops auth status` shows `unauthenticated`**
+The token was rejected. Check for leading/trailing whitespace when you paste it. Run `dojops provider add <provider> --token <token>` again with the corrected value.
+
+**Quality check score doesn't improve after enhancement**
+DojOps generates improvements based on its scan at `init` time. If you changed DevOps files manually after `init`, run `dojops init` again to refresh the context before re-checking.
+
+**The `.bak` file is missing**
+Backups are created only when DojOps modifies an existing file. If you used `--yes` and don't see a `.bak`, check `.dojops/history/`. DojOps logs the original content there too.
+
+---
+
+## What you learned
+
+You took a working Next.js project from a 62 to an 86 quality score in two commands. DojOps built context during `init`, used it to find specific gaps during `check`, then routed your prompts to the right specialist agents without you needing to pick one. The CI workflow kept its existing steps while gaining caching and security scanning. The Dockerfile went from a floating base tag to pinned versions with a non-root user. Everything was logged in a tamper-evident audit trail.
+
+---
+
+## Next steps
+
+- [CI/CD from Scratch](/tutorials/cicd-from-scratch) — Build a complete pipeline from zero using `plan` and `apply`
+- [Security Audit & Remediation](/tutorials/security-audit) — Run security scans with auto-fix and SBOM generation
+- [CLI Reference](/usage/cli) — Full command documentation
+- [DevOps Skills](/components/skills) — All 18 built-in skills and the custom skill system

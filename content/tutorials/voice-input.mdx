@@ -1,32 +1,36 @@
-# Voice Input
+# Voice input
 
-Use your voice to control DojOps — speak commands instead of typing them. All speech-to-text processing happens locally via whisper.cpp.
+Speak your DojOps commands instead of typing them. All transcription happens locally via whisper.cpp — no audio ever leaves your machine.
+
+> **Difficulty:** Beginner
+> **Duration:** 25 minutes (includes building whisper.cpp from source)
+> **What you'll build:** A fully working voice-input setup that lets you speak prompts in chat, plan, and autonomous agent mode
 
 ---
 
-## Overview
+## What you'll learn
 
-In this tutorial, you'll learn to:
-
-- Install the voice input dependencies (whisper.cpp + SoX)
-- Use voice in interactive chat sessions (`/voice`)
-- Speak plan goals with `dojops plan --voice`
+- Install whisper.cpp and SoX for your operating system
+- Verify the setup with `dojops doctor`
+- Use `/voice` inside interactive chat sessions
+- Speak a plan goal with `dojops plan --voice`
 - Run autonomous tasks with `dojops auto --voice`
-- Combine voice with other flags (`--execute`, `--yes`)
+- Combine voice with `--execute` and `--yes` for hands-free workflows
+- Diagnose the most common voice setup failures
 
-**Time estimate:** ~15 minutes (includes building whisper.cpp from source)
+## Prerequisites
 
-**Prerequisites:**
-
-- DojOps installed (`npm i -g @dojops/cli`)
-- A C compiler, cmake, and git (for building whisper.cpp)
+- DojOps 1.1.6 installed (`npm i -g @dojops/cli`)
 - A working microphone
+- A C compiler, cmake, and git (for building whisper.cpp — covered below)
 
 ---
 
-## Step 1: Install Build Tools and SoX
+## Workshop steps
 
-Voice input requires two system dependencies: **whisper.cpp** (speech-to-text engine) and **SoX** (audio recording). Before installing whisper.cpp, you need build tools.
+### Step 1: Install build tools and SoX
+
+Voice input requires two system dependencies: SoX records audio from your microphone, and whisper.cpp converts that audio to text. Install the build tools first, then SoX.
 
 **macOS:**
 
@@ -35,17 +39,17 @@ xcode-select --install
 brew install cmake sox
 ```
 
-**Linux / WSL (Debian/Ubuntu):**
+**Linux / WSL (Debian / Ubuntu):**
 
 ```bash
-sudo apt update
-sudo apt install build-essential cmake git sox libsox-fmt-all
+sudo apt update && sudo apt install -y \
+  build-essential cmake git sox libsox-fmt-all
 ```
 
-**Linux (Fedora/RHEL):**
+**Linux (Fedora / RHEL):**
 
 ```bash
-sudo dnf install gcc gcc-c++ cmake git sox sox-plugins-freeworld
+sudo dnf install -y gcc gcc-c++ cmake git sox sox-plugins-freeworld
 ```
 
 **Linux (Arch):**
@@ -54,56 +58,108 @@ sudo dnf install gcc gcc-c++ cmake git sox sox-plugins-freeworld
 sudo pacman -S base-devel cmake git sox
 ```
 
-> **Windows:** SoX can be installed from [the SoX SourceForge page](https://sox.sourceforge.net/). Voice input on Windows is experimental.
+Verify SoX is installed and can see your audio device:
+
+```bash
+sox --version
+```
+
+```
+SoX v14.4.2
+```
+
+If SoX is installed but can't access your microphone on Linux, check that your user is in the `audio` group:
+
+```bash
+groups $USER | grep audio
+```
+
+If `audio` isn't listed: `sudo usermod -aG audio $USER`, then log out and back in.
+
+> **Windows:** SoX is available from [sox.sourceforge.net](https://sox.sourceforge.net/). Voice input on Windows is experimental and may have audio device issues.
 
 ---
 
-## Step 2: Install whisper.cpp
+### Step 2: Install whisper.cpp
 
-DojOps builds whisper.cpp from source and downloads the default model (~142 MB). Everything is installed into `~/.dojops/toolchain/` — no system-level permissions needed.
+DojOps builds whisper.cpp from source and places everything in `~/.dojops/toolchain/` — no system permissions needed. The default model (`ggml-base.en.bin`) is approximately 142 MB and downloads automatically.
 
 ```bash
 dojops toolchain install whisper-cpp
 ```
 
 ```
-◐ Installing whisper-cpp...
-✓ whisper-cpp v1.7.3 installed.
-  Downloading model ggml-base.en.bin (142 MB)...
-✓ Model downloaded to ~/.dojops/voice/ggml-base.en.bin
+◐  Cloning whisper.cpp v1.7.3...
+◐  Building (this takes 1-3 minutes)...
+✓  whisper-cpp v1.7.3 installed
+   Binary: ~/.dojops/toolchain/bin/whisper-cli
+
+◐  Downloading model ggml-base.en.bin (142 MB)...
+✓  Model saved to ~/.dojops/voice/ggml-base.en.bin
 ```
 
-> whisper-cpp always installs globally (the model file is shared across projects). No scope prompt is shown.
+The build duration depends on your hardware. On a modern machine it's about 90 seconds. The model download depends on your connection speed.
+
+The whisper.cpp installation is global to your user account, not per-project. You only need to do this once.
 
 ---
 
-## Step 3: Verify the Setup
+### Step 3: Verify the setup
 
-Run the doctor command to check that all voice dependencies are found:
+Run the doctor command and check the Voice section:
 
 ```bash
 dojops doctor
 ```
 
-Look for the Voice section in the output:
+```
+  System checks
+  ─────────────────────────────────────────
+  Node.js             pass  v20.11.0
+  DojOps CLI          pass  v1.1.6
+  Provider            pass  openai (gpt-4o)
+
+  Voice
+  ─────────────────────────────────────────
+  whisper.cpp         pass  Found (~/.dojops/toolchain/bin/whisper-cli)
+  SoX (rec)           pass  Found (/usr/bin/rec)
+  Whisper model       pass  Found (~/.dojops/voice/ggml-base.en.bin, 142 MB)
+
+  Optional tools
+  ─────────────────────────────────────────
+  trivy               pass  v0.49.1
+  checkov             warn  Not installed (IaC scanning unavailable)
+```
+
+All three Voice lines must show `pass`. If any shows `warn` or `fail`, go back to Step 1 or 2 for the specific dependency.
+
+Test actual transcription before moving on:
+
+```bash
+dojops voice-test
+```
 
 ```
-  Voice: whisper.cpp    pass  Found (~/.dojops/toolchain/bin/whisper-cli)
-  Voice: SoX (rec)      pass  Found (/usr/bin/rec)
-  Voice: whisper model   pass  Found (~/.dojops/voice/ggml-base.en.bin)
+●  Recording for 3 seconds... (say something)
+
+●  Transcribed: "hello this is a test"
+
+✓  Voice input working correctly
 ```
 
-If any item shows `warn`, revisit Steps 1-2 for the missing dependency.
+If the transcription is empty or garbled, check Step 4 of the Troubleshooting section at the bottom of this page.
 
 ---
 
-## Step 4: Voice in Chat Mode
+### Step 4: Use voice in chat
 
-Start a chat session and use the `/voice` slash command:
+Start an interactive chat session:
 
 ```bash
 dojops chat
 ```
+
+At the prompt, type `/voice` to start a recording:
 
 ```
 ┌  DojOps Interactive Chat
@@ -113,27 +169,41 @@ dojops chat
 ●  Recording... Speak now (press Enter to stop, max 30s)
 ```
 
-Speak your question, then **press Enter** to stop recording. The audio is transcribed locally and sent as a chat message:
+Speak your question clearly, then **press Enter** to stop recording. The audio is transcribed locally:
 
 ```
-●  Transcribed: What CI tools are configured in this project?
+●  Transcribed: "What CI tools are configured in this project?"
 
-◇  DojOps: Based on the project scan, I can see:
-│  - GitHub Actions workflow (.github/workflows/ci.yml)
-│  - Dockerfile (multi-stage build)
+◇  DojOps: Based on the project files, I can see:
+│  · GitHub Actions workflow at .github/workflows/ci.yml
+│    (Node 20/22 matrix, pnpm, Vitest)
+│  · Dockerfile with multi-stage build
 │
 ◆  You: _
 ```
 
-You can use `/voice` as many times as you want during a session. Each recording is independent.
+You can use `/voice` as many times as you want during a session. Typed and voice inputs mix freely — use whichever is faster for each message.
 
-> **Tip:** Start the chat with `dojops chat --voice` to validate voice dependencies upfront. This way, you get an error at startup if something is missing, instead of mid-conversation.
+A practical tip: start chat with `--voice` to validate dependencies before you get deep into a session.
+
+```bash
+dojops chat --voice
+```
+
+```
+✓  Voice input ready (whisper-cli + ggml-base.en.bin)
+┌  DojOps Interactive Chat
+│
+◆  You: _
+```
+
+If a dependency is missing, the error appears here at startup instead of mid-conversation.
 
 ---
 
-## Step 5: Voice with Plan Command
+### Step 5: Speak a plan goal
 
-Use `--voice` to speak a plan goal instead of typing it:
+Use `--voice` with the `plan` command to speak a multi-step goal instead of typing it:
 
 ```bash
 dojops plan --voice
@@ -142,40 +212,47 @@ dojops plan --voice
 ```
 ●  Recording... Speak your plan goal (press Enter to stop, max 30s)
 
-●  Transcribed: Set up CI/CD for a Node.js app with Docker
+●  Transcribed: "Set up CI/CD for a Node.js app with Docker and push to GitHub Container Registry"
 
-◇  Tasks decomposed
+◇  Decomposing into tasks...
 
-◇  Set up CI/CD for a Node.js app with Docker (3 tasks)
+◇  Plan: Set up CI/CD for a Node.js app with Docker (4 tasks)
 │
-│    task-1 github-actions: Create GitHub Actions CI workflow
-│    task-2 dockerfile: Create multi-stage Dockerfile
-│    task-3 docker-compose: Create docker-compose.yml for local dev
+│    task-1  github-actions: Create GitHub Actions CI workflow
+│    task-2  dockerfile: Create multi-stage Dockerfile
+│    task-3  docker-compose: Create docker-compose.yml for local dev
+│    task-4  github-actions: Create release workflow for GHCR push
 │
 ◆  Plan saved as plan-50372126
 ```
 
-### Combine with --execute
+The transcription fills in the prompt. Everything after that works exactly as if you had typed it.
 
-Voice composes with all existing plan flags. Speak the goal and execute immediately:
+---
+
+### Step 6: Execute immediately after speaking
+
+Voice composes with all plan flags. Speak and execute in one command:
 
 ```bash
 dojops plan --voice --execute
 ```
 
-Or auto-approve everything:
+This records your goal, decomposes it into tasks, shows you the plan, and waits for approval before executing each task.
+
+For fully automated execution with no approval prompts:
 
 ```bash
 dojops plan --voice --execute --yes
 ```
 
-The voice transcription fills in the prompt — everything after that works exactly as if you'd typed it.
+Use `--yes` only when you've already reviewed the plan pattern and trust the output. A good workflow is to run `--execute` first (with approval prompts) on a new class of task, then `--execute --yes` once you're confident in what the plan produces.
 
 ---
 
-## Step 6: Voice with Autonomous Agent
+### Step 7: Speak an autonomous agent task
 
-Use `--voice` to speak a task for the autonomous agent:
+The autonomous agent accepts voice input the same way:
 
 ```bash
 dojops auto --voice
@@ -184,26 +261,71 @@ dojops auto --voice
 ```
 ●  Recording... Speak your task (press Enter to stop, max 30s)
 
-●  Transcribed: Check our Dockerfile and see if it follows best practices
+●  Transcribed: "Check our Dockerfile and update it to follow current best practices"
 
 ◐  Starting autonomous agent...
-│  read_file Dockerfile
-│  ...
-│  ✓ Done (3 iterations, 2 files modified)
+
+◇  read_file Dockerfile
+◇  search_files .dockerignore
+◇  run_skill dockerfile (with current file as context)
+◇  edit_file Dockerfile (pinned base image, added .dockerignore, removed root user)
+◇  run_command docker build --dry-run .
+◇  done
+
+✓  Done
+   3 changes applied  ·  6 iterations  ·  5,200 tokens
 ```
 
-The agent receives your transcribed text as its task and runs the full iterative loop — reading files, making changes, and verifying results.
+The agent receives your transcribed text as its task and runs the full iterative loop. Voice is purely an input mechanism — the agent behavior is identical to typing the prompt.
 
 ---
 
-## How Recording Works
+### Step 8: How recording works
 
-- **Press Enter** (or Space) to stop recording
-- **Ctrl+C** also stops recording without exiting the session
-- Maximum recording duration is **30 seconds**
-- Audio is recorded at 16kHz mono WAV (what whisper.cpp expects)
-- Temporary audio files are cleaned up automatically after transcription
-- All processing is local — no audio data leaves your machine
+A few specifics about recording behavior that affect day-to-day use:
+
+- Press Enter or Space to stop recording. Ctrl+C also stops without exiting.
+- The maximum duration is 30 seconds. Recording stops automatically at the limit.
+- SoX records 16kHz mono WAV — exactly what whisper.cpp expects.
+- The `.wav` file is written to a temp directory and deleted immediately after transcription.
+- No audio data leaves your machine. whisper.cpp runs the model locally.
+
+For long, complex tasks, 30 seconds is enough — most people can describe a DevOps task in 10–15 seconds. If you find yourself running out of time, split the task into smaller prompts and chain them in chat.
+
+---
+
+### Step 9: Set a custom model (optional)
+
+The default model (`ggml-base.en.bin`) is optimized for English. If you work in another language, download a multilingual model and point DojOps to it:
+
+```bash
+# Download the multilingual base model (~142 MB)
+curl -L -o ~/.dojops/voice/ggml-base.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
+
+# Use it for all sessions
+export DOJOPS_WHISPER_MODEL=~/.dojops/voice/ggml-base.bin
+```
+
+Add the export to your shell profile (`~/.zshrc` or `~/.bashrc`) to make it permanent.
+
+If you have a custom-built whisper.cpp binary:
+
+```bash
+export DOJOPS_WHISPER_BIN=/usr/local/bin/whisper-cli
+```
+
+Most users don't need either of these — DojOps auto-detects the binary and model from `~/.dojops/toolchain/` and `~/.dojops/voice/`.
+
+---
+
+## Try it yourself
+
+**Challenge 1:** Run `dojops chat --voice` and conduct a full multi-turn conversation using only voice input. Start by asking about your project structure, then ask for a CI workflow, then ask for a Dockerfile. No typing beyond `/voice` for each turn.
+
+**Challenge 2:** Use `dojops plan --voice --execute` to generate and apply a real config. Compare the quality of the output to a typed prompt — does speaking produce a more or less detailed prompt than you normally type?
+
+**Challenge 3:** Download the large whisper model (`ggml-large-v3.bin`, ~3 GB) and compare transcription accuracy against the base model on a technical prompt with tool names and acronyms like "GHCR", "trivy", "kubectl", and "Terraform".
 
 ---
 
@@ -211,67 +333,44 @@ The agent receives your transcribed text as its task and runs the full iterative
 
 **"Voice input requires: whisper.cpp binary"**
 
-whisper.cpp isn't installed or can't be found. Run:
-
-```bash
-dojops toolchain install whisper-cpp
-```
-
-If the build fails, check that cmake and a C compiler are installed:
+The binary isn't installed or can't be found. Run `dojops toolchain install whisper-cpp`. If the build fails, check that cmake and a C compiler are installed:
 
 ```bash
 cmake --version
-gcc --version   # or clang --version
+gcc --version   # or: clang --version on macOS
 ```
+
+If cmake is missing, install it via your package manager and retry.
 
 **"Voice input requires: sox"**
 
-SoX isn't installed. Install it via your system package manager (see Step 1).
+SoX isn't installed. Go back to Step 1 and install it for your OS. Verify with `sox --version` after installation.
 
 **"Recording failed — no audio captured"**
 
-Your microphone may not be accessible. Check:
+Your microphone isn't accessible. On Linux, test the microphone directly:
 
 ```bash
-# Linux: test recording
-rec -d test.wav trim 0 3
-
-# macOS: check System Preferences > Security & Privacy > Microphone
+rec -d test.wav trim 0 3 && aplay test.wav
 ```
 
-**"libwhisper.so / libggml.so not found"**
+If `rec` fails, the issue is at the OS level. Check your audio device configuration and verify your user is in the `audio` group. On macOS, check System Settings > Privacy & Security > Microphone and ensure Terminal (or your terminal emulator) has permission.
 
-The whisper.cpp installation is outdated. Clean and reinstall:
+**Transcription returns empty text or obvious garbage**
 
-```bash
-dojops toolchain remove whisper-cpp
-dojops toolchain install whisper-cpp
-```
-
-**Transcription returns garbage or empty text**
-
-The default model (`ggml-base.en.bin`) works best with English. For other languages, download a multilingual model and point to it:
-
-```bash
-export DOJOPS_WHISPER_MODEL=~/.dojops/voice/ggml-base.bin
-```
+Two common causes: the microphone volume is too low, or you're using the English-only model for non-English speech. For low volume, speak closer to the microphone and increase input gain in your system audio settings. For non-English, download the multilingual model as described in Step 9.
 
 ---
 
-## Environment Variables (Optional)
+## What you learned
 
-Most users don't need these — DojOps auto-detects whisper.cpp from the toolchain and system PATH:
-
-| Variable               | Purpose                      | Default                             |
-| ---------------------- | ---------------------------- | ----------------------------------- |
-| `DOJOPS_WHISPER_BIN`   | Override whisper binary path | Auto-detected from toolchain + PATH |
-| `DOJOPS_WHISPER_MODEL` | Override model file path     | `~/.dojops/voice/ggml-base.en.bin`  |
+Voice input in DojOps is a local-only feature — no audio data leaves your machine. SoX captures the recording, whisper.cpp runs inference on the model at `~/.dojops/voice/ggml-base.en.bin`, and the transcribed text is passed to the same pipeline as a typed prompt. The `--voice` flag works identically across chat, plan, and auto commands, and it composes with other flags like `--execute` and `--yes`. Once the setup is working, the only difference from typed input is how you provide the prompt.
 
 ---
 
-## What's Next?
+## Next steps
 
-- [Interactive Chat Sessions](/tutorials/interactive-chat) — Full chat tutorial with slash commands and agent pinning
-- [Autonomous Agent Mode](/tutorials/autonomous-agent) — Deep dive into the autonomous agent loop
-- [Advanced Plan Execution](/tutorials/advanced-plan-execution) — Dry run, resume, replay, and more
-- [CLI Reference](/usage/cli) — Full command reference
+- **[Interactive Chat Sessions](/tutorials/interactive-chat)** — Full chat tutorial with slash commands and agent pinning
+- **[Autonomous Agent Mode](/tutorials/autonomous-agent)** — Deep dive into the ReAct loop the agent runs after you speak a task
+- **[Advanced Plan Execution](/tutorials/advanced-plan-execution)** — Dry run, resume, replay, and parallel task execution
+- **[CLI Reference](/usage/cli)** — Full command reference for all `--voice` flags

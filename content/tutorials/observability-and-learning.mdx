@@ -1,33 +1,43 @@
-# Observability & Learning
+# Observability & learning
 
-Discover actionable insights, learn from recurring failures, and build persistent memory across sessions.
+Turn your execution history into actionable improvements — detect patterns, auto-generate rules, and build a memory that makes every future run smarter.
+
+> **Difficulty:** Intermediate
+> **Duration:** 30 minutes
+> **What you'll build:** A self-improving DojOps setup with learned rules from your project's error patterns and persistent cross-session memory backed by LanceDB vector embeddings
 
 ---
 
-## Overview
+## What you'll learn
 
-In this tutorial, you'll learn to:
+- Analyze your execution history to surface missed optimization opportunities
+- Filter insights by security, cost, or workflow focus
+- Mine recurring error patterns and convert them into rules injected into future LLM prompts
+- Manage the `.dojops/rules.md` file — both auto-generated and manual entries
+- Use LanceDB-backed cross-session memory in `dojops chat`
+- Inspect and clear memory when starting fresh on a project
 
-- Detect optimization opportunities from your execution history
-- Mine error patterns and auto-generate rules for future runs
-- Use cross-session memory to retain project context and decisions
-- Build a feedback loop that makes DojOps smarter over time
+## Prerequisites
 
-**Time estimate:** ~12 minutes
-
-**Prerequisites:**
-
-- DojOps installed (`npm i -g @dojops/cli`)
+- DojOps 1.1.6 installed (`npm i -g @dojops/cli`)
 - A project initialized with `dojops init`
-- Some prior scan/execution history (run a few commands first)
+- At least 5–10 prior executions (scans, generates, or debug runs) in your history
+
+Run a few commands now if you're starting fresh:
+
+```bash
+dojops scan
+dojops "Create a Dockerfile for a Node.js app"
+dojops --debug-ci "ERROR: npm ci failed"
+```
 
 ---
 
-## Part 1: Opportunity Detection
+## Workshop steps
 
-### Step 1: Run Opportunity Analysis
+### Step 1: Run opportunity detection
 
-After you've been using DojOps for a while, analyze your execution history for actionable suggestions:
+`dojops insights` reads your execution history and surfaces patterns you might have missed. It looks for commands you ran that would have benefited from additional flags, recurring failures, and cost inefficiencies.
 
 ```bash
 dojops insights
@@ -41,7 +51,7 @@ dojops insights
 │  Opportunities found: 4
 │
 │  1. Unused --fix flag
-│     You ran `scan` 8 times without using `--fix`.
+│     You ran `scan` 8 times without --fix.
 │     Auto-remediation could have resolved 23 findings automatically.
 │     → Try: dojops scan --fix
 │
@@ -52,7 +62,7 @@ dojops insights
 │
 │  3. Model cost optimization
 │     83% of your generations used gpt-4o, but 60% were simple
-│     configs (Dockerfiles, .gitignore) that gpt-4o-mini handles well.
+│     tasks (Dockerfiles, .gitignore) that gpt-4o-mini handles well.
 │     → Try: dojops config alias fast gpt-4o-mini
 │
 │  4. Scan coverage gap
@@ -63,41 +73,78 @@ dojops insights
 └  4 opportunities identified
 ```
 
-### Step 2: Focus on Specific Areas
-
-Filter insights by category:
-
-```bash
-# Security-focused insights
-dojops insights --security
-
-# Cost-focused insights
-dojops insights --cost
-
-# Workflow optimization
-dojops insights --workflow
-```
-
-### Step 3: Act on Recommendations
-
-Each insight includes a concrete command you can run immediately:
-
-```bash
-# Apply the suggestions
-dojops scan --fix                    # Address unused --fix suggestion
-dojops config alias fast gpt-4o-mini # Address cost optimization
-dojops scan --iac                    # Address coverage gap
-```
-
-After acting on suggestions, `dojops insights` will update to reflect the improved state.
+Each entry tells you what happened in your history, why it matters, and exactly what to run to address it. The suggestions aren't generic advice — they're derived from your actual command history.
 
 ---
 
-## Part 2: Error Pattern Learning
+### Step 2: Filter insights by category
 
-### Step 4: Mine Patterns from History
+Running `insights` without flags shows everything. When you want to focus on a specific area, use a category filter.
 
-DojOps can analyze your execution logs and scan history to identify recurring failures:
+```bash
+dojops insights --security
+```
+
+```
+┌  Security Opportunities
+│
+│  1. Scan coverage gap
+│     You have Terraform configs but never ran `scan --iac`.
+│     Checkov could catch misconfigurations before apply.
+│     → Try: dojops scan --iac
+│
+│  2. gitleaks not configured
+│     You're scanning for vulnerabilities but skipping secret detection.
+│     → Try: dojops scan --secrets
+│
+└  2 security opportunities identified
+```
+
+```bash
+dojops insights --cost
+```
+
+```
+┌  Cost Opportunities
+│
+│  1. Model cost optimization
+│     83% of your generations used gpt-4o.
+│     60% were simple configs that gpt-4o-mini handles equally well.
+│     → Try: dojops config alias fast gpt-4o-mini
+│
+│  2. JSON scanner output not enabled
+│     Text scanner output uses ~38% more tokens than JSON mode.
+│     → Try: dojops config set scan.jsonOutput true
+│
+└  2 cost opportunities identified
+```
+
+The `--workflow` filter surfaces process issues like skipped verification steps or commands that frequently fail and get re-run.
+
+---
+
+### Step 3: Act on the recommendations
+
+Each insight includes a concrete command. Run them:
+
+```bash
+# Address the unused --fix insight
+dojops scan --fix
+
+# Address the cost optimization
+dojops config alias fast gpt-4o-mini
+
+# Address the IaC coverage gap
+dojops scan --iac
+```
+
+After you run these, `dojops insights` will update its analysis. The opportunities you've resolved won't re-appear — unless the underlying pattern re-emerges in future runs.
+
+---
+
+### Step 4: Mine error patterns from history
+
+`dojops learn` does something different from `insights`. Instead of looking for missed flags, it looks for recurring failures — errors that appear in multiple executions and likely have a common root cause.
 
 ```bash
 dojops learn
@@ -107,9 +154,9 @@ dojops learn
 ┌  Error Pattern Learning
 │
 │  Analyzed:
-│    Execution logs: 47 entries
-│    Scan history: 12 scans
-│    Plan results: 5 plans
+│    Execution logs:  47 entries
+│    Scan history:    12 scans
+│    Plan results:     5 plans
 │
 │  Patterns detected: 3
 │
@@ -124,16 +171,20 @@ dojops learn
 │     → Rule: Pre-check AWS_REGION before Terraform tasks
 │
 │  3. Dockerfile lint repeat (scan)
-│     hadolint DL3008 (pin apt versions) in every scan.
+│     hadolint DL3008 (pin apt versions) appears in every scan.
 │     Same 2 Dockerfiles never get fixed.
 │     → Rule: Prioritize DL3008 in remediation suggestions
 │
 └  3 patterns → rules saved to .dojops/rules.md
 ```
 
-### Step 5: Understand the Rules File
+DojOps converts each pattern into a plain-language rule and writes it to `.dojops/rules.md`. On every future `scan --fix`, `debug-ci`, and `plan` run, these rules are injected into the LLM's system prompt.
 
-The learned patterns are saved as rules that DojOps injects into future LLM prompts:
+---
+
+### Step 5: Inspect and edit the rules file
+
+The rules file is plain markdown. Open it directly:
 
 ```bash
 cat .dojops/rules.md
@@ -142,108 +193,143 @@ cat .dojops/rules.md
 ```markdown
 # Learned Rules (auto-generated by `dojops learn`)
 
+<!-- Last updated: 2026-03-20 -->
+
 ## Scan Patterns
 
-- lodash < 4.17.21 is a recurring CVE - suggest upgrade early
-- hadolint DL3008 appears in every scan - prioritize this fix
+- lodash < 4.17.21 is a recurring CVE in this project — suggest upgrade early in remediation
+- hadolint DL3008 (pin apt package versions) appears in every scan — prioritize this fix
 
 ## Execution Patterns
 
-- Terraform tasks in this project require AWS_REGION - verify before init
+- Terraform tasks in this project require AWS_REGION — verify it is set before running `terraform init`
 ```
 
-These rules are automatically included in LLM context for `scan --fix`, `debug-ci`, and `plan` commands, so the AI learns from your project's specific history.
-
-### Step 6: Manage Rules
-
-Add manual rules based on your team's knowledge:
+Because it's plain markdown, you can add rules manually. Team knowledge that doesn't show up in logs belongs here:
 
 ```bash
-# Rules file is plain markdown - edit directly
-echo "- Always use Node 20 LTS in CI workflows" >> .dojops/rules.md
+cat >> .dojops/rules.md << 'EOF'
+
+## Team Conventions
+
+- Always use Node 20 LTS in CI workflows — Node 18 reaches EOL in April 2025
+- Internal Docker registry is registry.company.com — use it instead of Docker Hub
+- All Kubernetes resources must include resource limits per policy RFC-2024-08
+EOF
 ```
 
-Reset learned rules to start fresh:
+Manual rules are treated identically to learned rules — they're injected into every relevant LLM prompt.
 
-```bash
-dojops learn --reset
-```
+---
 
-Re-learn from current history:
+### Step 6: Refresh and reset rules
+
+If you've fixed the underlying issues that generated learned rules, re-mine your history to see what's still recurring:
 
 ```bash
 dojops learn --refresh
 ```
 
+```
+┌  Error Pattern Learning (refresh)
+│
+│  Cleared 3 previous patterns
+│  Re-analyzed: 52 executions, 15 scans
+│
+│  Patterns detected: 1
+│
+│  1. Dockerfile lint repeat (scan)
+│     hadolint DL3008 still appears in 3 of 5 recent scans.
+│     → Rule: Prioritize DL3008
+│
+└  1 pattern saved (2 patterns resolved)
+```
+
+The CVE and Terraform patterns are gone because you fixed them. DL3008 persists because those Dockerfiles still haven't been updated.
+
+To wipe all learned rules and start from scratch:
+
+```bash
+dojops learn --reset
+```
+
+This removes only the auto-generated entries. Manual rules you added stay in place unless you edit the file directly.
+
 ---
 
-## Part 3: Memory / RAG Across Sessions
+### Step 7: Start a chat session with memory enabled
 
-### Step 7: Understand Cross-Session Memory
+DojOps chat uses LanceDB vector embeddings stored at `.dojops/memory/` to remember context across sessions. The memory is project-scoped — each project directory has its own memory index.
 
-DojOps uses vector embeddings (LanceDB) to remember context across `dojops chat` sessions. It remembers:
-
-- Past configurations you generated
-- Infrastructure decisions you made
-- User preferences for this project
-- Patterns from previous conversations
-
-### Step 8: Use Memory in Chat
-
-Start a chat session and DojOps will recall past context:
+Start a chat:
 
 ```bash
 dojops chat
 ```
 
+If you've had previous sessions in this project, DojOps recalls relevant context before you type anything:
+
 ```
-┌  DojOps Chat (memory enabled)
+┌  DojOps Chat  (memory enabled)
 │
-│  💡 Recalled context from 3 previous sessions:
-│    - Last Terraform setup used S3 backend with DynamoDB locking
-│    - Project uses GitHub Actions with Node 20/22 matrix
-│    - Preferred Kubernetes namespace: "production"
+│  Recalled context from 3 previous sessions:
+│    · Last Terraform setup used S3 backend with DynamoDB locking  (Mar 10)
+│    · Project uses GitHub Actions with Node 20/22 matrix          (Mar 08)
+│    · Preferred Kubernetes namespace: "production"                 (Mar 05)
 │
 ◆  How can I help?
 │
 │  > Set up a new Terraform module for RDS
 │
-│  Based on your previous Terraform setup, I'll configure this
-│  with the same S3 backend and DynamoDB locking pattern you
-│  used before...
+│  Based on your S3 backend and DynamoDB locking pattern from
+│  your previous Terraform config, I'll use the same backend
+│  block for this module...
 ```
 
-Memory means you don't have to repeat context. DojOps remembers your project's conventions.
+The model receives recalled memories as additional context. You don't repeat yourself session after session — conventions you stated once are applied automatically.
 
-### Step 9: Memory in Subsequent Sessions
+---
 
-Close and reopen chat, memory persists:
+### Step 8: Observe memory in practice across sessions
+
+Here's the part that matters most: memories survive session exit. Close chat, come back days later, and the context is still there.
+
+**Session 1:**
 
 ```bash
-# Session 1
 dojops chat
-> "We use Terraform modules from our internal registry at registry.company.com"
-# ... chat continues ...
+> "We use Terraform modules from our internal registry at registry.company.com/tf-modules"
+> "All modules must support both us-east-1 and eu-west-1"
 # (exit)
+```
 
-# Session 2 (days later)
+**Session 2 — three days later:**
+
+```bash
 dojops chat
 > "Create a new VPC module"
-# DojOps automatically uses your internal registry URL
 ```
 
 ```
 ┌  DojOps Chat
 │
-│  Creating VPC module with source from registry.company.com
-│  (recalled from session on Mar 10)
+│  Creating VPC module with:
+│    source: registry.company.com/tf-modules/vpc
+│    (recalled from session on Mar 17)
+│
+│  Including provider configuration for us-east-1 and eu-west-1
+│    (recalled from session on Mar 17)
 │
 │  ...
 ```
 
-### Step 10: View Memory Status
+The model applied both conventions without being reminded. The vector search found the relevant memories and included them in context.
 
-Check what DojOps has memorized for the current project:
+---
+
+### Step 9: Inspect memory status
+
+Check what's stored in the memory index for the current project:
 
 ```bash
 dojops memory
@@ -252,90 +338,107 @@ dojops memory
 ```
 ┌  Project Memory
 │
-│  Entries: 23
-│  Storage: .dojops/memory/
-│  Index size: 156 KB
+│  Entries:     23
+│  Storage:     .dojops/memory/
+│  Index size:  156 KB
 │
 │  Recent memories:
-│    "S3 backend with DynamoDB lock for all Terraform"  (Mar 10)
-│    "GitHub Actions CI with Node 20/22 matrix"         (Mar 08)
-│    "Use internal registry at registry.company.com"    (Mar 10)
-│    "Production namespace, staging for pre-release"    (Mar 05)
+│    "S3 backend with DynamoDB lock for all Terraform"      (Mar 17)
+│    "GitHub Actions CI with Node 20/22 matrix"             (Mar 15)
+│    "Use internal registry at registry.company.com"        (Mar 17)
+│    "Production namespace, staging for pre-release"        (Mar 12)
+│    "resource limits required on all k8s resources"        (Mar 14)
 │
 └  23 memories across 8 sessions
 ```
 
-### Step 11: Clear Memory
+The index size grows with use. At 156 KB it's negligible, and LanceDB handles much larger indexes efficiently.
 
-If you want to start fresh:
+---
+
+### Step 10: Clear memory for a fresh start
+
+If you're reusing a project directory for a completely different purpose, or you want to remove a wrong convention that got memorized:
 
 ```bash
-# Clear all memory for this project
 dojops memory clear
 ```
 
 ```
 ┌  Memory Cleared
 │
-│  Removed: 23 entries
-│  Freed: 156 KB
+│  Removed:  23 entries
+│  Freed:    156 KB
 │
 └  Future sessions start with a clean slate
 ```
 
----
-
-## The Learning Feedback Loop
-
-These three features create a continuous improvement cycle:
-
-```
-  Run commands
-       │
-       ▼
-  Build history ──→ dojops insights (spot opportunities)
-       │                    │
-       ▼                    ▼
-  dojops learn ──→ .dojops/rules.md (auto-inject into LLM)
-       │
-       ▼
-  dojops chat ──→ memory (remember decisions across sessions)
-       │
-       ▼
-  Better results next time
-```
-
-The more you use DojOps, the smarter it gets for your specific project.
+You can't selectively delete individual memories from the CLI yet — it's all-or-nothing. If you need to correct a specific misconception the model has, the fastest workaround is to explicitly state the correction in chat: "We no longer use the S3 backend — we've switched to Terraform Cloud." That correction gets memorized and will override the older entry in future retrievals.
 
 ---
 
-## Summary
+## The feedback loop
 
-In this tutorial, you:
+These features combine into a cycle that improves over time:
 
-1. **Detected opportunities** with `dojops insights`, actionable suggestions from your history
-2. **Learned error patterns** with `dojops learn`, auto-generated rules from recurring failures
-3. **Used cross-session memory** in `dojops chat`, persistent context across conversations
-4. **Built a feedback loop** where DojOps improves from your project's specific patterns
-
-### Quick Reference
-
-```bash
-dojops insights                 # Detect opportunities
-dojops insights --security      # Security-focused insights
-dojops insights --cost          # Cost optimization insights
-
-dojops learn                    # Mine error patterns
-dojops learn --refresh          # Re-learn from current history
-dojops learn --reset            # Clear learned rules
-
-dojops chat                     # Chat with memory enabled
-dojops memory                   # View memory status
-dojops memory clear             # Clear project memory
+```
+Run commands
+  │
+  ▼
+dojops insights     →  spot missed flags and coverage gaps
+  │
+  ▼
+dojops learn        →  .dojops/rules.md auto-injected into future prompts
+  │
+  ▼
+dojops chat         →  .dojops/memory/ recalls project conventions
+  │
+  ▼
+Better output on the next run
 ```
 
-### Next Steps
+The loop is self-reinforcing. More history means more accurate patterns. More patterns mean better rules. Better rules mean more relevant LLM output.
 
-- **[Token Analytics & Cost Control](/tutorials/token-analytics-and-cost-control)**, Monitor and reduce LLM costs
-- **[Security Audit & Remediation](/tutorials/security-audit)**, Full scanning walkthrough
-- **[Interactive Chat Sessions](/tutorials/interactive-chat)**, Deep dive into chat features
+---
+
+## Try it yourself
+
+**Challenge 1:** Add three manual rules to `.dojops/rules.md` that capture your team's actual conventions — things like preferred base images, naming conventions, or environment requirements. Run `dojops "Create a Dockerfile for a Python app"` before and after adding the rules and compare the output.
+
+**Challenge 2:** Start two separate `dojops chat` sessions on the same project, one hour apart. In the first session, tell the model about a project-specific constraint. In the second, ask a question where that constraint would affect the answer — without repeating it. Verify whether memory retrieved the right context.
+
+**Challenge 3:** Run `dojops learn` on a project that has at least 10 executions. Identify one pattern in the output that you can fix at the source rather than just documenting as a rule. Fix it, run `dojops learn --refresh`, and confirm the pattern no longer appears.
+
+---
+
+## Troubleshooting
+
+**`dojops insights` returns "no opportunities found" immediately**
+
+You need at least a few executions in your history. Run `dojops history` to check how many entries exist. If the history is empty, run a scan and a couple of `generate` commands first.
+
+**`dojops learn` doesn't detect a pattern you know is recurring**
+
+Pattern detection uses a threshold — an error must appear in at least 3 executions to be flagged. If you have fewer than 5 executions total, results will be sparse. Also check that the relevant commands are in `.dojops/` history (not a different directory).
+
+**Memory in chat isn't recalling context you know you stated**
+
+Memory recall uses vector similarity search. If the question you're asking is phrased very differently from how you stated the original context, the similarity score may fall below the recall threshold. Try rephrasing the question more closely to the original wording, or explicitly re-state the context in the current session.
+
+**`.dojops/memory/` is missing or empty**
+
+Memory is written only after a `dojops chat` session ends cleanly. If you killed a session with `kill -9` or a crash, the memory index may not have been flushed. Run `dojops memory` to check. If the directory is missing entirely, run `dojops init` to recreate the project structure.
+
+---
+
+## What you learned
+
+DojOps gets more accurate on your specific project the more you use it. The insights engine surfaces what you're missing based on your actual history rather than generic best practices. The learning engine converts recurring failures into rules that pre-inform the LLM before it generates a response — so it avoids the same mistake automatically. Cross-session memory backed by LanceDB means you stop repeating context that the model should already know. Together, these three features form a feedback loop where each run contributes to better results on the next one.
+
+---
+
+## Next steps
+
+- **[Token Analytics & Cost Control](/tutorials/token-analytics-and-cost-control)** — Monitor and reduce LLM costs per provider and skill
+- **[Security Audit & Remediation](/tutorials/security-audit)** — Full scanning walkthrough with all 10 scanners
+- **[Interactive Chat Sessions](/tutorials/interactive-chat)** — Slash commands, agent pinning, and conversation management

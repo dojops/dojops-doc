@@ -1,42 +1,47 @@
-# Security Audit & Remediation
+# Security audit & remediation
 
 Run a full security audit on your project with scanning, SBOM generation, and auto-remediation.
 
+> **Difficulty:** Intermediate
+> **Duration:** 30 minutes
+> **What you'll build:** A complete security picture of the example Next.js project — vulnerability scan results across multiple categories, a CycloneDX SBOM, LLM-generated remediations for the findings, and a 50%+ reduction in total findings after applying fixes.
+
 ---
 
-## Overview
+## What you'll learn
 
-In this tutorial, you'll use DojOps to:
+- How DojOps runs multiple scanners in parallel and aggregates findings
+- Which of the 10 built-in scanners cover which threat categories
+- What a Software Bill of Materials is and when you need one
+- How auto-remediation generates context-aware fixes, not generic advice
+- How scan comparison tracks your security posture over time
 
-- Run full security scans across multiple categories (vulnerabilities, dependencies, IaC, secrets)
-- Run focused scans for specific concerns
-- Generate a Software Bill of Materials (SBOM)
-- Auto-remediate findings with LLM-powered fixes
-- Compare scans to track improvement over time
+---
 
-**Time estimate:** ~15 minutes
+## Prerequisites
 
-**Prerequisites:**
-
-- Node.js >= 20 installed
-- An API key from a supported LLM provider
+- Node.js >= 20 ([nodejs.org](https://nodejs.org))
 - Git installed
-- Optional: `trivy`, `gitleaks`, `checkov`, `hadolint`, `shellcheck`, `semgrep` for full scanner coverage (DojOps uses whichever scanners are available)
+- DojOps installed: `npm i -g @dojops/cli`
+- An API key from a supported LLM provider
+
+Optional but recommended for full scanner coverage: install some or all of these tools — `trivy`, `gitleaks`, `checkov`, `hadolint`, `shellcheck`, `semgrep`. DojOps runs whichever scanners it finds on your PATH and skips the rest. You don't need all ten to get meaningful results.
 
 ---
 
-## Step 1: Setup
+## Workshop steps
 
-Install DojOps and clone the example project:
+### Step 1: Setup
+
+Install DojOps if you haven't already, then clone the example project:
 
 ```bash
 npm i -g @dojops/cli
-
 git clone https://github.com/dojops/example-nextjs.git
 cd example-nextjs
 ```
 
-Configure your provider and initialize:
+Configure your LLM provider and initialize the project:
 
 ```bash
 dojops provider add openai --token sk-...
@@ -50,7 +55,7 @@ Languages detected:
   TypeScript, JavaScript, CSS
 
 CI/CD platforms:
-  GitHub Actions
+  GitHub Actions (.github/workflows/ci.yml)
 
 Container files:
   Dockerfile, .dockerignore
@@ -58,74 +63,163 @@ Container files:
 Project context saved to .dojops/context.json
 ```
 
+The project context records which files exist. Scan commands use this to know where to look.
+
 ---
 
-## Step 2: Run Full Scan
+### Step 2: Run a full scan
 
-Run all applicable scanners:
+Run all available scanners in a single command:
 
 ```bash
 dojops scan
 ```
 
-DojOps detects which scanners are available on your system and runs them against your project:
-
 ```
 Security Scan
+─────────────────────────────────────
 
-Scanners run: 5/10
-  npm-audit     found  2 findings
-  trivy         found  0 findings
-  gitleaks      found  0 findings
-  hadolint      found  3 findings
-  checkov       found  1 finding
+Detecting available scanners...
+  npm-audit     found
+  trivy         found
+  gitleaks      found
+  hadolint      found
+  checkov       found
+  shellcheck    not installed (skip)
+  semgrep       not installed (skip)
+  pip-audit     not installed (skip)
+  trivy-sbom    found
+  trivy-license found
 
+Running 6/10 scanners...
+
+  npm-audit     ✓  2 findings
+  trivy         ✓  0 findings
+  gitleaks      ✓  0 findings
+  hadolint      ✓  3 findings
+  checkov       ✓  1 finding
+  trivy-license ✓  0 findings
+
+─────────────────────────────────────
 Summary:
   Critical  0
   High      1
   Medium    3
   Low       2
 
-Results saved to .dojops/scan-history/scan-<id>.json
+Results saved to .dojops/scan-history/scan-a1b2c3.json
 ```
 
-DojOps runs whichever of its 10 scanners are installed. Missing scanners are skipped with a note, you don't need all of them installed.
+DojOps ran 6 of its 10 scanners — the 4 missing tools were skipped without error. The output tells you exact finding counts per scanner so you know where the problems are before looking at details. No Critical findings is good. The High finding from `npm-audit` needs attention.
+
+View the detailed findings:
+
+```bash
+dojops scan --show scan-a1b2c3
+```
+
+```
+Scan Details: scan-a1b2c3
+─────────────────────────────────────
+
+npm-audit:
+  [HIGH]   GHSA-9c47-m6qq-7p4h  semver < 7.5.2
+           Path: next > postcss > semver
+           Fix:  npm update semver
+
+  [MEDIUM] GHSA-72xf-g2v4-qvf3  Next.js response splitting
+           Path: next@14.0.1
+           Fix:  Upgrade to next@14.0.4 or later
+
+hadolint:
+  [MEDIUM] DL3008  apt-get install without pinned versions
+           Line:   Dockerfile:14
+           Fix:    Pin: apt-get install -y curl=7.88.1-10+deb12u5
+
+  [MEDIUM] DL3018  apk add without pinned versions
+           Line:   Dockerfile:22
+           Fix:    Pin: apk add --no-cache bash=5.2.15-r5
+
+  [LOW]    DL3025  Use JSON array notation for CMD
+           Line:   Dockerfile:31
+           Fix:    CMD ["node", "server.js"]
+
+checkov:
+  [HIGH]   CKV_DOCKER_2  Dockerfile has no HEALTHCHECK
+           Fix:  Add HEALTHCHECK instruction
+```
+
+You now have exact file and line references for every finding. The High from checkov is a missing `HEALTHCHECK` — fixable in one line.
 
 ---
 
-## Step 3: Focused Scans
+### Step 3: Focused scans
 
-Run targeted scans for specific categories:
+Run targeted scans when you only care about a specific category. Useful when you want to verify a specific fix without re-running everything.
 
-### Security Scanners
+**Vulnerability and secret detection only:**
 
 ```bash
 dojops scan --security
 ```
 
-Runs `trivy` (container/filesystem vulnerabilities) and `gitleaks` (secret detection). Use this to check for leaked credentials or known CVEs.
+```
+Security Scan (security mode)
 
-### Dependency Audit
+  trivy      ✓  0 findings  (container/filesystem vulnerabilities)
+  gitleaks   ✓  0 findings  (hardcoded secrets, API keys)
+
+No security findings.
+```
+
+No leaked credentials, no known CVEs in your container image.
+
+**Dependency audit only:**
 
 ```bash
 dojops scan --deps
 ```
 
-Runs `npm-audit` and `pip-audit` (if applicable). Reports vulnerable dependencies with severity levels and remediation advice.
+```
+Dependency Audit
 
-### Infrastructure as Code
+  npm-audit   ✓  2 findings
+  pip-audit      not installed (skip)
+
+Findings:
+  [HIGH]   semver < 7.5.2 — upgrade via: npm update semver
+  [MEDIUM] next@14.0.1 — upgrade to next@14.0.4
+```
+
+Use `--deps` when you've just updated `package.json` and want to confirm no new vulnerabilities slipped in.
+
+**Infrastructure as Code only:**
 
 ```bash
 dojops scan --iac
 ```
 
-Runs `checkov` (Terraform/CloudFormation/K8s policy checks), `hadolint` (Dockerfile linting), and `shellcheck` (shell script analysis). Catches misconfigurations before deployment.
+```
+IaC Scan
+
+  checkov    ✓  1 finding   (Dockerfile/Terraform/K8s policy)
+  hadolint   ✓  3 findings  (Dockerfile lint)
+  shellcheck    not installed (skip)
+
+Findings:
+  [HIGH]   CKV_DOCKER_2    Dockerfile — missing HEALTHCHECK
+  [MEDIUM] DL3008          Dockerfile:14 — unpinned apt-get
+  [MEDIUM] DL3018          Dockerfile:22 — unpinned apk add
+  [LOW]    DL3025          Dockerfile:31 — CMD not JSON array
+```
+
+IaC scanning catches misconfigurations before deployment, not after. A missing `HEALTHCHECK` doesn't fail your build, but it will cause your container orchestrator to route traffic to unhealthy instances.
 
 ---
 
-## Step 4: Generate SBOM
+### Step 4: Generate an SBOM
 
-Generate a Software Bill of Materials in CycloneDX format:
+A Software Bill of Materials lists every component in your application — direct dependencies, transitive dependencies, their versions, licenses, and cryptographic hashes. You need one for supply chain security compliance (SOC 2, SLSA, executive orders on software security).
 
 ```bash
 dojops scan --sbom
@@ -133,88 +227,183 @@ dojops scan --sbom
 
 ```
 SBOM Generation
+─────────────────────────────────────
 
-Format:   CycloneDX
-Scanner:  trivy-sbom
-Components found: 142
+Format:     CycloneDX JSON
+Scanner:    trivy-sbom
+Target:     ./
 
-Output: .dojops/scan-history/sbom-<id>.json
+Scanning dependency tree...
 
-SBOM includes:
-  - All npm dependencies (direct + transitive)
-  - Component versions and licenses
-  - Package URLs (purl) for each component
-  - SHA-256 hashes for integrity tracking
+Components found: 247
+  Direct:     18
+  Transitive: 229
+
+License breakdown:
+  MIT       184 components
+  ISC        31 components
+  Apache-2.0  22 components
+  BSD-3       10 components
+
+Output: .dojops/scan-history/sbom-b2c3d4.json
 ```
 
-SBOMs are essential for supply chain security and compliance. The output is compatible with standard CycloneDX tooling.
+The SBOM is in CycloneDX format — compatible with Grype, Dependency-Track, and most compliance tooling. Each component entry includes its package URL (`purl`), version, and SHA-256 hash. That hash lets you verify later that the component you shipped matches what was recorded.
+
+Check for license compliance issues:
+
+```bash
+dojops scan --license
+```
+
+```
+License Audit
+
+  trivy-license  ✓  running
+
+License findings:
+  [INFO] GPL-2.0  found in: some-package@1.2.3
+                  Note: GPL requires source disclosure if distributed
+
+  [INFO] LGPL-2.1 found in: another-package@2.0.0
+                  Note: LGPL requires disclosure of modifications only
+
+No policy violations detected.
+```
+
+If your organization prohibits GPL in commercial products, DojOps surfaces those conflicts before they become legal issues.
 
 ---
 
-## Step 5: Auto-Remediation
+### Step 5: Auto-remediation
 
-Use LLM-powered auto-fix to generate remediation for scan findings:
+Send the scan findings to your LLM provider and generate targeted fixes. The key difference from manual fixing: the LLM has your full project context, so fixes reference your actual Dockerfile structure rather than producing generic snippets.
 
 ```bash
 dojops scan --fix
 ```
 
-DojOps sends the scan findings to your LLM provider and generates targeted fixes:
-
 ```
 Auto-Remediation
+─────────────────────────────────────
 
-Finding: hadolint DL3008 - Pin versions in apt-get install
-  Fix: Updated Dockerfile apt-get line with pinned versions
-  Apply? (y/n): y
+Reading latest scan: scan-a1b2c3
+Loading project context: .dojops/context.json
+Sending findings to openai (gpt-4o)...
 
-Finding: hadolint DL3018 - Pin versions in apk add
-  Fix: Updated Dockerfile apk add line with pinned versions
-  Apply? (y/n): y
+Generating fixes...
 
-Finding: npm-audit - moderate severity in dependency
-  Fix: Updated package.json with patched version
-  Apply? (y/n): y
+─────────────────────────────────────
+Finding 1: hadolint DL3008 — apt-get without pinned versions
+  File:    Dockerfile:14
+  Fix:     Pinned curl to curl=7.88.1-10+deb12u5
+  Preview:
+    - RUN apt-get install -y curl
+    + RUN apt-get install -y curl=7.88.1-10+deb12u5
 
-Remediation complete. 3 fixes applied.
+  Apply? (y/n/skip): y
+
+Finding 2: hadolint DL3018 — apk add without pinned versions
+  File:    Dockerfile:22
+  Fix:     Pinned bash to bash=5.2.15-r5
+  Preview:
+    - RUN apk add --no-cache bash
+    + RUN apk add --no-cache bash=5.2.15-r5
+
+  Apply? (y/n/skip): y
+
+Finding 3: hadolint DL3025 — CMD not in JSON array
+  File:    Dockerfile:31
+  Fix:     Converted to exec form
+  Preview:
+    - CMD node server.js
+    + CMD ["node", "server.js"]
+
+  Apply? (y/n/skip): y
+
+Finding 4: checkov CKV_DOCKER_2 — no HEALTHCHECK
+  File:    Dockerfile
+  Fix:     Added HEALTHCHECK with appropriate interval
+  Preview:
+    + HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    +   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+  Apply? (y/n/skip): y
+
+─────────────────────────────────────
+Remediation summary:
+  Applied: 4 fixes
+  Skipped: 0
+  Backup:  Dockerfile.bak (original preserved)
+
+Note: npm-audit findings require package updates:
+  Run: npm update semver
+  Run: npm install next@14.0.4
 ```
 
-Each fix is presented for approval before being applied. The LLM generates context-aware fixes that understand your specific project setup, not just generic advice.
+The npm-audit findings aren't auto-fixed because updating dependencies requires `npm install` — DojOps won't run arbitrary package manager commands without explicit instruction. But the instructions are there. Run them manually, or ask DojOps to generate a script:
+
+```bash
+dojops "Generate a shell script to apply the npm-audit fixes from the latest scan"
+```
 
 ---
 
-## Step 6: Compare Scans
+### Step 6: Compare scans
 
-After applying fixes, run another scan and compare with the previous results:
+After applying fixes, run another scan and compare before and after:
 
 ```bash
+dojops scan
 dojops scan --compare
 ```
 
 ```
 Scan Comparison
+─────────────────────────────────────
 
-Previous scan: scan-001 (2025-01-15 10:00)
-Current scan:  scan-002 (2025-01-15 10:15)
+Previous: scan-a1b2c3 (2026-03-20 10:00)
+Current:  scan-c3d4e5 (2026-03-20 10:20)
 
-  Resolved:    3 findings
-    - hadolint DL3008 (medium)
-    - hadolint DL3018 (medium)
-    - npm-audit moderate vulnerability
+Resolved (4 findings):
+  ✓ hadolint DL3008   Dockerfile apt-get now pinned      (was MEDIUM)
+  ✓ hadolint DL3018   Dockerfile apk add now pinned      (was MEDIUM)
+  ✓ hadolint DL3025   CMD now in JSON array form         (was LOW)
+  ✓ checkov  CKV_DOCKER_2  HEALTHCHECK now present       (was HIGH)
 
-  New:         0 findings
-  Unchanged:   3 findings
+New (0 findings):
+  — none
 
-Trend: 6 → 3 findings (50% reduction)
+Unchanged (2 findings):
+  ! npm-audit  semver < 7.5.2                           (HIGH — pending manual fix)
+  ! npm-audit  next@14.0.1 response splitting           (MEDIUM — pending manual fix)
+
+─────────────────────────────────────
+Trend: 6 → 2 findings (67% reduction)
+Severity delta: -1 High, -2 Medium, -1 Low
 ```
 
-Scan comparison gives you a clear before/after view, making it easy to verify that remediations worked and no new issues were introduced.
+Four findings resolved, none introduced. The two remaining are npm dependency updates you need to run manually. The comparison makes it easy to present security progress to a team or auditor — you have a timestamped, hash-chained record of every scan and fix.
 
 ---
 
-## Step 7: Verify Audit Trail
+### Step 7: Verify the audit trail
 
-All scan operations are recorded in the hash-chained audit log. Verify its integrity:
+All scan operations are logged in the hash-chained audit trail:
+
+```bash
+dojops history list
+```
+
+```
+ID         Type   Scanner/Agent       Status     Date
+scan-001   scan   multi-scan          completed  2026-03-20 10:00
+scan-002   scan   trivy-sbom          completed  2026-03-20 10:05
+fix-001    fix    remediation         completed  2026-03-20 10:10
+scan-003   scan   multi-scan          completed  2026-03-20 10:20
+```
+
+Verify the chain integrity:
 
 ```bash
 dojops history verify
@@ -222,42 +411,49 @@ dojops history verify
 
 ```
 Audit chain integrity: verified
-Entries: 5
+Entries: 4
 Chain status: valid (all hashes match)
 ```
 
-View the scan history:
-
-```bash
-dojops history list
-```
-
-```
-ID         Type    Tool          Status     Date
-scan-001   scan    multi-scan    completed  2025-01-15 10:00
-scan-002   scan    sbom          completed  2025-01-15 10:05
-fix-001    fix     remediation   completed  2025-01-15 10:10
-scan-003   scan    multi-scan    completed  2025-01-15 10:15
-```
-
-The audit trail provides a tamper-evident record of every scan, fix, and operation, useful for compliance and incident response.
+The audit trail is useful beyond compliance. If a vulnerability reappears after a fix, you can check the history to confirm the fix was actually applied and rule out the possibility that a subsequent operation reverted it.
 
 ---
 
-## Summary
+## Try it yourself
 
-In this tutorial, you:
+**Challenge 1 — Scan with severity filter.** Run `dojops scan --severity=high` to see only High and Critical findings. Useful for prioritizing a backlog without noise from Low/Medium items.
 
-1. **Ran a full scan** across 10 scanner categories to identify vulnerabilities
-2. **Used focused scans** (`--security`, `--deps`, `--iac`) for targeted analysis
-3. **Generated an SBOM** in CycloneDX format for supply chain visibility
-4. **Auto-remediated** findings with LLM-powered, context-aware fixes
-5. **Compared scans** to verify a 50% reduction in findings
-6. **Verified the audit trail** with hash-chain integrity checks
+**Challenge 2 — Export the SBOM.** The SBOM is at `.dojops/scan-history/sbom-*.json`. Open it and find a component with a GPL license. Check whether your project's license is compatible.
 
-### Next Steps
+**Challenge 3 — Add scanning to CI.** Use `dojops "Add a security scanning step to the GitHub Actions workflow that fails on High severity findings"`. Review the diff — it should add `dojops scan --security --severity=high` as a CI step with a non-zero exit on findings.
 
-- **[Enhance a Next.js Project](/tutorials/enhance-nextjs-project)**, Improve DevOps configs with AI
-- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)**, Build a full pipeline using plan and apply
-- **[Security Scanning](/components/security-scanning)**, Deep dive into all 10 scanners
-- **[Execution Engine](/components/execution-engine)**, Policies, sandboxing, and audit trails
+---
+
+## Troubleshooting
+
+**Only 2 of 10 scanners run**
+Most scanners are external tools you need to install separately. Run `dojops scan --list-scanners` to see which are available and where to install the missing ones. `npm-audit` is always available because it uses the npm CLI you already have.
+
+**`gitleaks` reports a finding in a file you don't recognize**
+Gitleaks scans git history, not just the working tree. A secret committed in a previous commit — even a deleted file — will appear. Rotate the credential and use `git filter-repo` or BFG to scrub the history.
+
+**Auto-remediation generates a fix that breaks your build**
+DojOps creates a `.bak` before modifying any file. Restore with `cp Dockerfile.bak Dockerfile`. Then run `dojops scan --fix` again with a more specific prompt describing your constraint — for example, if you can't upgrade to a specific package version because of a peer dependency conflict.
+
+**SBOM generation fails with "trivy not found"**
+`trivy-sbom` requires the `trivy` binary. Install it from [aquasecurity.github.io/trivy](https://aquasecurity.github.io/trivy/). On macOS: `brew install trivy`. On Linux: use the install script from the Trivy docs.
+
+---
+
+## What you learned
+
+You ran a multi-scanner security audit across six categories, generated a CycloneDX SBOM with 247 components, and used LLM-powered auto-remediation to fix four Dockerfile findings. Scan comparison confirmed a 67% reduction in total findings with no regressions introduced. The entire operation — scans, fixes, re-scans — is logged in a hash-chained audit trail that proves the chain of custody for every change.
+
+---
+
+## Next steps
+
+- **[Enhance a Next.js Project](/tutorials/enhance-nextjs-project)** — Improve DevOps configs with AI-powered quality checks
+- **[CI/CD from Scratch](/tutorials/cicd-from-scratch)** — Build a full pipeline using plan and apply
+- **[Security Scanning](/components/security-scanning)** — Deep dive into all 10 scanners and their configurations
+- **[Execution Engine](/components/execution-engine)** — Policies, sandboxing, and audit trails

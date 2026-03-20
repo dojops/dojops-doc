@@ -1,34 +1,57 @@
-# Advanced Config Management
+# Advanced config management
 
-Protect your setup with encrypted secrets, backup snapshots, and bulk configuration.
+Keep API keys out of plaintext, snapshot your setup before risky changes, and distribute a consistent configuration across your team.
+
+> **Difficulty:** Intermediate
+> **Duration:** 30 minutes
+> **What you'll build:** A team-shareable configuration workflow with an encrypted secrets vault, versioned config snapshots, and a one-command onboarding script for new team members
 
 ---
 
-## Overview
+## What you'll learn
 
-In this tutorial, you'll learn to:
+- Store API keys in an AES-256-GCM encrypted vault and reference them with `$secret:` syntax
+- Create point-in-time configuration snapshots with SHA-256 integrity verification
+- Restore a previous configuration safely, with automatic pre-restore backup
+- Export your current settings as a shareable JSON file for team onboarding
+- Apply bulk configuration from a file in a single command
 
-- Store API keys securely with the encrypted secrets vault
-- Snapshot and restore your entire DojOps configuration
-- Apply bulk configuration from files for team onboarding
-- Combine these features for a robust config workflow
+## Prerequisites
 
-**Time estimate:** ~10 minutes
-
-**Prerequisites:**
-
-- DojOps installed (`npm i -g @dojops/cli`)
+- DojOps 1.1.6 installed (`npm i -g @dojops/cli`)
 - A project initialized with `dojops init`
+- At least one LLM provider API key to practice with
 
 ---
 
-## Part 1: Encrypted Secrets Vault
+## Workshop steps
 
-### Step 1: Understand the Problem
+### Step 1: Understand the default storage problem
 
-By default, API keys are stored in `~/.dojops/config.json` as plaintext. The secrets vault replaces this with AES-256-GCM encrypted storage, the same encryption standard used by password managers and cloud providers.
+By default, `dojops init` stores your API key in `~/.dojops/config.json` as plaintext. Open it to see what that looks like:
 
-### Step 2: Store a Secret
+```bash
+cat ~/.dojops/config.json
+```
+
+```json
+{
+  "provider": "openai",
+  "providers": {
+    "openai": {
+      "apiKey": "sk-proj-abc123yourrealkey..."
+    }
+  }
+}
+```
+
+That key is readable by any process that can read your home directory. If you ever `cat` this file in a screen share, it leaks. The encrypted vault replaces this pattern entirely.
+
+---
+
+### Step 2: Store a secret in the vault
+
+The `dojops secrets set` command encrypts your key using AES-256-GCM and writes it to `.dojops/vault.enc`. The original key is never stored anywhere in plaintext after this point.
 
 ```bash
 dojops secrets set OPENAI_API_KEY sk-proj-abc123...
@@ -37,24 +60,28 @@ dojops secrets set OPENAI_API_KEY sk-proj-abc123...
 ```
 ┌  Secret Stored
 │
-│  Key: OPENAI_API_KEY
+│  Key:        OPENAI_API_KEY
 │  Encryption: AES-256-GCM
-│  Storage: ~/.dojops/secrets.enc
+│  Storage:    ~/.dojops/vault.enc
 │
 └  Encrypted and saved
 ```
 
-Store multiple provider keys:
+The encryption key is derived from your machine identity and stored separately from the vault — which means a copy of `vault.enc` alone is useless without the corresponding machine.
+
+Now store your other provider keys if you have them:
 
 ```bash
-dojops secrets set ANTHROPIC_API_KEY sk-ant-...
+dojops secrets set ANTHROPIC_API_KEY sk-ant-api03-...
 dojops secrets set DEEPSEEK_API_KEY sk-...
-dojops secrets set GEMINI_API_KEY AI...
+dojops secrets set GEMINI_API_KEY AIza...
 ```
 
-### Step 3: Reference Secrets in Config
+---
 
-Your config file now references secrets instead of containing raw keys:
+### Step 3: Reference secrets in your config
+
+Once a key is in the vault, update your config to reference it by name instead of value. Open `~/.dojops/config.json` and change the `apiKey` fields:
 
 ```json
 {
@@ -65,14 +92,35 @@ Your config file now references secrets instead of containing raw keys:
     },
     "anthropic": {
       "apiKey": "$secret:ANTHROPIC_API_KEY"
+    },
+    "deepseek": {
+      "apiKey": "$secret:DEEPSEEK_API_KEY"
     }
   }
 }
 ```
 
-DojOps resolves `$secret:` references at runtime, so your plaintext keys never appear in config files.
+DojOps resolves `$secret:` references at runtime by looking up the vault. Your config file can now be committed to version control or shared with teammates without exposing any keys.
 
-### Step 4: List Stored Secrets
+Verify the resolution works by running a quick provider check:
+
+```bash
+dojops check provider
+```
+
+```
+✔ Provider: openai
+✔ Model: gpt-4o
+✔ Connection: OK
+```
+
+If the connection succeeds, the vault lookup is working correctly.
+
+---
+
+### Step 4: Inspect what's stored
+
+List your vault contents at any time. DojOps shows only the key name and a short prefix of the value — enough to confirm you stored the right key without exposing it.
 
 ```bash
 dojops secrets list
@@ -82,16 +130,18 @@ dojops secrets list
 ┌  Encrypted Secrets
 │
 │  OPENAI_API_KEY      set  (sk-proj-abc...)
-│  ANTHROPIC_API_KEY   set  (sk-ant-...)
+│  ANTHROPIC_API_KEY   set  (sk-ant-api0...)
 │  DEEPSEEK_API_KEY    set  (sk-...)
-│  GEMINI_API_KEY      set  (AI...)
+│  GEMINI_API_KEY      set  (AIza...)
 │
-└  4 secrets stored in ~/.dojops/secrets.enc
+└  4 secrets stored in ~/.dojops/vault.enc
 ```
 
-Only the first few characters of each key are shown for identification.
+---
 
-### Step 5: Remove a Secret
+### Step 5: Remove a secret
+
+If you rotate an API key or stop using a provider, remove the old secret:
 
 ```bash
 dojops secrets remove DEEPSEEK_API_KEY
@@ -100,19 +150,19 @@ dojops secrets remove DEEPSEEK_API_KEY
 ```
 ┌  Secret Removed
 │
-│  Key: DEEPSEEK_API_KEY
+│  Key:    DEEPSEEK_API_KEY
 │  Status: deleted from vault
 │
 └  3 secrets remaining
 ```
 
+After removal, any config reference pointing to `$secret:DEEPSEEK_API_KEY` will fail at runtime with a clear error message — which makes broken references easy to catch.
+
 ---
 
-## Part 2: Config Backup & Restore
+### Step 6: Create a configuration snapshot
 
-### Step 6: Create a Backup Snapshot
-
-Before making major changes, snapshot your entire `.dojops/` directory:
+Before you make any significant change — switching providers, updating model settings, applying team config — take a snapshot. A snapshot is a tar.gz of your entire `.dojops/` directory with a SHA-256 checksum to prove integrity.
 
 ```bash
 dojops backup
@@ -121,25 +171,27 @@ dojops backup
 ```
 ┌  Backup Created
 │
-│  Snapshot: backup-2026-03-13-143022.tar.gz
-│  Location: ~/.dojops/backups/
-│  Size: 24 KB
-│  SHA-256: a1b2c3d4...
+│  Snapshot:  backup-2026-03-20-143022.tar.gz
+│  Location:  ~/.dojops/backups/
+│  Size:      24 KB
+│  SHA-256:   a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6...
 │
 │  Contents:
 │    config.json
-│    secrets.enc
+│    vault.enc
 │    context.json
-│    scan-history/ (3 files)
+│    scan-history/  (3 files)
 │    execution-logs/ (7 files)
 │    audit-log.jsonl
 │
 └  Backup verified
 ```
 
-The backup is a tar.gz archive with SHA-256 integrity verification.
+The SHA-256 hash is written into the archive metadata. When you restore later, DojOps recomputes it and refuses to restore a corrupted or tampered archive.
 
-### Step 7: List Backups
+---
+
+### Step 7: View all snapshots
 
 ```bash
 dojops backup list
@@ -148,50 +200,22 @@ dojops backup list
 ```
 ┌  Backups
 │
-│  backup-2026-03-13-143022  24 KB  2 min ago
-│  backup-2026-03-10-091500  18 KB  3 days ago
-│  backup-2026-03-01-160000  12 KB  12 days ago
+│  backup-2026-03-20-143022  24 KB  just now
+│  backup-2026-03-17-091500  18 KB  3 days ago
+│  backup-2026-03-10-160000  12 KB  10 days ago
 │
-└  3 snapshots (54 KB total)
+└  3 snapshots (54 KB total)  stored in ~/.dojops/backups/
 ```
 
-### Step 8: Restore from a Backup
-
-Roll back to a previous configuration state:
-
-```bash
-dojops restore backup-2026-03-10-091500
-```
-
-```
-┌  Restore
-│
-│  Restoring: backup-2026-03-10-091500
-│  SHA-256: verified ✓
-│
-│  Restored:
-│    config.json
-│    secrets.enc
-│    context.json
-│    scan-history/ (2 files)
-│    execution-logs/ (5 files)
-│    audit-log.jsonl
-│
-│  Current config backed up to:
-│    backup-2026-03-13-pre-restore.tar.gz
-│
-└  Restore complete
-```
-
-DojOps automatically creates a backup of the current state before restoring, so you can always undo a restore.
+Snapshots accumulate over time. You can keep them indefinitely or prune old ones manually — DojOps doesn't auto-delete them.
 
 ---
 
-## Part 3: Bulk Configuration with Config Apply
+### Step 8: Apply a team configuration file
 
-### Step 9: Create a Team Config File
+Team configs are JSON files that set provider, model, aliases, and scan defaults. Anyone who applies them gets the same behavior as everyone else on the team, regardless of what they had configured before.
 
-Create a JSON file with your team's standard configuration:
+Create `team-defaults.json`:
 
 ```json
 {
@@ -212,9 +236,7 @@ Create a JSON file with your team's standard configuration:
 }
 ```
 
-Save this as `team-defaults.json`.
-
-### Step 10: Apply the Configuration
+Apply it:
 
 ```bash
 dojops config apply team-defaults.json
@@ -226,72 +248,115 @@ dojops config apply team-defaults.json
 │  Applied from: team-defaults.json
 │
 │  Changes:
-│    provider        → openai
-│    model           → gpt-4o
-│    temperature     → 0
-│    fallbackProvider → anthropic
-│    aliases         → 3 aliases set
-│    thinking        → medium
-│    scan defaults   → security, deps, iac
+│    provider          →  openai
+│    model             →  gpt-4o
+│    temperature       →  0
+│    fallbackProvider  →  anthropic
+│    aliases           →  3 aliases set (fast, smart, review)
+│    thinking          →  medium
+│    scan.categories   →  security, deps, iac
+│    scan.jsonOutput   →  true
 │
 └  8 settings updated
 ```
 
-### Step 11: Share Configs Across Your Team
+Notice `temperature: 0`. This is intentional for team configs — zero temperature makes output deterministic, which means two people running the same prompt get equivalent results. Use higher temperatures for exploratory work in personal configs.
 
-Check the config file into your repository for team standardization:
+---
+
+### Step 9: Restore from a snapshot
+
+Something went wrong after applying the team config. Roll back to your pre-change snapshot:
 
 ```bash
-# Save current config as a shareable file
+dojops restore backup-2026-03-17-091500
+```
+
+```
+┌  Restore
+│
+│  Restoring: backup-2026-03-17-091500
+│  SHA-256:   verified ✓
+│
+│  Restored:
+│    config.json
+│    vault.enc
+│    context.json
+│    scan-history/  (2 files)
+│    execution-logs/ (5 files)
+│    audit-log.jsonl
+│
+│  Current config backed up to:
+│    backup-2026-03-20-pre-restore.tar.gz
+│
+└  Restore complete
+```
+
+DojOps automatically creates a backup of your current state before overwriting it. So even if the restoration takes you somewhere wrong, you can restore again from `backup-2026-03-20-pre-restore.tar.gz`.
+
+---
+
+### Step 10: Build a team onboarding workflow
+
+Put the pieces together into a reproducible onboarding flow. Export your current config as the team standard:
+
+```bash
 dojops config export > .dojops/team-config.json
-
-# New team member applies it on setup
-git clone <your-repo>
-cd <your-repo>
-dojops init
-dojops config apply .dojops/team-config.json
 ```
 
-This ensures everyone on the team uses the same model, aliases, and scan settings, reducing "works on my machine" configuration drift.
-
----
-
-## Workflow: Safe Config Changes
-
-Combine all three features for a safe configuration workflow:
+Check this file into your repository. It contains no secrets — only model names, aliases, and scan defaults. New team members run:
 
 ```bash
-# 1. Backup before changes
-dojops backup
-
-# 2. Store secrets securely
-dojops secrets set OPENAI_API_KEY sk-proj-...
-dojops secrets set ANTHROPIC_API_KEY sk-ant-...
-
-# 3. Apply team configuration
-dojops config apply team-defaults.json
-
-# 4. Verify everything works
-dojops status
-
-# 5. If something breaks, restore
-dojops restore <latest-backup>
+git clone git@github.com:your-org/your-repo.git
+cd your-repo
+dojops init
+dojops secrets set OPENAI_API_KEY sk-proj-...   # their own key
+dojops config apply .dojops/team-config.json
+dojops check provider
 ```
+
+After those four commands, a new team member has the same model, aliases, and scan settings as everyone else. They bring their own API key; you provide the configuration.
 
 ---
 
-## Summary
+## Try it yourself
 
-In this tutorial, you:
+**Challenge 1:** Create a second JSON config file called `local-dev.json` that overrides `temperature` to `0.7` and `model` to `gpt-4o-mini` for local experimentation. Apply it, verify the change, then restore from your snapshot.
 
-1. **Stored API keys securely** with AES-256-GCM encrypted vault
-2. **Referenced secrets** in config via `$secret:` syntax
-3. **Created backup snapshots** with SHA-256 integrity verification
-4. **Restored configurations** from previous snapshots
-5. **Applied bulk configs** from JSON files for team onboarding
+**Challenge 2:** Write a shell script that takes a backup, applies `team-defaults.json`, runs `dojops check provider`, and on failure automatically restores the previous backup.
 
-### Next Steps
+**Challenge 3:** Add a fourth alias called `code` mapped to your preferred model for code-heavy tasks. Export the config and check whether the alias survives a `config apply` round-trip.
 
-- **[Provider & Configuration](/tutorials/provider-and-configuration)**, Full provider management guide
-- **[Model Aliases & Thinking Levels](/tutorials/model-aliases-and-thinking)**, Optimize model selection
-- **[Observability & Learning](/tutorials/observability-and-learning)**, Detect patterns and learn from past runs
+---
+
+## Troubleshooting
+
+**`dojops secrets set` fails with "encryption key not found"**
+
+The vault encryption key is derived on first use and stored in `~/.dojops/.key`. If it's missing, run `dojops init` to regenerate it. Don't delete `.key` — doing so makes all existing vault entries unreadable.
+
+**`$secret:OPENAI_API_KEY` resolves as the literal string at runtime**
+
+The `$secret:` prefix is case-sensitive. Check your config for `$Secret:` or `$SECRET:` typos. Also verify the key was actually stored: `dojops secrets list`.
+
+**Restore fails with "SHA-256 mismatch"**
+
+The archive was modified after creation. This is either corruption (disk issue) or tampering. DojOps will not restore a mismatched archive. If you need to recover, check `~/.dojops/backups/` for an older snapshot.
+
+**`config apply` silently ignores some fields**
+
+Only known config keys are applied. Unrecognized fields are ignored and logged at the debug level. Run `dojops config apply team-defaults.json --verbose` to see which keys were accepted and which were skipped.
+
+---
+
+## What you learned
+
+Config management in DojOps is built around three habits: encrypt secrets before they touch disk, snapshot before changes, and share configs as files rather than word-of-mouth. The vault uses AES-256-GCM, the same cipher used by professional password managers. Snapshots are portable and integrity-verified, so you can restore with confidence even weeks later. The `config apply` pattern gives teams a single source of truth for model behavior without requiring everyone to manually recreate settings. Together, these practices eliminate the two most common config problems: leaked API keys and "works on my machine" model differences.
+
+---
+
+## Next steps
+
+- **[Provider & Configuration](/tutorials/provider-and-configuration)** — Full provider management guide including fallback logic
+- **[Model Aliases & Thinking Levels](/tutorials/model-aliases-and-thinking)** — Route tasks to the right model automatically
+- **[Observability & Learning](/tutorials/observability-and-learning)** — Build a feedback loop from your execution history
