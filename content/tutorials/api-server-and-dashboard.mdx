@@ -101,7 +101,9 @@ dojops serve
 └  Server ready
 ```
 
-Requests without the key now get a 401. The dashboard login screen will prompt for the key.
+Requests without the key now get a 401. This includes the web dashboard — when you open `http://localhost:3000` in your browser, you'll see a login screen asking for the API key. Paste the key from `dojops serve credentials` to log in.
+
+> **Important:** Copy the API key when it's displayed. The key is hashed before storage, so you can't retrieve it later. If you lose it, run `dojops serve credentials` again to generate a new one.
 
 For local development where you don't want authentication overhead:
 
@@ -142,7 +144,7 @@ For most team setups, running `dojops serve` on an internal port behind an nginx
 
 ### Step 4: Explore the web dashboard
 
-Open `http://localhost:3000` in your browser. The dashboard has five tabs. After a few operations, each tab fills in with real data.
+Open `http://localhost:3000` in your browser. If you generated credentials in Step 2, the dashboard will show a login screen — paste your API key to authenticate. The dashboard has five tabs. After a few operations, each tab fills in with real data.
 
 **Overview tab** — Plan execution totals, success and failure rates, recent activity timeline. If you've run `dojops apply` a few times, you'll see task counts grouped by skill type.
 

@@ -25,22 +25,22 @@ Run a full security audit on your project with scanning, SBOM generation, and au
 - DojOps installed: `npm i -g @dojops/cli`
 - An API key from a supported LLM provider
 
-Optional but recommended for full scanner coverage: install some or all of these tools. DojOps runs whichever scanners it finds on your PATH and skips the rest. You don't need all ten to get meaningful results, but `npm-audit` alone gives limited coverage.
+Optional but recommended for full scanner coverage: install some or all of the external scanners. DojOps runs whichever scanners it finds on your PATH and skips the rest. You don't need all ten to get meaningful results, but `npm-audit` alone gives limited coverage.
 
-Install on Debian/Ubuntu:
+The fastest way to install scanners is through the DojOps toolchain. All six external scanners are available:
 
 ```bash
-# trivy — container and filesystem vulnerability scanner
-curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-
-# gitleaks — secrets detection (download from GitHub releases)
-# hadolint — Dockerfile linter (download from GitHub releases)
-# checkov — IaC scanner: pip3 install checkov
-# shellcheck — shell script linter: apt-get install -y shellcheck
-# semgrep — static analysis: pip3 install semgrep
+# Install all scanners at once
+dojops toolchain install trivy gitleaks hadolint shellcheck semgrep checkov
 ```
 
-> **Note:** If no external scanners are installed, `dojops scan` runs only `npm-audit` (for Node.js projects) and may report "No security issues found" — which can be misleadingly reassuring. Install at least `trivy` and `gitleaks` for meaningful coverage.
+The toolchain downloads pre-built binaries for trivy, gitleaks, hadolint, and shellcheck to `~/.dojops/toolchain/bin/`. Semgrep and checkov are Python tools — the toolchain installs them in sandboxed venvs at `~/.dojops/toolchain/venvs/` (requires python3 on your system).
+
+Trivy requires a vulnerability database (~100 MB) to detect CVEs. The toolchain installer downloads it automatically after placing the binary. If the download fails (network issues, firewalls), trivy retries on the first scan. You can verify the DB is ready by running `trivy fs --scanners vuln /tmp` — if it reports "Number of vulnerabilities: 0" instead of a download error, the DB is present.
+
+Run `dojops toolchain list` to see all available tools and their install status.
+
+> **Note:** If no external scanners are installed, `dojops scan` runs only `npm-audit` (for Node.js projects) and may report "No security issues found" — which can be misleadingly reassuring. Install at least `trivy` and `gitleaks` for meaningful coverage: `dojops toolchain install trivy gitleaks`.
 
 ---
 
@@ -411,11 +411,13 @@ dojops history list
 ```
 
 ```
-ID         Type   Scanner/Agent       Status     Date
-scan-001   scan   multi-scan          completed  2026-03-20 10:00
-scan-002   scan   trivy-sbom          completed  2026-03-20 10:05
-fix-001    fix    remediation         completed  2026-03-20 10:10
-scan-003   scan   multi-scan          completed  2026-03-20 10:20
+◇  Plans (3) ────────────────────────────────────────────────────╮
+│                                                                │
+│  scan-a1b2c3    COMPLETED  3/20/2026  Full security scan      │
+│  scan-d4e5f6    COMPLETED  3/20/2026  SBOM generation         │
+│  scan-g7h8i9    COMPLETED  3/20/2026  Post-remediation scan   │
+│                                                                │
+├────────────────────────────────────────────────────────────────╯
 ```
 
 Verify the chain integrity:

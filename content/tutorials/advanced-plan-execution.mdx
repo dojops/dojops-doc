@@ -309,13 +309,16 @@ dojops history list
 ```
 
 ```
-┌  Execution History
-│
-│  plan-f7a2b1c3  2026-03-20 14:30  3/3 tasks  ✓ completed
-│  plan-e6d5c4b2  2026-03-19 09:15  2/2 tasks  ✓ completed
-│  plan-d1a2b3c4  2026-03-18 16:45  4/4 tasks  ✗ partial (3/4)
-│
-└  3 plans
+◇  Plans (3) ────────────────────────────────────────────────────────────╮
+│                                                                        │
+│  plan-f7a2b1c3  COMPLETED  3/20/2026  Create multi-stage Dockerfile   │
+│                                       with CI workflow                 │
+│  plan-e6d5c4b2  COMPLETED  3/19/2026  Add Kubernetes manifests for    │
+│                                       staging environment              │
+│  plan-d1a2b3c4  COMPLETED  3/18/2026  Set up Terraform for AWS S3    │
+│                                       and CloudFront                   │
+│                                                                        │
+├────────────────────────────────────────────────────────────────────────╯
 ```
 
 Get the full details of a specific plan:
@@ -333,14 +336,9 @@ dojops history verify
 ```
 
 ```
-┌  Audit Verification
-│
-│  Entries: 47
-│  Chain: ✓ intact (all hashes valid)
-│  First: 2026-03-15T08:00:00Z
-│  Last:  2026-03-20T14:35:00Z
-│
-└  Audit log integrity verified
+Audit chain integrity: verified
+Entries: 47
+Chain status: valid (all hashes match)
 ```
 
 If entries have been manually edited or deleted, `verify` reports which entry broke the chain. To repair a corrupted chain (entries can't be un-tampered, but the chain pointers can be rebuilt):

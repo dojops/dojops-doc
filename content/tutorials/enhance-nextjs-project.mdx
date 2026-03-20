@@ -197,41 +197,62 @@ Missing files:
 
 ### Step 6: Enhance the CI workflow
 
-Feed the quality check findings into your prompt:
+Feed the quality check findings into your prompt. Use `--execute` to write the changes to disk with an approval step:
 
 ```bash
-dojops "Enhance the GitHub Actions CI workflow with dependency caching, security scanning, and Docker image building"
+dojops --execute "Enhance the GitHub Actions CI workflow with dependency caching, security scanning, and Docker image building"
 ```
 
-```
-Routing to: github-actions-specialist
-
-Reading: .github/workflows/ci.yml
-Reading: .dojops/context.json
-
-Generating enhanced workflow...
-
-Changes to .github/workflows/ci.yml:
-  + actions/cache for node_modules (saves ~45s per run)
-  + actions/cache for .next/cache (speeds up Next.js builds)
-  + npm audit step (catches vulnerable dependencies)
-  + Docker build verification step
-  + Node.js 20/22 matrix testing
-
-Backup created: .github/workflows/ci.yml.bak
-
-Apply changes? (y/n/diff): diff
-```
-
-Type `diff` to preview the exact changes before committing. You'll see a unified diff of the workflow file. When you're satisfied:
+DojOps first decomposes your goal into a TaskGraph — a dependency-ordered set of tasks:
 
 ```
-Apply changes? (y/n/diff): y
-
-Written: .github/workflows/ci.yml
+◇  Tasks decomposed
+│
+◇  Enhance the GitHub Actions CI workflow... (4 tasks) ──────────╮
+│                                                                 │
+│  analyze-existing-ci github-actions [cicd-specialist]:         │
+│    Analyze the existing CI workflow structure                   │
+│  create-docker-build-action github-actions [docker-specialist]:│
+│    Create composite action for Docker builds                   │
+│    (after: analyze-existing-ci)                                │
+│  create-security-scan-action github-actions [security-auditor]:│
+│    Create composite action for security scanning               │
+│    (after: analyze-existing-ci)                                │
+│  update-ci-workflow github-actions [cicd-specialist]:          │
+│    Update the main CI workflow with all improvements            │
+│    (after: create-docker-build-action, create-security-scan)   │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────╯
+│
+◆  Plan saved as plan-cb41398f
 ```
 
-Your existing steps are preserved. DojOps added the improvements around them. If anything looks wrong, `cp .github/workflows/ci.yml.bak .github/workflows/ci.yml` gets you back to where you started.
+Then it shows a pre-flight summary with risk assessment and asks for approval:
+
+```
+◇  Pre-flight Summary ──────────────────────╮
+│                                            │
+│  Plan:   plan-cb41398f                     │
+│  Tasks:  4 tasks                           │
+│  Risk:   LOW                               │
+│  Skills: github-actions                    │
+│                                            │
+├────────────────────────────────────────────╯
+│
+◇  Impact Summary ───────────╮
+│                             │
+│  Files to write:    ~4      │
+│  Verification:  github-actions │
+│  Risk level:    LOW         │
+│                             │
+├─────────────────────────────╯
+│
+◇  Apply this plan? (y/n): y
+```
+
+Type `y` to execute. DojOps runs each task in dependency order, generates the files, and writes them to disk. Existing files get a `.bak` backup before being overwritten.
+
+> **Tip:** Use `--yes` to auto-approve (`dojops --execute --yes "..."`). Use plain `dojops "..."` without `--execute` to preview what would be generated without writing any files.
 
 ---
 
@@ -240,29 +261,23 @@ Your existing steps are preserved. DojOps added the improvements around them. If
 The quality check flagged unpinned base images. In practice, floating tags cause silent breakage when upstream images update. Fix it:
 
 ```bash
-dojops "Enhance the Dockerfile with pinned base image versions, security hardening, and build caching"
+dojops --execute "Enhance the Dockerfile with pinned base image versions, security hardening, and build caching"
 ```
 
+DojOps decomposes this into tasks, shows the plan, and asks for approval — same flow as Step 6. After you approve:
+
 ```
-Routing to: dockerfile-specialist
+◇  Executing task: analyze-dockerfile [dockerfile-specialist]
+◇  Executing task: harden-dockerfile [dockerfile-specialist]
 
-Reading: Dockerfile
-Reading: .dojops/context.json
+  Changes to Dockerfile:
+    + Pinned node:20.11.1-slim (was node:20-slim with floating tag)
+    + Non-root user (USER nextjs:nodejs, uid 1001)
+    + Optimized COPY order for layer cache efficiency
+    + HEALTHCHECK directive for container orchestration
+    + OCI image labels for traceability
 
-Generating hardened Dockerfile...
-
-Changes to Dockerfile:
-  + Pinned node:20.11.1-slim (was node:20-slim with floating tag)
-  + Non-root user (USER nextjs:nodejs, uid 1001)
-  + Optimized COPY order for layer cache efficiency
-  + HEALTHCHECK directive for container orchestration
-  + OCI image labels for traceability
-
-Backup created: Dockerfile.bak
-
-Apply changes? (y/n/diff): y
-
-Written: Dockerfile
+  Written: Dockerfile (backup: Dockerfile.bak)
 ```
 
 Pinned versions prevent "works on my machine" failures. The non-root user shrinks your attack surface. The health check tells Kubernetes and Docker Compose when the container is actually ready to serve traffic, not just started.
@@ -300,12 +315,14 @@ dojops history list
 ```
 
 ```
-ID         Type      Agent                     Status     Date
-init-001   init      project-scanner           completed  2026-03-20 10:05
-check-001  check     quality-analyst           completed  2026-03-20 10:08
-exec-001   execute   github-actions-specialist  completed  2026-03-20 10:12
-exec-002   execute   dockerfile-specialist      completed  2026-03-20 10:15
-check-002  check     quality-analyst           completed  2026-03-20 10:18
+◇  Plans (2) ───────────────────────────────────────────────────────────╮
+│                                                                       │
+│  plan-a1b2c3d4  COMPLETED  3/20/2026  Enhance the GitHub Actions CI  │
+│                                       workflow with dependency caching│
+│  plan-e5f6a7b8  COMPLETED  3/20/2026  Enhance the Dockerfile with    │
+│                                       pinned base image versions     │
+│                                                                       │
+├───────────────────────────────────────────────────────────────────────╯
 ```
 
 Every operation is hash-chained. `dojops history verify` confirms the chain is intact and nothing was tampered with.
@@ -318,7 +335,7 @@ Every operation is hash-chained. `dojops history verify` confirms the chain is i
 
 2. Three `info` items remain. Use DojOps to generate `SECURITY.md` and `renovate.json`, then re-run `dojops check`. See how high the score goes.
 
-3. Run `dojops history verify`, then `dojops history show exec-001`. The hash-chain format is how the audit log stays tamper-evident.
+3. Run `dojops history verify`, then `dojops history show plan-a1b2c3d4`. The hash-chain format is how the audit log stays tamper-evident.
 
 ---
 
