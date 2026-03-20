@@ -34,7 +34,7 @@ No prior MCP experience needed. If you've used `dojops auto` before, you already
 
 ### Step 1: Understand the dispatch chain
 
-Before adding MCP servers, it helps to see where they fit. When the autonomous agent decides to call a tool, DojOps checks three places in order:
+When the autonomous agent calls a tool, DojOps checks three places in order:
 
 ```
 1. Built-in tools (read_file, write_file, edit_file, run_command, run_skill, search_files, done)
@@ -158,7 +158,7 @@ The agent saw `mcp__memory__write_memory` in its tool list, figured out what it 
 
 ### Step 4: Add a filesystem server
 
-The filesystem server lets the agent read and list files from specific directories. This is useful when you want the agent to access files outside the project root — like a shared config directory or documentation folder.
+The filesystem server lets the agent read and list files from directories you specify. If your shared configs or documentation live outside the project root, this is how you give the agent access.
 
 ```bash
 dojops mcp add
@@ -223,7 +223,7 @@ MCP config lives in two places:
 
 DojOps merges both at startup. If the same server name appears in both, the project config wins.
 
-A typical setup: put servers that every project needs (like a GitHub integration) in the global config, and project-specific servers in the project config.
+Servers that every project needs (like a GitHub integration) belong in the global config. Project-specific servers go in the project config.
 
 ```bash
 # Move the memory server to global config (available in all projects)
@@ -294,7 +294,7 @@ The `env` field sets explicit overrides (applied after sanitization). `allowEnvP
 
 ### Step 7: Use MCP tools in chat
 
-MCP tools work in interactive chat too, not only in `dojops auto`. When you launch a chat session, DojOps connects to configured MCP servers and makes their tools available to the autonomous commands within chat:
+MCP tools also work in interactive chat. When you launch a session, DojOps connects to configured MCP servers and makes their tools available to autonomous commands within the session:
 
 ```bash
 dojops chat
@@ -327,7 +327,7 @@ The `/auto` slash command within chat gives the agent access to the full tool se
 
 ### Step 8: Trust and MCP servers
 
-When you clone a repo that includes `.dojops/mcp.json`, DojOps asks you to trust the workspace before connecting to those servers. This prevents a malicious repo from auto-connecting to arbitrary MCP servers.
+When you clone a repo that includes `.dojops/mcp.json`, DojOps asks you to trust the workspace before connecting to those servers. Without your approval, no MCP connections are made.
 
 ```
 ┌  DojOps Trust Check
@@ -403,7 +403,7 @@ Regular chat messages go through agent routing and don't call tools. MCP tools a
 
 ## What you learned
 
-MCP servers give the DojOps agent access to external tools without modifying any code. You add a server to `.dojops/mcp.json`, DojOps discovers its tools at startup, and the agent can call them alongside `read_file`, `write_file`, and the rest of the built-in set. The namespace prefix (`mcp__server__tool`) keeps everything separate. Environment sanitization strips API keys before spawning server processes, so an untrusted package can't exfiltrate your credentials. Project config overrides global config by server name, and the trust system gates workspace configs from cloned repos.
+You added two MCP servers to `.dojops/mcp.json` and the agent picked up their tools automatically — no code changes, no imports, just config. The `mcp__server__tool` namespace keeps external tools separate from built-ins. DojOps strips API keys from the child process environment so a compromised server package can't read your credentials. Project config overrides global by server name. The trust system asks before loading workspace configs from repos you didn't write.
 
 ---
 
