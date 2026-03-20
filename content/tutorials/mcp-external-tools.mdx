@@ -1,0 +1,415 @@
+# MCP external tools
+
+Extend the DojOps agent with external tools via the Model Context Protocol.
+
+> **Difficulty:** Intermediate
+> **Duration:** 30 minutes
+> **What you'll build:** A DojOps setup with two MCP servers — a local memory store and a filesystem server — that the autonomous agent uses alongside its built-in tools. You'll see how tool discovery, namespacing, and credential safety work in practice.
+
+---
+
+## What you'll learn
+
+- How MCP servers plug into the agent's tool-use loop without code changes
+- Adding stdio and HTTP transport servers via the CLI and config files
+- How tool namespacing prevents collisions between built-in and external tools
+- Project vs global config hierarchy and when to use each
+- How DojOps strips sensitive environment variables before spawning MCP processes
+- Using MCP tools in both autonomous mode and interactive chat
+
+---
+
+## Prerequisites
+
+- DojOps installed: `npm i -g @dojops/cli`
+- An API key configured (`dojops provider add <provider> --token <token>`)
+- Node.js >= 20 (needed for `npx` to run MCP server packages)
+- A project with `dojops init` already run
+
+No prior MCP experience needed. If you've used `dojops auto` before, you already know the agent loop — MCP just adds more tools to it.
+
+---
+
+## Workshop steps
+
+### Step 1: Understand the dispatch chain
+
+Before adding MCP servers, it helps to see where they fit. When the autonomous agent decides to call a tool, DojOps checks three places in order:
+
+```
+1. Built-in tools (read_file, write_file, edit_file, run_command, run_skill, search_files, done)
+2. Registered skills (.dops files)
+3. MCP tools (mcp__<server>__<tool>)
+4. → "Unknown tool" error
+```
+
+Built-in tools always win. MCP tools come last. This means an MCP server can't accidentally override `write_file` or any other built-in — it can only add new capabilities.
+
+Run `dojops mcp list` to confirm you don't have any servers configured yet:
+
+```bash
+dojops mcp list
+```
+
+```
+MCP Servers (0)
+
+No MCP servers configured.
+Add one with: dojops mcp add
+```
+
+---
+
+### Step 2: Add a memory server
+
+The memory server is the simplest MCP server to start with. It gives the agent two tools: `write_memory` and `read_memory` — a key-value store that persists for the session.
+
+```bash
+dojops mcp add
+```
+
+```
+┌  Add MCP Server
+│
+◆  Server name: memory
+│
+◆  Transport: stdio
+│
+◆  Command: npx
+│
+◆  Arguments: -y @modelcontextprotocol/server-memory
+│
+◇  Server "memory" added to .dojops/mcp.json
+```
+
+Check what got written:
+
+```bash
+cat .dojops/mcp.json
+```
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+```
+
+The `stdio` transport spawns a local process and communicates over stdin/stdout using JSON-RPC. The `-y` flag tells npx to auto-install the package without prompting.
+
+Verify the connection:
+
+```bash
+dojops mcp list
+```
+
+```
+MCP Servers (1)
+
+  memory (stdio) npx -y @modelcontextprotocol/server-memory
+
+1/1 connected, 2 tools available
+```
+
+Two tools discovered: `mcp__memory__write_memory` and `mcp__memory__read_memory`. The `mcp__memory__` prefix tells DojOps which server to route the call to.
+
+---
+
+### Step 3: Use MCP tools in autonomous mode
+
+Now tell the agent to use the memory server:
+
+```bash
+dojops auto "Store a note that our staging environment uses t3.medium instances on AWS us-east-1, then read it back and confirm what you stored"
+```
+
+```
+Connected 1 MCP server(s) (2 tools)
+
+Iteration 1/50
+  Reasoning: I need to store a note using the memory server, then retrieve it.
+  Tool call: mcp__memory__write_memory
+    key: "staging-environment"
+    value: "Staging uses t3.medium instances on AWS us-east-1"
+  Result: Note stored successfully
+
+Iteration 2/50
+  Reasoning: Now I'll read the note back to confirm.
+  Tool call: mcp__memory__read_memory
+    key: "staging-environment"
+  Result: "Staging uses t3.medium instances on AWS us-east-1"
+
+Iteration 3/50
+  Reasoning: The note was stored and retrieved correctly. I'm done.
+  Tool call: done
+    summary: Stored and verified a note about the staging environment...
+
+Completed in 3 iterations (4.2s)
+```
+
+The agent saw `mcp__memory__write_memory` in its tool list, figured out what it does from the tool description, and called it with the right arguments. No configuration beyond adding the server.
+
+---
+
+### Step 4: Add a filesystem server
+
+The filesystem server lets the agent read and list files from specific directories. This is useful when you want the agent to access files outside the project root — like a shared config directory or documentation folder.
+
+```bash
+dojops mcp add
+```
+
+```
+┌  Add MCP Server
+│
+◆  Server name: docs
+│
+◆  Transport: stdio
+│
+◆  Command: npx
+│
+◆  Arguments: -y @modelcontextprotocol/server-filesystem /path/to/shared-docs
+│
+◇  Server "docs" added to .dojops/mcp.json
+```
+
+Now `.dojops/mcp.json` has two servers:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "docs": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/shared-docs"]
+    }
+  }
+}
+```
+
+```bash
+dojops mcp list
+```
+
+```
+MCP Servers (2)
+
+  memory (stdio) npx -y @modelcontextprotocol/server-memory
+  docs   (stdio) npx -y @modelcontextprotocol/server-filesystem /path/to/shared-docs
+
+2/2 connected, 5 tools available
+```
+
+The filesystem server added 3 tools (`read_file`, `list_directory`, `get_file_info`). These show up as `mcp__docs__read_file`, `mcp__docs__list_directory`, and `mcp__docs__get_file_info` — no collision with the built-in `read_file` because of the namespace prefix.
+
+---
+
+### Step 5: Project vs global config
+
+MCP config lives in two places:
+
+- `.dojops/mcp.json` — project-scoped, committed to the repo (or gitignored)
+- `~/.dojops/mcp.json` — global, shared across all projects
+
+DojOps merges both at startup. If the same server name appears in both, the project config wins.
+
+A typical setup: put servers that every project needs (like a GitHub integration) in the global config, and project-specific servers in the project config.
+
+```bash
+# Move the memory server to global config (available in all projects)
+mkdir -p ~/.dojops
+cat > ~/.dojops/mcp.json << 'EOF'
+{
+  "mcpServers": {
+    "memory": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+EOF
+```
+
+Now remove it from the project config to avoid duplication. Edit `.dojops/mcp.json` and keep only the `docs` server:
+
+```json
+{
+  "mcpServers": {
+    "docs": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/shared-docs"]
+    }
+  }
+}
+```
+
+`dojops mcp list` still shows both — the merge happens at load time.
+
+---
+
+### Step 6: Environment variable safety
+
+When DojOps spawns a stdio MCP server, it strips sensitive environment variables from the child process. A compromised or untrusted MCP server package can't read your API keys.
+
+Stripped patterns:
+
+- `*_API_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_CREDENTIAL`
+- `ANTHROPIC_*`, `OPENAI_*`, `DEEPSEEK_*`, `GEMINI_*`, `GITHUB_COPILOT_*`
+
+Safe variables like `PATH`, `HOME`, `USER`, `SHELL`, and `NODE_*` pass through.
+
+If your MCP server genuinely needs a specific environment variable, whitelist it:
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "transport": "stdio",
+      "command": "node",
+      "args": ["server.js"],
+      "env": {
+        "MY_SERVER_API_KEY": "sk-..."
+      },
+      "allowEnvPassthrough": ["DATABASE_URL"]
+    }
+  }
+}
+```
+
+The `env` field sets explicit overrides (applied after sanitization). `allowEnvPassthrough` lets specific env vars through the filter.
+
+---
+
+### Step 7: Use MCP tools in chat
+
+MCP tools work in interactive chat too, not only in `dojops auto`. When you launch a chat session, DojOps connects to configured MCP servers and makes their tools available to the autonomous commands within chat:
+
+```bash
+dojops chat
+```
+
+```
+┌  DojOps Chat
+│  Session: chat-d4e5f6
+│  MCP: 2 servers, 5 tools
+│
+◆  You: /auto Use the memory server to store our deployment checklist: 1. Run tests 2. Build Docker image 3. Push to registry 4. Deploy to staging
+│
+◇  DojOps:
+│  Running autonomous agent...
+│  Connected 2 MCP server(s) (5 tools)
+│
+│  Tool call: mcp__memory__write_memory
+│    key: "deployment-checklist"
+│    value: "1. Run tests\n2. Build Docker image\n3. Push to registry\n4. Deploy to staging"
+│  Result: Stored successfully
+│
+│  Done: Saved the deployment checklist to the memory server.
+│
+◆  You: _
+```
+
+The `/auto` slash command within chat gives the agent access to the full tool set including MCP tools. Regular chat messages go through agent routing but don't call tools directly.
+
+---
+
+### Step 8: Trust and MCP servers
+
+When you clone a repo that includes `.dojops/mcp.json`, DojOps asks you to trust the workspace before connecting to those servers. This prevents a malicious repo from auto-connecting to arbitrary MCP servers.
+
+```
+┌  DojOps Trust Check
+│
+│  This workspace contains MCP server configs:
+│    memory (stdio) — npx -y @modelcontextprotocol/server-memory
+│    custom-api (streamable-http) — https://example.com/mcp
+│
+│  Trust this workspace? These servers will be connected when you
+│  run dojops auto or dojops chat.
+│
+◆  Trust? (y/n): y
+│
+◇  Workspace trusted. Decision saved to ~/.dojops/trusted-folders.json
+```
+
+If you decline, DojOps runs normally but skips loading MCP servers, custom agents, and custom skills from the workspace. You can manage trust with:
+
+```bash
+dojops trust          # Trust current workspace
+dojops trust list     # Show all trusted folders
+dojops untrust        # Remove trust
+```
+
+Trust is verified by content hash. If someone modifies `.dojops/mcp.json` after you trusted it, you'll be prompted again.
+
+---
+
+### Step 9: Remove a server
+
+To remove a server you no longer need:
+
+```bash
+dojops mcp remove docs
+```
+
+```
+Removed "docs" from .dojops/mcp.json
+```
+
+Without a name argument, `dojops mcp remove` shows an interactive picker listing all configured servers.
+
+---
+
+## Try it yourself
+
+1. Add the `@modelcontextprotocol/server-github` server and use `dojops auto` to list issues in a public repo. You'll need a GitHub token — pass it via the `env` field in the config.
+
+2. Set up a project-level memory server and a global filesystem server. Run `dojops mcp list` from two different projects and confirm the merge behavior: both servers should appear, but only the filesystem server is shared.
+
+3. Write a `.dojops/mcp.json` that defines a server with `allowEnvPassthrough: ["DATABASE_URL"]`. Run `dojops auto "List tables in the database"` and watch the agent discover and use the PostgreSQL tools.
+
+---
+
+## Troubleshooting
+
+**`dojops mcp list` shows "0/1 connected"**
+The server process failed to start. Common causes: the npm package isn't installed (npx will try to install it, but network issues can block this), or the command path is wrong. Run the command manually to see the error: `npx -y @modelcontextprotocol/server-memory`.
+
+**"Unknown tool" error during `dojops auto`**
+The agent tried to call a tool that doesn't exist. This happens when the LLM hallucinates a tool name. MCP tools must match the `mcp__<server>__<tool>` pattern exactly. Check `dojops mcp list` to see which tools are actually available.
+
+**MCP server can't access environment variables**
+DojOps sanitizes the environment before spawning stdio servers. If your server needs a specific variable (like `DATABASE_URL`), add it to `allowEnvPassthrough` in the server config, or set it explicitly in the `env` field.
+
+**Trust prompt keeps appearing**
+You changed `.dojops/mcp.json` (or agents/skills) since the last trust decision. DojOps hashes the content of workspace configs and re-prompts when the hash changes. Run `dojops trust` to re-trust with the updated config.
+
+**MCP tools work in `dojops auto` but not in regular chat messages**
+Regular chat messages go through agent routing and don't call tools. MCP tools are available when you use `/auto <prompt>` inside a chat session, which starts the autonomous agent loop with tool access.
+
+---
+
+## What you learned
+
+MCP servers give the DojOps agent access to external tools without modifying any code. You add a server to `.dojops/mcp.json`, DojOps discovers its tools at startup, and the agent can call them alongside `read_file`, `write_file`, and the rest of the built-in set. The namespace prefix (`mcp__server__tool`) keeps everything separate. Environment sanitization strips API keys before spawning server processes, so an untrusted package can't exfiltrate your credentials. Project config overrides global config by server name, and the trust system gates workspace configs from cloned repos.
+
+---
+
+## Next steps
+
+- [MCP reference](/components/mcp) — Config format, transport details, architecture diagram
+- [Autonomous Agent Mode](/tutorials/autonomous-agent) — The tool-use loop that MCP tools plug into
+- [Custom Agents & Skills](/tutorials/custom-agents-and-skills) — Build agents that combine MCP tools with custom skills
+- [CLI Reference](/usage/cli) — `dojops mcp` command documentation

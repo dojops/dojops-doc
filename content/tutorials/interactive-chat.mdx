@@ -96,17 +96,29 @@ Type `/exit` to end the session at any time.
 
 Slash commands let you trigger DojOps operations from within the chat without leaving the session. Here's the full set:
 
-| Command         | What it does                                               |
-| --------------- | ---------------------------------------------------------- |
-| `/plan <goal>`  | Decompose a goal into a task graph                         |
-| `/apply`        | Execute the most recent plan                               |
-| `/scan`         | Run a security scan and show results inline                |
-| `/agent <name>` | Switch to a specific specialist agent                      |
-| `/history`      | Show recent execution history                              |
-| `/clear`        | Clear conversation history (keeps session, resets context) |
-| `/save`         | Save the current session to disk                           |
-| `/voice`        | Push-to-talk voice input (requires whisper.cpp and sox)    |
-| `/exit`         | End the session                                            |
+| Command              | What it does                                              |
+| -------------------- | --------------------------------------------------------- |
+| `/help`              | Show all available commands                               |
+| `/exit`              | Save session and exit                                     |
+| `/agent <name>`      | Pin to a specialist agent (`auto` to unpin)               |
+| `/model`             | Switch LLM model (interactive picker)                     |
+| `/provider [name]`   | Switch LLM provider mid-session                           |
+| `/compress`          | Summarize conversation to free context window             |
+| `/sessions`          | List saved chat sessions                                  |
+| `/status`            | Show session status bar (agent, provider, turn count)     |
+| `/history`           | Show recent messages in this session                      |
+| `/clear`             | Clear conversation history (keeps session)                |
+| `/save`              | Save the current session to disk                          |
+| `/plan <goal>`       | Decompose a goal into a task graph                        |
+| `/apply [plan-id]`   | Execute a saved plan                                      |
+| `/scan [type]`       | Run a security scan and show results inline               |
+| `/auto <prompt>`     | Run autonomous agent (iterative tool-use)                 |
+| `/checkpoint [name]` | Create a git-based snapshot of current state              |
+| `/restore <id>`      | Restore files from a checkpoint                           |
+| `/rewind [n]`        | Undo last N conversation turns (`--code` to revert files) |
+| `/voice`             | Push-to-talk voice input (requires whisper.cpp and sox)   |
+| `!<command>`         | Run a shell command inline (e.g. `!git status`)           |
+| `@path/to/file`      | Inject file contents into your message as context         |
 
 Plan and apply a Docker Compose setup from within chat:
 

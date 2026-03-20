@@ -13,5 +13,6 @@ export default {
   "config-management-advanced": "Advanced Config Management",
   "observability-and-learning": "Observability & Learning",
   "autonomous-agent": "Autonomous Agent Mode",
+  "mcp-external-tools": "MCP External Tools",
   "voice-input": "Voice Input",
 };
