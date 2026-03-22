@@ -215,9 +215,15 @@ Chat supports slash commands:
 | `dojops memory list`           | List persistent project notes (`--category` to filter)      |
 | `dojops memory add <text>`     | Add a project note (`--category`, `--keywords`)             |
 | `dojops memory remove <id>`    | Remove a note by ID (alias: `rm`)                           |
+| `dojops memory clear`          | Delete all notes                                            |
 | `dojops memory search <query>` | Search notes by keyword                                     |
 | `dojops memory auto [on\|off]` | Toggle auto-enrichment from agent runs                      |
 | `dojops memory errors`         | List learned error patterns with occurrence counts          |
+| `dojops learn summary`         | Overview of executions, errors, and recent activity         |
+| `dojops learn patterns`        | Execution frequency by command type with success rates      |
+| `dojops learn rules`           | List learned error patterns with resolution status          |
+| `dojops learn resolve <id>`    | Mark an error pattern as resolved with a note               |
+| `dojops learn dismiss <id>`    | Delete an error pattern                                     |
 
 ### Scheduled Jobs
 
@@ -261,6 +267,29 @@ Review runs external validators (actionlint, hadolint, shellcheck) against detec
 | `dojops untrust`    | Remove trust for the current workspace       |
 
 When a project contains custom agents (`.dojops/agents/`), MCP servers (`.dojops/mcp.json`), or custom skills (`.dojops/skills/`), DojOps prompts you to trust the folder before loading them. Trust decisions are stored in `~/.dojops/trusted-folders.json` with a SHA-256 content hash. If configs change, you'll be re-prompted.
+
+### Secrets
+
+| Command                           | Description                                     |
+| --------------------------------- | ----------------------------------------------- |
+| `dojops secrets list`             | List stored secret names with encryption status |
+| `dojops secrets set <name> <val>` | Store a secret (AES-256-GCM encrypted)          |
+| `dojops secrets get <name>`       | Retrieve a secret (masked unless `--raw`)       |
+| `dojops secrets remove <name>`    | Delete a secret                                 |
+
+Secrets are encrypted with AES-256-GCM and stored in `.dojops/secrets.json` with restrictive file permissions (0600). Use this for API keys, tokens, and credentials that skills and agents reference at runtime.
+
+### Backup
+
+| Command                                    | Description                                             |
+| ------------------------------------------ | ------------------------------------------------------- |
+| `dojops backup`                            | Create a timestamped .tar.gz of `.dojops/` with SHA-256 |
+| `dojops backup --output DIR`               | Save the backup archive to a specific directory         |
+| `dojops backup list`                       | List existing backup archives in the project root       |
+| `dojops backup restore <archive>`          | Extract a backup into `.dojops/`                        |
+| `dojops backup restore <archive> --verify` | Verify SHA-256 checksum before restoring                |
+
+Backs up the entire `.dojops/` directory — config, memory database, secrets vault, checkpoints, and custom skills. A `.sha256` checksum file is written alongside each archive.
 
 ### Infrastructure
 
@@ -684,6 +713,7 @@ dojops memory add "Terraform state in S3" --category=convention --keywords=terra
 dojops memory list
 dojops memory search terraform
 dojops memory remove 3
+dojops memory clear              # Delete all notes
 
 # Auto-enrichment (memory from dojops auto runs)
 dojops memory auto              # Check status
@@ -692,6 +722,13 @@ dojops memory auto off          # Disable
 
 # Learned error patterns
 dojops memory errors
+
+# Pattern analysis (learn from execution history)
+dojops learn summary                          # Quick overview
+dojops learn patterns                         # Usage by command type
+dojops learn rules --type generate            # Error patterns for generate
+dojops learn resolve 5 "Fixed by pinning to gpt-4o"
+dojops learn dismiss 3                        # Remove an error pattern
 ```
 
 ### Scheduled Jobs
@@ -724,6 +761,39 @@ dojops trust list
 
 # Remove trust
 dojops untrust
+```
+
+### Secrets
+
+```bash
+# Store API keys and tokens (AES-256-GCM encrypted)
+dojops secrets set ANTHROPIC_API_KEY sk-ant-...
+dojops secrets set AWS_ACCESS_KEY_ID AKIA...
+
+# List stored secrets
+dojops secrets list
+
+# Retrieve (masked by default)
+dojops secrets get ANTHROPIC_API_KEY
+dojops secrets get ANTHROPIC_API_KEY --raw   # Full value
+
+# Remove
+dojops secrets remove AWS_ACCESS_KEY_ID
+```
+
+### Backup
+
+```bash
+# Create a backup of .dojops/
+dojops backup
+dojops backup --output ~/backups
+
+# List existing backups
+dojops backup list
+
+# Restore from a backup
+dojops backup restore dojops-backup-2026-03-22.tar.gz
+dojops backup restore dojops-backup-2026-03-22.tar.gz --verify
 ```
 
 ### Review
