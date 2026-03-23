@@ -17,8 +17,7 @@ export const metadata: Metadata = {
   icons: "/dojops-favicon.png",
   openGraph: {
     title: "DojOps Documentation",
-    description:
-      "Guides, tutorials, and API reference for DojOps — the AI DevOps automation engine.",
+    description: "Guides, tutorials, and API reference for DojOps — the AI automation engine.",
     url: "https://doc.dojops.ai",
     siteName: "DojOps Docs",
     locale: "en_US",
@@ -35,8 +34,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "DojOps Documentation",
-    description:
-      "Guides, tutorials, and API reference for DojOps — the AI DevOps automation engine.",
+    description: "Guides, tutorials, and API reference for DojOps — the AI automation engine.",
     images: ["/dojops-favicon.png"],
   },
   alternates: {
