@@ -6,6 +6,17 @@ Complete reference for the `dojops` command-line interface.
 
 ## Commands
 
+### Workflow
+
+| Command                      | Description                                                 |
+| ---------------------------- | ----------------------------------------------------------- |
+| `dojops arise`               | Generate complete CI/CD pipeline from scratch (interactive) |
+| `dojops arise --yes`         | Auto-detect preferences and generate with smart defaults    |
+| `dojops arise --dry-run`     | Preview pipeline design without generating files            |
+| `dojops arise --skip-verify` | Skip external config validation during generation           |
+
+`arise` scans your repo, asks about your CI platform (GitHub Actions, GitLab CI, Jenkins), pipeline stages, container registry, security scanner, deploy target, and environment strategy, then generates all files in parallel with verification and audit logging. Use `--yes` to skip prompts and auto-detect everything.
+
 ### Generation & Planning
 
 | Command                            | Description                                                 |

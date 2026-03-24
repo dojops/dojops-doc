@@ -1,0 +1,265 @@
+# Pipeline generation with arise
+
+Generate a full CI/CD pipeline from a single command. DojOps scans your repo, gathers your preferences, and writes every file.
+
+> **Difficulty:** Beginner
+> **Duration:** 20 minutes
+> **What you'll build:** A complete CI/CD pipeline (workflow, Dockerfile, deployment config, and security scanning) generated from interactive prompts or smart defaults.
+
+---
+
+## What you'll learn
+
+- How `dojops arise` scans your repository to detect languages, CI tools, and infrastructure
+- How smart defaults auto-detect the right pipeline for your project
+- How the interactive mode lets you pick platforms, stages, registries, and deploy targets
+- How arise builds a task graph and generates files in parallel
+- How to preview a pipeline design before committing to it with `--dry-run`
+
+---
+
+## Prerequisites
+
+- Node.js >= 20 ([nodejs.org](https://nodejs.org))
+- Git installed
+- DojOps installed: `npm i -g @dojops/cli`
+- An API key from a supported LLM provider
+
+---
+
+## Workshop steps
+
+### Step 1: Set up a project
+
+Create a fresh project or use an existing one. For this tutorial, start from scratch:
+
+```bash
+mkdir my-api && cd my-api
+git init
+npm init -y
+```
+
+Add scripts so the generated pipeline has real commands to run:
+
+```json
+{
+  "name": "my-api",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "start": "node dist/index.js"
+  }
+}
+```
+
+Configure your LLM provider if you haven't already:
+
+```bash
+dojops provider add openai --token sk-...
+```
+
+---
+
+### Step 2: Run arise with smart defaults
+
+The fastest path. DojOps scans the repo, picks defaults based on what it finds, and generates everything:
+
+```bash
+dojops arise --yes
+```
+
+```
+ dojops arise
+
+ Scanning repository...
+
+ ┌  Repo analysis
+ │
+ │  Languages: JavaScript
+ │  Package manager: npm
+ │  CI platforms: (none)
+ │  Container files: (none)
+ │  Infrastructure: (none)
+ │
+ └
+
+ ┌  Pipeline design
+ │
+ │  ┌─ build ─┐
+ │  │  test   │──▶ containerize ──▶ deploy
+ │  │  lint   │
+ │  └────────-┘
+ │
+ └
+
+ ┌  Files to generate (3)
+ │
+ │  + .github/workflows/ci.yml
+ │  + Dockerfile
+ │  + docker-compose.yml
+ │
+ └
+
+ ┌  Tasks (3)
+ │
+ │  ci-workflow github-actions: Generate GitHub Actions pipeline...
+ │  dockerfile dockerfile: Generate production Dockerfile...
+ │  deploy-config docker-compose: Generate deployment config...
+ │
+ └
+
+ ┌  Verification
+ │
+ │  ✓ ci-workflow
+ │  ✓ dockerfile
+ │  ✓ deploy-config
+ │
+ └
+
+ ┌  Files created (3)
+ │
+ │  + .github/workflows/ci.yml
+ │  + Dockerfile
+ │  + docker-compose.yml
+ │
+ └
+
+ Pipeline generated: 3/3 tasks succeeded in 24s
+```
+
+Smart defaults detected no CI, no containers, no infrastructure, and chose GitHub Actions, a multi-stage Dockerfile, and Docker Compose. For repos with existing infrastructure, arise adapts: if it finds GitLab CI, it generates `.gitlab-ci.yml` instead; if it finds Kubernetes manifests, it adds K8s deployment configs.
+
+---
+
+### Step 3: Run arise interactively
+
+For full control, drop the `--yes` flag:
+
+```bash
+dojops arise
+```
+
+DojOps walks you through seven choices:
+
+1. **CI platform** - GitHub Actions, GitLab CI, or Jenkins. If your repo already has a CI config, it's pre-selected.
+
+2. **Pipeline stages** - Pick from: build, test, lint, security scan, containerize, publish artifacts, deploy. Pre-selected based on what your repo already has.
+
+3. **Container registry** - ghcr.io, Docker Hub, AWS ECR, GCR, JFrog, or Nexus. Only asked if you selected containerize or publish.
+
+4. **Security scanner** - Trivy, Snyk, Grype, or Falco. Only asked if you selected security scan.
+
+5. **Deploy target** - Kubernetes, Helm, Docker Compose, ArgoCD, AWS ECS, bare metal, or serverless. Only asked if you selected deploy. Existing infrastructure is auto-detected and pre-selected.
+
+6. **Environment strategy** - Single environment, staging + production, or dev + staging + production.
+
+7. **Notifications** - None, Slack, or email.
+
+After you confirm, arise builds a task graph and generates files in parallel where possible.
+
+---
+
+### Step 4: Preview with dry run
+
+Not ready to commit? Preview what arise would generate:
+
+```bash
+dojops arise --dry-run
+```
+
+This runs the full scan, gathers preferences (or uses `--yes` defaults), renders the pipeline diagram and file list, then stops. No files are written. Use this to validate the pipeline design before generating.
+
+---
+
+### Step 5: Inspect the output
+
+Check what was generated:
+
+```bash
+ls -la .github/workflows/ Dockerfile docker-compose.yml
+```
+
+Every file goes through the SafeExecutor verification pipeline. The CI workflow was validated against actionlint, the Dockerfile against hadolint, and all files were checked against Zod schemas. If verification fails, arise runs up to 3 self-repair attempts before moving on.
+
+Check the audit trail:
+
+```bash
+dojops history list
+```
+
+The arise execution is recorded with a plan ID, timestamps, and the full preference set. You can replay it later with `dojops apply --replay`.
+
+---
+
+### Step 6: Iterate
+
+Generated pipeline needs changes? You have several options:
+
+**Regenerate a single file.** Use the standard generate command:
+
+```bash
+dojops "Update the GitHub Actions workflow to add Node 22 to the matrix"
+```
+
+**Run arise again.** It respects existing files. If a Dockerfile already exists, the containerize task uses it as context.
+
+**Edit manually.** The generated files are standard configs. Edit them as you would any CI workflow, Dockerfile, or deployment manifest.
+
+---
+
+## What arise generates
+
+The files depend on your choices:
+
+| Choice                | Files generated                                                            |
+| --------------------- | -------------------------------------------------------------------------- |
+| GitHub Actions        | `.github/workflows/ci.yml`                                                 |
+| GitLab CI             | `.gitlab-ci.yml`                                                           |
+| Jenkins               | `Jenkinsfile`                                                              |
+| Containerize          | `Dockerfile`, `.dockerignore`                                              |
+| Kubernetes deploy     | `manifests/deployment.yaml`, `manifests/service.yaml`                      |
+| Helm deploy           | `chart/Chart.yaml`, `chart/values.yaml`, `chart/templates/deployment.yaml` |
+| Docker Compose deploy | `docker-compose.yml`                                                       |
+| ArgoCD deploy         | `argocd/application.yaml`                                                  |
+| Trivy scanning (K8s)  | `manifests/trivy-operator.yaml`                                            |
+| Falco scanning        | `falco/falco-rules.yaml`                                                   |
+
+---
+
+## Try it yourself
+
+**Challenge 1 - Full stack.** Run `dojops arise` on a real project with a Dockerfile and Kubernetes manifests already in place. Watch how arise detects them and builds around the existing infrastructure.
+
+**Challenge 2 - GitLab CI.** Run `dojops arise` in a GitLab-hosted repo. Arise detects the platform and generates `.gitlab-ci.yml` with the right stages.
+
+**Challenge 3 - Compare.** Run `dojops arise --dry-run` twice: once with `--yes` for smart defaults, once interactively with different choices. Compare the pipeline diagrams.
+
+---
+
+## Troubleshooting
+
+**`arise` picks the wrong CI platform**
+The auto-detection reads existing CI config files. If none exist, it defaults to GitHub Actions. Use interactive mode (no `--yes`) to pick a different platform.
+
+**Generated files fail verification**
+Arise runs self-repair automatically (up to 3 attempts). If verification still fails, check the output for specific errors. The most common cause is a missing system tool (e.g., actionlint, hadolint). Run `dojops toolchain install` to add them.
+
+**`--yes` generates too few stages**
+Smart defaults are conservative. If your repo has no Dockerfile, containerize isn't included. Use interactive mode to select all the stages you want.
+
+---
+
+## What you learned
+
+You started with an empty project and ended with a verified CI/CD pipeline. The `arise` command scanned the repository, gathered preferences (or inferred them), rendered a pipeline diagram, built a dependency-aware task graph, generated files in parallel, verified each output, and logged everything to an audit trail. The generated pipeline is a starting point: refine individual files with `dojops generate` or edit them directly.
+
+---
+
+## Next steps
+
+- **[CI/CD from scratch](/tutorials/cicd-from-scratch)** - Build a pipeline step by step using plan and apply
+- **[Security audit](/tutorials/security-audit)** - Scan for vulnerabilities and auto-fix findings
+- **[Custom agents and skills](/tutorials/custom-agents-and-skills)** - Build your own .dops skills
+- **[Execution engine](/components/execution-engine)** - Policies, sandboxing, and audit trails
