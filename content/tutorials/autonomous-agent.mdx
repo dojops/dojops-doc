@@ -211,7 +211,7 @@ Open the generated `ci.yml` — it uses `pnpm` because it found a `pnpm-lock.yam
 
 ### Step 6: Invoke built-in skills from inside the loop
 
-The `run_skill` tool gives the agent access to all 19 built-in DojOps skills. The agent discovers what's needed, then delegates to the right skill with the right parameters.
+The `run_skill` tool gives the agent access to all 35 built-in DojOps skills. The agent discovers what's needed, then delegates to the right skill with the right parameters.
 
 ```bash
 dojops auto "Dockerize this application with a multi-stage build, then create a docker-compose for local development"
@@ -400,7 +400,7 @@ The agent has 7 tools available. Understanding what each does helps you predict 
 | `write_file`   | Create or overwrite a file (subject to path allowlist)           |
 | `edit_file`    | Replace a specific string in a file (surgical, not full rewrite) |
 | `run_command`  | Execute a shell command (timeout enforced by policy)             |
-| `run_skill`    | Run one of the 19 built-in DojOps skills with custom context     |
+| `run_skill`    | Run one of the 35 built-in DojOps skills with custom context     |
 | `search_files` | Search files by glob pattern or content substring                |
 | `done`         | Signal completion and return a human-readable summary            |
 
@@ -457,7 +457,7 @@ The agent passes context to skills via the `context` parameter. If the context l
 
 ## What you learned
 
-The autonomous agent is the right tool when you need DojOps to _understand_ your project before changing it. The ReAct loop — reason, act, observe, repeat — lets the agent gather real information from your files and adapt when things don't go as expected. The `run_skill` tool inside the loop combines this awareness with the quality of DojOps's 19 built-in skills, producing tailored output instead of templates. File operations and command execution are always bounded by the execution policy, so the agent works within a defined safety envelope regardless of what the LLM decides to do.
+The autonomous agent is the right tool when you need DojOps to _understand_ your project before changing it. The ReAct loop — reason, act, observe, repeat — lets the agent gather real information from your files and adapt when things don't go as expected. The `run_skill` tool inside the loop combines this awareness with the quality of DojOps's 35 built-in skills, producing tailored output instead of templates. File operations and command execution are always bounded by the execution policy, so the agent works within a defined safety envelope regardless of what the LLM decides to do.
 
 ---
 

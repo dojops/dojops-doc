@@ -1,6 +1,6 @@
 # Architecture
 
-DojOps is a modular DevOps agent system with 19 built-in skills, a custom skill system, 17 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails. Every LLM output is schema-validated and policy-checked before anything gets written.
+DojOps is a modular DevOps agent system with 35 built-in skills, a custom skill system, 32 specialist agents, sandboxed execution, approval workflows, and hash-chained audit trails. Every LLM output is schema-validated and policy-checked before anything gets written.
 
 ---
 
@@ -13,13 +13,13 @@ User
 CLI (@clack/prompts TUI) / REST API (Express)
  |
  v
-Agent Router (17 specialist agents, keyword confidence scoring)
+Agent Router (32 specialist agents, keyword confidence scoring)
  |
  v
 Planner Engine (LLM -> TaskGraph -> topological execution)
  |
  v
-Skill Registry (19 built-in skills + custom skills, unified discovery)
+Skill Registry (35 built-in skills + custom skills, unified discovery)
  |
  v
 Skill SDK Layer (BaseSkill<T>, Zod validation)
@@ -47,7 +47,7 @@ DojOps is a pnpm monorepo with Turbo build orchestration. TypeScript (ES2022, Co
 @dojops/scanner        10 security scanners + remediation engine
 @dojops/session        Chat session management + autonomous agent loop (AgentLoop) + memory + context injection
 @dojops/context        Context7 documentation augmentation for skills
-@dojops/core           LLM abstraction + 6 providers + 17 specialist agents + CI debugger + infra diff + DevOps checker
+@dojops/core           LLM abstraction + 6 providers + 32 specialist agents + CI debugger + infra diff + DevOps checker
 @dojops/sdk            BaseSkill<T> abstract class with Zod validation + optional verify() + file-reader utilities
 ```
 
@@ -116,7 +116,7 @@ All responses pass through `parseAndValidate()`, strips markdown fences, `JSON.p
 
 ### 2. Multi-Agent System (`@dojops/core`)
 
-17 built-in specialist agents with keyword-based routing and confidence scoring, plus support for custom agents. The `AgentRouter` scores prompts against each agent's keyword list and routes to the highest-confidence match. If no agent exceeds the threshold, it falls back to the general-purpose `DevOpsAgent`.
+32 built-in specialist agents with keyword-based routing and confidence scoring, plus support for custom agents. The `AgentRouter` scores prompts against each agent's keyword list and routes to the highest-confidence match. If no agent exceeds the threshold, it falls back to the general-purpose `DevOpsAgent`.
 
 Custom agents are defined as structured `README.md` files in `.dojops/agents/<name>/` (project) or `~/.dojops/agents/<name>/` (global). They can be created via LLM (`dojops agents create "description"`) or manually (`dojops agents create --manual`). Custom agents participate in the same keyword-based routing as built-in agents and can override built-in agents by name. Discovery is handled by `@dojops/skill-registry`.
 
@@ -175,13 +175,13 @@ The DOPS runtime processes `.dops` skill files, a declarative format combining Y
 
 ### 5. DevOps Skills (`@dojops/runtime`)
 
-19 built-in skills covering CI/CD, IaC, containers, monitoring, and system services. All 19 are `.dops` skills in `packages/runtime/skills/`, processed by `DopsRuntime`, generating raw file content directly via LLM with Context7 documentation augmentation. All skills support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
+35 built-in skills covering CI/CD, IaC, containers, monitoring, and system services. All 19 are `.dops` skills in `packages/runtime/skills/`, processed by `DopsRuntime`, generating raw file content directly via LLM with Context7 documentation augmentation. All skills support updating existing configs via auto-detection, `existingContent` input, and `.bak` backup before overwrite. All file writes use `atomicWriteFileSync()` for crash safety. Every `execute()` returns `filesWritten`/`filesModified` for rollback tracking.
 
 See [DevOps Skills](/components/skills) for the full skill list.
 
 ### 5b. Skill Registry (`@dojops/skill-registry`)
 
-Unified registry layer between consumers (Planner, Executor, CLI, API) and skill implementations. Combines all 19 built-in skills with custom skills discovered from disk:
+Unified registry layer between consumers (Planner, Executor, CLI, API) and skill implementations. Combines all 35 built-in skills with custom skills discovered from disk:
 
 - **`.dops` skill discovery**, Discovers `.dops` skills from `.dojops/skills/` (project) and `~/.dojops/skills/` (global)
 - **Skill validation**, Zod schema validates `.dops` frontmatter
