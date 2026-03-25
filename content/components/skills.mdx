@@ -1,8 +1,8 @@
 # DevOps Skills
 
-DojOps includes 35 built-in DevOps skills covering CI/CD, infrastructure-as-code, containers, monitoring, and system services. All skills follow a consistent pattern built on the `BaseSkill<T>` abstract class. A custom skill system lets you extend DojOps with your own skills via declarative `.dops` files.
+DojOps includes 38 built-in DevOps skills covering CI/CD, infrastructure-as-code, containers, monitoring, and system services. All skills follow a consistent pattern built on the `BaseSkill<T>` abstract class. A custom skill system lets you extend DojOps with your own skills via declarative `.dops` files.
 
-> **As of v2.0.0, only `.dops v2` format is supported.** The legacy v1 format and `tool.yaml` manifests have been removed.
+> **Only `.dops v2` format is supported.** The legacy v1 format and `tool.yaml` manifests have been removed.
 
 ---
 
@@ -34,7 +34,7 @@ DojOps includes 35 built-in DevOps skills covering CI/CD, infrastructure-as-code
 
 ## Skill Pattern
 
-All 35 built-in skills are defined as `.dops v2` skill files in `packages/runtime/skills/`. Each skill is processed by `DopsRuntime`, which compiles prompts, calls the LLM, and writes raw file content directly (no JSON→serialize step).
+All 38 built-in skills are defined as `.dops v2` skill files in `packages/runtime/skills/`. Each skill is processed by `DopsRuntime`, which compiles prompts, calls the LLM, and writes raw file content directly (no JSON→serialize step).
 
 ```
 packages/runtime/skills/
@@ -107,7 +107,7 @@ The `{entryFile}` value is resolved from the first entry in the skill's `files` 
 
 ### Existing Config Auto-Detection
 
-All 19 tools auto-detect existing config files and switch to update mode when found. Each tool knows its output file path and reads existing content automatically:
+All skills auto-detect existing config files and switch to update mode when found. Each tool knows its output file path and reads existing content automatically:
 
 | Tool           | Auto-Detect Path                                                       |
 | -------------- | ---------------------------------------------------------------------- |

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: "%s DojOps Docs",
   },
   description:
-    "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI. Guides for 18 DevOps skills, 17 agents, and 6 LLM providers.",
+    "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI. Guides for 38 DevOps skills, 32 agents, and 7 LLM providers.",
   icons: "/dojops-favicon.png",
   openGraph: {
     title: "DojOps Documentation",
