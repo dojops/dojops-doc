@@ -407,9 +407,42 @@ You added two MCP servers to `.dojops/mcp.json` and the agent picked up their to
 
 ---
 
+## Bonus: DojOps as an MCP server
+
+DojOps can also run as an MCP server, letting external CLI agents (Claude Code, Gemini CLI, GitHub Copilot, OpenClaw) use DojOps capabilities as tools.
+
+This is the reverse of what you did above: instead of DojOps calling external tools, external agents call DojOps.
+
+```bash
+# Start the API server in one terminal
+dojops serve
+
+# Start the MCP server in another (connects to the API on port 3000)
+dojops serve --mcp
+```
+
+Or configure it directly in your agent's settings:
+
+```json
+{
+  "mcpServers": {
+    "dojops": {
+      "command": "dojops",
+      "args": ["serve", "--mcp"]
+    }
+  }
+}
+```
+
+The MCP server exposes 9 tools: `generate`, `plan`, `scan`, `debug-ci`, `diff-analyze`, `chat`, `list-agents`, `list-skills`, and `repo-scan`. Each proxies to the running `dojops serve` instance over HTTP.
+
+See the [MCP reference](/components/mcp#dojops-as-mcp-server) for configuration examples for Claude Code, Gemini CLI, and GitHub Copilot.
+
+---
+
 ## Next steps
 
-- [MCP reference](/components/mcp) — Config format, transport details, architecture diagram
+- [MCP reference](/components/mcp) — Config format, transport details, MCP server setup
 - [Autonomous Agent Mode](/tutorials/autonomous-agent) — The tool-use loop that MCP tools plug into
 - [Custom Agents & Skills](/tutorials/custom-agents-and-skills) — Build agents that combine MCP tools with custom skills
 - [CLI Reference](/usage/cli) — `dojops mcp` command documentation

@@ -181,3 +181,100 @@ dojops auto "Store a note about our deployment process and retrieve it"
 | `@modelcontextprotocol/server-slack`      | stdio     | Slack messaging        |
 
 Browse more at [modelcontextprotocol.io/servers](https://modelcontextprotocol.io/servers).
+
+---
+
+## DojOps as MCP server
+
+DojOps can also run as an MCP server, exposing its capabilities to external CLI agents like Claude Code, Gemini CLI, GitHub Copilot, and OpenClaw.
+
+### Starting the server
+
+```bash
+# Via the CLI (requires dojops serve running separately on port 3000)
+dojops serve --mcp
+
+# Standalone (same behavior)
+npx @dojops/mcp
+```
+
+The MCP server uses stdio transport and proxies all requests to a running `dojops serve` instance (default `http://localhost:3000`).
+
+### Exposed tools
+
+| Tool           | Description                                         |
+| -------------- | --------------------------------------------------- |
+| `generate`     | Agent-routed LLM generation for DevOps configs      |
+| `plan`         | Decompose a goal into a dependency-aware task graph |
+| `scan`         | Run security scanners on a project directory        |
+| `debug-ci`     | Diagnose CI/CD log failures                         |
+| `diff-analyze` | Analyze infrastructure diffs for risk and cost      |
+| `chat`         | Send a chat message with agent routing              |
+| `list-agents`  | List available specialist agents                    |
+| `list-skills`  | List available built-in and custom skills           |
+| `repo-scan`    | Scan a repository for DevOps context                |
+
+### Configuring external agents
+
+**Claude Code** (`~/.claude/settings.json` or project `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "dojops": {
+      "command": "dojops",
+      "args": ["serve", "--mcp"]
+    }
+  }
+}
+```
+
+**Gemini CLI** (`.gemini/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "dojops": {
+      "command": "npx",
+      "args": ["@dojops/mcp"]
+    }
+  }
+}
+```
+
+**GitHub Copilot** (`.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "dojops": {
+      "command": "dojops",
+      "args": ["serve", "--mcp"]
+    }
+  }
+}
+```
+
+### Environment variables
+
+| Variable         | Default                 | Description                                 |
+| ---------------- | ----------------------- | ------------------------------------------- |
+| `DOJOPS_API_URL` | `http://localhost:3000` | Base URL of running `dojops serve` instance |
+| `DOJOPS_API_KEY` | _(none)_                | API key for `dojops serve` authentication   |
+
+### Architecture
+
+```
+External Agent (Claude Code / Gemini CLI / Copilot)
+  |
+  v  stdio (JSON-RPC)
+DojOps MCP Server (dojops serve --mcp)
+  |
+  v  HTTP
+DojOps API (dojops serve, port 3000)
+  |
+  v
+LLM Provider → Agent Router → Skill Engine → Executor
+```
+
+The MCP server is a thin proxy layer. It translates MCP tool calls into HTTP requests to the DojOps REST API and returns the results. All the actual processing (agent routing, skill matching, LLM generation, validation) happens in the running `dojops serve` instance.
