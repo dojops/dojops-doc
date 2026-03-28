@@ -39,6 +39,21 @@ The selected agent's system prompt is prepended to the LLM request, providing do
 | 15  | `shell-specialist`         | shell-scripting         | Bash/POSIX, ShellCheck, error handling, cron, automation, sed, awk, pipefail                         |
 | 16  | `python-specialist`        | python-scripting        | Type hints, pytest, Poetry, async, Flask, Django, FastAPI, mypy, ruff                                |
 | 17  | `devsecops-reviewer`       | devsecops-review        | DevSecOps review pipeline: tool validation, Context7 docs, structured LLM analysis of DevOps configs |
+| 18  | `sre-specialist`           | site-reliability        | SLOs, SLIs, error budgets, incident management, capacity planning, toil reduction                    |
+| 19  | `cost-optimizer`           | cost-optimization       | Cloud cost analysis, FinOps, right-sizing, reserved instances, spot strategies, budget alerts        |
+| 20  | `incident-response`        | incident-management     | Incident triage, severity classification, RCA, communication plans, escalation paths                 |
+| 21  | `remediation-specialist`   | remediation             | CVE fixes, dependency updates, config hardening, security patching, compliance gap closure           |
+| 22  | `performance-engineer`     | performance             | Load testing (k6, Locust, Gatling), profiling, bottleneck identification, caching strategies         |
+| 23  | `api-security-specialist`  | api-security            | OAuth 2.0, JWT, OWASP API Top 10, API gateway, rate limiting, CORS, mTLS                             |
+| 24  | `container-security`       | container-security      | Image scanning (Trivy, Grype), runtime security (Falco), pod security standards, SBOM                |
+| 25  | `secret-management`        | secrets                 | HashiCorp Vault, AWS/GCP/Azure secret managers, rotation, KMS, SOPS, external secrets                |
+| 26  | `log-analyzer`             | log-analysis            | ELK, Loki, Fluentd, structured logging, log parsing, anomaly detection, correlation                  |
+| 27  | `migration-specialist`     | migration               | Cloud migration, database migration, blue-green cutover, data pipelines, rollback planning           |
+| 28  | `chaos-engineer`           | chaos-engineering       | Litmus, Chaos Mesh, Gremlin, game days, failure injection, resilience testing, blast radius          |
+| 29  | `platform-engineer`        | platform-engineering    | Internal developer platforms, Backstage, Crossplane, golden paths, self-service infrastructure       |
+| 30  | `change-impact-analyst`    | change-analysis         | Blast radius estimation, dependency tracing, change risk scoring, rollback planning                  |
+| 31  | `runbook-generator`        | runbook-generation      | Operational runbooks, decision trees, escalation paths, PagerDuty/OpsGenie integration               |
+| 32  | `policy-engine-specialist` | policy-as-code          | OPA/Rego, Kyverno, Gatekeeper, admission control, compliance-as-code, conftest                       |
 
 ---
 
@@ -65,6 +80,21 @@ Each agent is matched by the following keyword sets:
 | `shell-specialist`         | bash, shell, shellcheck, sh, zsh, posix, script, cron, sed, awk, grep, pipefail, trap, shebang, systemd, service, timer, unit, journalctl          |
 | `python-specialist`        | python, pip, pytest, mypy, ruff, poetry, venv, asyncio, flask, django, fastapi, pep8, pylint, typer                                                |
 | `devsecops-reviewer`       | review, devsecops, validate, audit, compliance, best practices, security review, config review, iac review, pipeline review                        |
+| `sre-specialist`           | sre, reliability, slo, sli, error budget, postmortem, capacity, toil, on-call, pager                                                               |
+| `cost-optimizer`           | cost, expensive, budget, finops, right-size, reserved, spot, savings, spend, billing                                                               |
+| `incident-response`        | incident, outage, downtime, pagerduty, opsgenie, severity, rca, root cause                                                                         |
+| `remediation-specialist`   | remediate, patch, vulnerability, cve, upgrade, harden, mitigate                                                                                    |
+| `performance-engineer`     | performance, latency, throughput, load test, bottleneck, slow, profile, benchmark                                                                  |
+| `api-security-specialist`  | api security, oauth, jwt, oidc, rate limit, cors, api gateway, api key, authorization, authentication                                              |
+| `container-security`       | container security, image scan, falco, seccomp, apparmor, rootless, trivy, grype, cosign, sbom                                                     |
+| `secret-management`        | vault, secret, credential, rotate, kms, seal, unseal, secrets manager, external secrets, sops                                                      |
+| `log-analyzer`             | log, logging, elk, loki, fluentd, logstash, kibana, parse, aggregate, structured log, syslog                                                       |
+| `migration-specialist`     | migrate, migration, lift and shift, replatform, rearchitect, cutover, blue-green migration, data migration                                         |
+| `chaos-engineer`           | chaos, chaos engineering, litmus, chaos mesh, gremlin, game day, fault injection, resilience, blast radius                                         |
+| `platform-engineer`        | platform, idp, backstage, crossplane, golden path, developer experience, self-service, portal, scaffold                                            |
+| `change-impact-analyst`    | impact, blast radius, change risk, downstream, dependency, rollback plan, risk score, affected                                                     |
+| `runbook-generator`        | runbook, procedure, playbook, standard operating, escalation, decision tree, operational guide                                                     |
+| `policy-engine-specialist` | opa, rego, kyverno, gatekeeper, admission, policy, guardrail, constraint, enforce, conftest                                                        |
 
 ---
 
@@ -72,18 +102,19 @@ Each agent is matched by the following keyword sets:
 
 Some agents declare external tool dependencies that enhance their capabilities:
 
-| Agent                   | Tool Dependency               |
-| ----------------------- | ----------------------------- |
-| `terraform-specialist`  | `hcl2json`                    |
-| `kubernetes-specialist` | `yaml-lint`                   |
-| `cicd-specialist`       | `yaml-lint`                   |
-| `security-auditor`      | `snyk`                        |
-| `docker-specialist`     | `dockerfilelint`              |
-| `gitops-specialist`     | `yaml-lint`                   |
-| `compliance-auditor`    | `@open-policy-agent/opa-wasm` |
-| `appsec-specialist`     | `snyk`                        |
-| `shell-specialist`      | `shellcheck`                  |
-| `python-specialist`     | `pyright`                     |
+| Agent                      | Tool Dependency               |
+| -------------------------- | ----------------------------- |
+| `terraform-specialist`     | `hcl2json`                    |
+| `kubernetes-specialist`    | `yaml-lint`                   |
+| `cicd-specialist`          | `yaml-lint`                   |
+| `security-auditor`         | `snyk`                        |
+| `docker-specialist`        | `dockerfilelint`              |
+| `gitops-specialist`        | `yaml-lint`                   |
+| `compliance-auditor`       | `@open-policy-agent/opa-wasm` |
+| `appsec-specialist`        | `snyk`                        |
+| `shell-specialist`         | `shellcheck`                  |
+| `python-specialist`        | `pyright`                     |
+| `policy-engine-specialist` | `@open-policy-agent/opa-wasm` |
 
 ---
 

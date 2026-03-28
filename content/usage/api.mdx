@@ -1,6 +1,6 @@
 # API Reference
 
-DojOps exposes a REST API via Express with 21 endpoints covering generation, planning, autonomous agent, diagnostics, scanning, chat, metrics, and history. Start the server with `dojops serve`.
+DojOps exposes a REST API via Express with 23 endpoints covering generation, planning, autonomous agent, diagnostics, scanning, chat, metrics, history, and code review. Start the server with `dojops serve`.
 
 ---
 
@@ -170,6 +170,54 @@ curl -X POST http://localhost:3000/api/plan \
 
 ---
 
+### Code Review
+
+#### `POST /api/review`
+
+Run a DevSecOps code review pipeline. Validates tool configurations, fetches Context7 documentation, and produces structured LLM analysis.
+
+**Request:**
+
+```json
+{
+  "files": ["docker-compose.yml", ".github/workflows/ci.yml"],
+  "checks": ["security", "best-practices", "performance"]
+}
+```
+
+| Field    | Type     | Required | Description                     |
+| -------- | -------- | -------- | ------------------------------- |
+| `files`  | string[] | Yes      | Files to review                 |
+| `checks` | string[] | No       | Check categories (default: all) |
+
+**Response:**
+
+```json
+{
+  "findings": [
+    {
+      "file": "docker-compose.yml",
+      "line": 12,
+      "severity": "warning",
+      "category": "security",
+      "message": "Container running as root user",
+      "suggestion": "Add 'user: 1001:1001' to the service definition"
+    }
+  ],
+  "summary": { "critical": 0, "error": 1, "warning": 3, "info": 2 }
+}
+```
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:3000/api/review \
+  -H "Content-Type: application/json" \
+  -d '{"files": ["docker-compose.yml"]}'
+```
+
+---
+
 ### Autonomous Agent
 
 #### `POST /api/auto`
@@ -221,6 +269,28 @@ Run the autonomous agent loop (ReAct pattern). The agent iteratively reads files
 curl -X POST http://localhost:3000/api/auto \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Add health check endpoint to the Express API"}'
+```
+
+#### `GET /api/auto/runs/:id`
+
+Check the status of a background autonomous agent run (created with `background: true`).
+
+**Response:**
+
+```json
+{
+  "id": "auto-a1b2c3d4",
+  "status": "running",
+  "iterations": 3,
+  "currentTool": "edit_file",
+  "startedAt": "2026-03-28T10:00:00Z"
+}
+```
+
+**curl:**
+
+```bash
+curl http://localhost:3000/api/auto/runs/auto-a1b2c3d4
 ```
 
 ---

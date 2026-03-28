@@ -45,8 +45,8 @@ content/
 │   ├── overview.mdx               # System design, package layers, data flow
 │   └── security-model.mdx         # Defense-in-depth, trust boundaries
 ├── components/
-│   ├── agents.mdx                 # 17 built-in agents + custom agents
-│   ├── tools.mdx                  # 18 DevOps skills + custom skill system
+│   ├── agents.mdx                 # 32 built-in agents + custom agents
+│   ├── tools.mdx                  # 38 DevOps skills + custom skill system
 │   ├── tool-spec-v1.mdx           # Frozen v1 tool contract
 │   ├── security-scanning.mdx      # 10 scanners, modes, remediation
 │   ├── execution-engine.mdx       # SafeExecutor, policies, audit logging
