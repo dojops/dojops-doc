@@ -1,5 +1,8 @@
 node_modules
 .next
 .git
+.github
+.env*
+coverage
 *.md
 !content/**/*.mdx
