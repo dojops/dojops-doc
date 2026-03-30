@@ -1,0 +1,158 @@
+# Setup guide
+
+Step-by-step walkthrough of `dojops-sa setup`, from installation to your first autonomous run.
+
+> **Duration:** 10-15 minutes
+> **Prerequisites:** Node.js 20+, git, an LLM provider API key
+
+---
+
+## Step 1: Install dojops-sa
+
+```bash
+npm install -g @dojops/super-agent
+```
+
+Confirm the binary is available:
+
+```bash
+dojops-sa --version
+# 0.1.0
+```
+
+## Step 2: Install the dojops CLI
+
+dojops-sa uses the dojops CLI for code generation. If you don't have it yet:
+
+```bash
+npm install -g @dojops/cli
+```
+
+The setup wizard detects whether `dojops` is installed and offers to install it automatically if missing.
+
+## Step 3: Configure an LLM provider
+
+dojops-sa delegates all LLM calls to the dojops CLI. Configure your provider:
+
+```bash
+dojops config
+```
+
+This sets the provider and API key. Supported providers:
+
+| Provider       | Environment variable                                 |
+| -------------- | ---------------------------------------------------- |
+| OpenAI         | `OPENAI_API_KEY`                                     |
+| Anthropic      | `ANTHROPIC_API_KEY`                                  |
+| DeepSeek       | `DEEPSEEK_API_KEY`                                   |
+| Google Gemini  | `GEMINI_API_KEY`                                     |
+| Ollama         | `OLLAMA_HOST` (defaults to `http://localhost:11434`) |
+| Mistral        | Uses OpenAI-compatible API                           |
+| GitHub Copilot | Uses OpenAI-compatible API                           |
+
+The setup wizard checks for a configured provider and warns if none is found.
+
+## Step 4: Run the setup wizard
+
+```bash
+dojops-sa setup
+```
+
+The wizard performs these steps in order:
+
+### 4a. dojops CLI check
+
+Detects the installed `dojops` CLI version. If not found, offers to install `@dojops/cli` globally.
+
+### 4b. LLM provider verification
+
+Checks if `dojops config` has been run or if any provider environment variables are set. Warns if not configured but allows proceeding.
+
+### 4c. Database initialization
+
+Creates the SQLite database at `~/.dojops-super-agent/agent.db` with WAL mode enabled. Applies all schema migrations and generates an encryption key for credential storage.
+
+### 4d. License token
+
+Prompts for your DojOps license token:
+
+```
+? Enter your license token: dojops_abc123...
+```
+
+Get a token from [console.dojops.ai/settings/licenses](https://console.dojops.ai/settings/licenses). The token is validated online against the license server. Offline trial tokens with cryptographic verification are also supported.
+
+### 4e. Connector configuration
+
+Prompts to add a ticketing system connector. This step is optional during setup; you can add connectors later with `dojops-sa connectors add`.
+
+Available connector types:
+
+- **Jira** (Cloud or Data Center): requires base URL, email, and API token
+- **GitLab**: requires base URL and personal access token
+- **GitHub**: requires personal access token (classic or fine-grained)
+- **Confluence** (read-only knowledge source): requires base URL, email, and API token
+
+Credentials are encrypted with AES-256-GCM before storage.
+
+### 4f. Knowledge base
+
+Scrapes 17 pages from [doc.dojops.ai](https://doc.dojops.ai) and stores them locally. This knowledge base is used during planning to enrich ticket context. It refreshes automatically every night at midnight UTC.
+
+### 4g. Setup complete
+
+Marks the setup as finished. You're ready to start the agent.
+
+## Step 5: Start the agent
+
+```bash
+# Start the autonomous loop (polls every 5 minutes)
+dojops-sa start
+
+# Or run a single pass and exit
+dojops-sa start --once
+```
+
+## Verifying the setup
+
+Check that everything is configured:
+
+```bash
+# Show agent status and tracked tickets
+dojops-sa status
+
+# List configured connectors
+dojops-sa connectors list
+
+# Show which credentials are set
+dojops-sa config list
+```
+
+## Environment variables
+
+| Variable                   | Purpose                                                 | Default                         |
+| -------------------------- | ------------------------------------------------------- | ------------------------------- |
+| `DOJOPS_SA_ENCRYPTION_KEY` | 64-char hex string (32 bytes) for credential encryption | Auto-generated and stored in DB |
+| `DOJOPS_CONSOLE_URL`       | Custom console URL (for self-hosted)                    | `https://console.dojops.ai`     |
+| `DOJOPS_PROVIDER`          | Override the LLM provider                               | From `dojops config`            |
+| `DOJOPS_MODEL`             | Override the LLM model                                  | From `dojops config`            |
+| `DOJOPS_CONTEXT_ENABLED`   | Enable Context7 documentation lookup                    | `false`                         |
+
+## Troubleshooting
+
+### "No LLM provider configured"
+
+Run `dojops config` to set up a provider, or set the appropriate environment variable (e.g. `OPENAI_API_KEY`).
+
+### "License validation failed"
+
+Check that your token starts with `dojops_` and hasn't expired. Visit [console.dojops.ai/settings/licenses](https://console.dojops.ai/settings/licenses) to check your license status.
+
+### "Lock file exists"
+
+Another instance of dojops-sa is running, or a previous run crashed. If no other instance is active, the stale lock at `~/.dojops-super-agent/agent.lock` will be auto-cleaned on the next start (PID-based detection).
+
+## Next steps
+
+- [CLI commands](/dojops-sa/commands) for the full command reference
+- [Connectors](/dojops-sa/connectors) for platform-specific setup details

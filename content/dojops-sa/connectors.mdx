@@ -1,0 +1,154 @@
+# Connectors
+
+dojops-sa includes built-in connectors for ticketing systems and knowledge sources. Connectors are configured locally during `dojops-sa setup` or added later with `dojops-sa connectors add`.
+
+---
+
+## Supported connectors
+
+### Task connectors (ticket sources)
+
+These connectors poll for assigned tickets and report results back.
+
+| System                          | Auth method                                     | How tickets are discovered                                |
+| ------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| **Jira** (Cloud or Data Center) | Basic auth (email + API token)                  | JQL query: `assignee = email AND resolution = Unresolved` |
+| **GitLab**                      | Personal Access Token                           | Issues API filtered by `assignee_username`                |
+| **GitHub**                      | Personal Access Token (classic or fine-grained) | Issues API filtered by `assignee`                         |
+
+### Knowledge connectors (read-only)
+
+| System         | Auth method                    | Purpose                                                                 |
+| -------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| **Confluence** | Basic auth (email + API token) | Searches documentation for context enrichment during the planning phase |
+
+## Feature matrix
+
+| Capability             | Jira                            | GitLab               | GitHub   | Confluence |
+| ---------------------- | ------------------------------- | -------------------- | -------- | ---------- |
+| Poll assigned tickets  | yes                             | yes                  | yes      | -          |
+| Update ticket status   | Transitions API                 | Labels               | Labels   | -          |
+| Post comments          | ADF (Atlassian Document Format) | Markdown (Notes API) | Markdown | -          |
+| Create PR/MR           | -                               | yes                  | yes      | -          |
+| Sub-task decomposition | yes                             | -                    | -        | -          |
+| @mention reporter      | yes                             | -                    | -        | -          |
+| Knowledge search       | -                               | -                    | -        | yes        |
+
+## Adding a connector
+
+```bash
+dojops-sa connectors add
+```
+
+The interactive prompt asks for:
+
+1. **Type:** jira, gitlab, github, or confluence
+2. **Name:** a display label (e.g. "Work Jira", "Personal GitHub")
+3. **URL:** base URL of the instance (e.g. `https://mycompany.atlassian.net`)
+4. **Credentials:** email and API token (Jira, Confluence) or personal access token (GitLab, GitHub)
+5. **Project key:** Jira project key, GitLab group/project path, GitHub `owner/repo`, or Confluence space key
+
+Credentials are encrypted with AES-256-GCM before storage.
+
+## Jira setup
+
+### Requirements
+
+- A Jira Cloud or Data Center instance
+- An API token generated from [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+- The email address associated with your Atlassian account
+- A project key (e.g. `PROJ`)
+
+### How it works
+
+- **Discovery:** JQL query filters tickets assigned to the configured email with unresolved status
+- **Status updates:** uses the Jira Transitions API to move tickets through workflow states
+- **Comments:** posted in Atlassian Document Format (ADF), the native rich text format for Jira Cloud
+- **Sub-tasks:** the agent detects parent/child ticket relationships and enriches context with sibling ticket information
+
+### Required permissions
+
+The API token user needs:
+
+- Browse Projects
+- Create Issues (for sub-task creation)
+- Transition Issues
+- Add Comments
+- Edit Issues (for label updates)
+
+## GitLab setup
+
+### Requirements
+
+- A GitLab instance (gitlab.com or self-hosted)
+- A Personal Access Token with `api` scope
+- A project or group path (e.g. `mygroup/myproject`)
+
+### How it works
+
+- **Discovery:** Issues API filtered by `assignee_username`
+- **Status updates:** label-based (adds/removes labels like `In Progress`, `In Review`, `Done`)
+- **Comments:** posted as Markdown notes via the Notes API
+- **PR creation:** opens merge requests from the work branch to the default branch
+
+## GitHub setup
+
+### Requirements
+
+- A GitHub account (github.com or Enterprise)
+- A Personal Access Token (classic with `repo` scope, or fine-grained with repository access)
+- A repository in `owner/repo` format
+
+### How it works
+
+- **Discovery:** Issues API filtered by `assignee`
+- **Status updates:** label-based (same convention as GitLab)
+- **Comments:** posted as Markdown
+- **PR creation:** opens pull requests from the work branch to the default branch
+
+## Confluence setup
+
+### Requirements
+
+- A Confluence Cloud instance
+- An API token (same generation as Jira)
+- A space key (e.g. `ENG`)
+
+### How it works
+
+Confluence is a read-only knowledge connector. During the planning phase, the agent searches Confluence for documentation relevant to the current ticket. This enriches the context passed to the dojops CLI, helping it generate more accurate code.
+
+Confluence content is not modified by the agent.
+
+## Managing connectors
+
+```bash
+# List all connectors
+dojops-sa connectors list
+
+# Remove a connector by ID
+dojops-sa connectors remove <id>
+
+# View connector capabilities
+dojops-sa connectors capabilities
+
+# Rotate a connector's API token
+dojops-sa secrets rotate
+
+# Check credential ages
+dojops-sa secrets check
+```
+
+## Credential rotation
+
+Rotate credentials before they expire or when a team member leaves:
+
+```bash
+dojops-sa secrets rotate
+```
+
+Check for stale credentials (older than 90 days):
+
+```bash
+dojops-sa secrets check
+```

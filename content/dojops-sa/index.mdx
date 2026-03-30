@@ -1,0 +1,82 @@
+# dojops-sa (super agent)
+
+A local autonomous DevOps agent that polls your ticketing system for assigned work, generates code changes using the dojops CLI, pushes branches, opens pull requests, and reports results back on tickets.
+
+> **Binary:** `dojops-sa`
+> **Package:** `@dojops/super-agent`
+> **License:** requires a DojOps license token
+
+---
+
+## What it does
+
+dojops-sa runs a continuous loop on your machine (or a CI runner, or a VM). Each cycle it:
+
+1. Polls connected ticketing systems (Jira, GitLab Issues, GitHub Issues) for tickets assigned to your agent user
+2. Clones the target repository and creates a work branch
+3. Plans the changes using the dojops CLI and your configured LLM provider
+4. Executes file generation, runs a security review
+5. Commits, pushes, and opens a pull request
+6. Posts a summary comment on the original ticket and updates its status
+
+The agent never sends data anywhere except your configured ticketing system, git remote, LLM provider, and the DojOps license server for validation.
+
+## How it relates to other DojOps components
+
+| Component             | Role                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **dojops CLI**        | The generation engine. dojops-sa spawns it as a subprocess for planning and execution.                        |
+| **dojops-sa**         | The autonomous loop. Polls for work, orchestrates the CLI, pushes results.                                    |
+| **dojops-sa console** | Web portal for managing licenses, billing, and team access.                                                   |
+| **dojops-connectors** | Public npm packages for platform integrations. dojops-sa has its own built-in lightweight connectors instead. |
+
+dojops-sa does **not** import `@dojops/*` packages directly. It spawns the `dojops` CLI binary as a child process, passing `--output json --non-interactive` flags to get structured output.
+
+## Requirements
+
+- Node.js 20 or later
+- An LLM provider configured via `dojops config` (OpenAI, Anthropic, Ollama, DeepSeek, Mistral, Gemini, or GitHub Copilot)
+- A DojOps license token (get one from [console.dojops.ai](https://console.dojops.ai))
+- Git installed and configured with SSH or HTTPS credentials for your repositories
+
+## Installation
+
+```bash
+npm install -g @dojops/super-agent
+```
+
+Verify it works:
+
+```bash
+dojops-sa --version
+```
+
+## Quick start
+
+```bash
+# 1. Run interactive setup
+dojops-sa setup
+
+# 2. Start the autonomous loop
+dojops-sa start
+```
+
+The setup wizard walks you through LLM provider verification, license activation, and connector configuration. See the [setup guide](/dojops-sa/setup) for the full walkthrough.
+
+## Data storage
+
+All state is stored locally in `~/.dojops-super-agent/`:
+
+| File         | Purpose                                                                      |
+| ------------ | ---------------------------------------------------------------------------- |
+| `agent.db`   | SQLite database (WAL mode) with tickets, runs, connectors, config, knowledge |
+| `agent.lock` | PID-based lock file preventing multiple instances                            |
+
+Credentials in the database are encrypted with AES-256-GCM. The encryption key can be provided via the `DOJOPS_SA_ENCRYPTION_KEY` environment variable or auto-generated on first run.
+
+## Next steps
+
+- [Setup guide](/dojops-sa/setup) for step-by-step first-run configuration
+- [CLI commands](/dojops-sa/commands) for the full command reference
+- [How it works](/dojops-sa/how-it-works) for the agent loop architecture
+- [Connectors](/dojops-sa/connectors) for supported platforms and their capabilities

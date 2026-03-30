@@ -1,0 +1,195 @@
+# CLI commands
+
+Complete reference for all `dojops-sa` commands.
+
+---
+
+## setup
+
+Interactive first-run wizard. Configures the database, license, LLM provider check, and optional connector.
+
+```bash
+dojops-sa setup
+```
+
+See [setup guide](/dojops-sa/setup) for the full walkthrough.
+
+## start
+
+Start the autonomous agent loop. Polls connected ticketing systems for assigned tickets, processes them, and reports results.
+
+```bash
+dojops-sa start [options]
+```
+
+| Flag              | Description                          | Default          |
+| ----------------- | ------------------------------------ | ---------------- |
+| `--once`          | Run a single polling cycle then exit | Continuous loop  |
+| `--interval <ms>` | Polling interval in milliseconds     | `300000` (5 min) |
+| `--limit <n>`     | Max tickets to process per cycle     | No limit         |
+
+Examples:
+
+```bash
+# Default: poll every 5 minutes
+dojops-sa start
+
+# Single pass (useful for CI or testing)
+dojops-sa start --once
+
+# Poll every 2 minutes, process up to 3 tickets per cycle
+dojops-sa start --interval 120000 --limit 3
+```
+
+## status
+
+Show tracked tickets, their current state, and agent status.
+
+```bash
+dojops-sa status [options]
+```
+
+| Flag      | Description                                       |
+| --------- | ------------------------------------------------- |
+| `--costs` | Include token usage and cost breakdown per ticket |
+
+Output includes ticket reference, status (open, in_progress, in_review, done, failed, skipped, waiting_info), branch name, and PR URL if created.
+
+## connectors
+
+Manage ticketing system connectors.
+
+### connectors list
+
+Show all configured connectors with their type, URL, and status.
+
+```bash
+dojops-sa connectors list
+```
+
+### connectors add
+
+Add a new connector interactively. Prompts for connector type, URL, credentials, and project key.
+
+```bash
+dojops-sa connectors add
+```
+
+Supported types: `jira`, `gitlab`, `github`, `confluence`
+
+### connectors remove
+
+Remove a connector by ID.
+
+```bash
+dojops-sa connectors remove <id>
+```
+
+### connectors capabilities
+
+Show the feature matrix for all connector types (tasks, code, comments, transitions, sub-tasks, mentions, knowledge).
+
+```bash
+dojops-sa connectors capabilities
+```
+
+## config
+
+Manage stored credentials and agent configuration.
+
+### config set
+
+Store a credential interactively.
+
+```bash
+dojops-sa config set
+```
+
+### config list
+
+Show which credentials and settings are configured.
+
+```bash
+dojops-sa config list
+```
+
+### config remove
+
+Remove a stored credential.
+
+```bash
+dojops-sa config remove
+```
+
+## secrets
+
+Credential rotation and health checks.
+
+### secrets rotate
+
+Rotate a connector's API token. Prompts for the connector and the new token.
+
+```bash
+dojops-sa secrets rotate
+```
+
+### secrets check
+
+Show credential ages and flag stale credentials (older than 90 days).
+
+```bash
+dojops-sa secrets check
+```
+
+## learn
+
+Error pattern mining from execution history.
+
+### learn mine
+
+Analyze run history for recurring error patterns. Groups similar errors by fingerprint and tracks occurrence counts.
+
+```bash
+dojops-sa learn mine
+```
+
+### learn list
+
+List discovered error patterns, optionally filtered by repository.
+
+```bash
+dojops-sa learn list [--repo <repo>]
+```
+
+### learn resolve
+
+Mark an error pattern as resolved. Prompts for the pattern and a resolution description.
+
+```bash
+dojops-sa learn resolve
+```
+
+## update
+
+Refresh the local knowledge base from doc.dojops.ai and check for dojops CLI updates.
+
+```bash
+dojops-sa update
+```
+
+This runs the same maintenance tasks that execute automatically at midnight UTC.
+
+## server-id
+
+Generate or display the unique server ID used for offline license binding.
+
+```bash
+dojops-sa server-id [options]
+```
+
+| Flag           | Description                                                                   |
+| -------------- | ----------------------------------------------------------------------------- |
+| `--regenerate` | Generate a new key (invalidates the previous server ID and any bound license) |
+| `--json`       | Output as JSON                                                                |
+
+The server ID is derived from system identity (MAC address, hostname) and stored in the database.

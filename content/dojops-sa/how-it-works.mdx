@@ -1,0 +1,154 @@
+# How it works
+
+Architecture of the dojops-sa autonomous loop, from polling to pull request.
+
+---
+
+## Agent loop
+
+The core loop runs continuously (or once with `--once`):
+
+```
+Poll --> Resolve stories --> Filter actionable --> Prioritize --> Process batch
+  |            |                    |                   |
+  +-- Check waiting_info ----------+-------------------+
+  +-- Check fix requests
+```
+
+Each cycle:
+
+1. **Poll** each connected ticketing system for tickets assigned to the agent user
+2. **Resolve** parent stories into subtasks where applicable
+3. **Filter** tickets that are actionable (not already done, not blocked, not waiting for info)
+4. **Prioritize** the batch: bugs first, then respect dependencies, then by ticket priority
+5. **Process** each ticket through the execution pipeline
+
+## Per-ticket execution pipeline
+
+```
+Ticket
+  |
+  +-> [Clone] repository
+  |     Create work/<ticket-ref> branch from main
+  |
+  +-> [Plan] with dojops CLI
+  |     dojops --plan [--context "..."]
+  |     Input: ticket description + context + knowledge base
+  |     Output: proposed file changes + rationale
+  |
+  +-> [Execute] file generation
+  |     dojops --execute --yes
+  |     Generates or modifies files per the plan
+  |
+  +-> [Review] security and quality scan
+  |     dojops review
+  |     Returns scan findings and risk assessment
+  |
+  +-> [Push] changes to git remote
+  |     git add, commit, push origin work/<ticket-ref>
+  |
+  +-> [PR/MR] creation (if connector supports it)
+  |     Opens a pull request on GitHub or merge request on GitLab
+  |     Links back to the original ticket
+  |
+  +-> [Report] back to ticketing system
+        Update ticket status (in_progress -> in_review -> done)
+        Post summary comment with results
+        Link to PR/MR
+        Record execution metadata
+```
+
+## Ticket prioritization
+
+The agent processes tickets in this order:
+
+1. **Bugs first.** Tickets with type containing "bug", "defect", "incident", or "regression" are prioritized.
+2. **Respect dependencies.** If ticket B is blocked by ticket A and both are in the batch, A is processed first.
+3. **Priority field.** Falls back to the ticket's priority field from the source system.
+
+## How dojops CLI is spawned
+
+dojops-sa does not import `@dojops/*` packages. It spawns the `dojops` CLI as a child process:
+
+```bash
+dojops --plan --output json --non-interactive --context "ticket description..."
+dojops --execute --yes --output json --non-interactive
+dojops review --output json --non-interactive
+```
+
+Output parsing:
+
+- The CLI may emit TUI decorations before JSON output. The agent strips non-JSON prefix content.
+- Token counts are parsed from output strings (e.g. "15,234 tokens") and recorded in the runs table.
+- A plan is considered usable if it has `status="COMPLETED"` or partial status with file changes.
+
+## Environment isolation
+
+When spawning child processes (dojops CLI, git), only whitelisted environment variables are forwarded:
+
+| Category      | Variables                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| System        | `HOME`, `USER`, `PATH`, `SHELL`, `LANG`, `LC_ALL`, `TERM`, `TMPDIR`, `XDG_*`               |
+| LLM providers | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `OLLAMA_HOST` |
+| DojOps config | `DOJOPS_PROVIDER`, `DOJOPS_MODEL`, `DOJOPS_CONSOLE_URL`, `DOJOPS_CONTEXT_ENABLED`          |
+| Git           | `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `GIT_SSH_COMMAND`, `SSH_AUTH_SOCK`                      |
+
+Everything else (database URLs, AWS keys, etc.) is excluded to prevent leaking secrets into cloned repository workspaces.
+
+## Concurrency and locking
+
+- **In-process guard:** a boolean flag prevents overlapping cycles within the same process
+- **File-based lock:** `~/.dojops-super-agent/agent.lock` prevents multiple dojops-sa instances from running simultaneously
+- **PID-based stale detection:** if the PID in the lock file belongs to a dead process, the lock is auto-cleaned
+
+## Knowledge base
+
+During the planning phase, the agent searches its local knowledge base to enrich ticket context. The knowledge base contains 17 pages scraped from doc.dojops.ai:
+
+- Getting started: installation, quickstart, configuration, providers
+- Usage: CLI, API, dashboard
+- Architecture: overview, security model
+- Components: agents, tools, security scanning, execution engine, planner
+- Community: contributing, troubleshooting
+
+The knowledge base refreshes automatically at midnight UTC via a built-in cron job. You can also trigger a manual refresh with `dojops-sa update`.
+
+## Error pattern learning
+
+The agent tracks execution failures and learns from them:
+
+- Each error is fingerprinted (hashed) for deduplication
+- Occurrence counts and first/last seen timestamps are recorded
+- Patterns can be filtered by repository with `dojops-sa learn list --repo <repo>`
+- Resolved patterns are marked with a resolution description via `dojops-sa learn resolve`
+
+This per-repo memory helps the agent avoid repeating known mistakes and surfaces recurring issues for investigation.
+
+## Nightly maintenance
+
+A cron job runs at midnight UTC:
+
+1. Refreshes the documentation knowledge base from doc.dojops.ai
+2. Checks for new dojops CLI versions
+3. Auto-updates the CLI if a newer version is available
+
+## Credential security
+
+- **Encryption:** AES-256-GCM with a unique random IV per encryption
+- **Key storage:** the encryption key can be provided via `DOJOPS_SA_ENCRYPTION_KEY` (64-char hex, 32 bytes) or is auto-generated and stored in the config table
+- **Rotation tracking:** `dojops-sa secrets check` warns about credentials older than 90 days
+- **No telemetry:** no data leaves your machine except to configured ticketing systems, git remotes, the LLM provider, and the license server
+
+## Database schema
+
+All state is in `~/.dojops-super-agent/agent.db` (SQLite with WAL mode):
+
+| Table            | Purpose                                                                    |
+| ---------------- | -------------------------------------------------------------------------- |
+| `config`         | Key-value store for settings and encrypted credentials                     |
+| `connectors`     | Configured ticketing system connectors                                     |
+| `tickets`        | Tracked tickets with status, branch, PR URL                                |
+| `runs`           | Execution audit trail per ticket (action, input, output, duration, tokens) |
+| `knowledge`      | Scraped documentation from doc.dojops.ai                                   |
+| `learning`       | Per-repo success/failure patterns                                          |
+| `error_patterns` | Recurring error patterns mined from run history                            |

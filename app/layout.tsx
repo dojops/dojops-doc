@@ -10,11 +10,13 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://doc.dojops.ai"),
   title: {
     default: "DojOps Documentation",
-    template: "%s DojOps Docs",
+    template: "%s | DojOps Docs",
   },
   description:
     "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI. Guides for 38 DevOps skills, 32 agents, and 7 LLM providers.",
-  icons: "/dojops-favicon.png",
+  icons: {
+    icon: [{ url: "/dojops-favicon.png", sizes: "64x64", type: "image/png" }],
+  },
   openGraph: {
     title: "DojOps Documentation",
     description: "Guides, tutorials, and API reference for DojOps — the AI automation engine.",
@@ -24,9 +26,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/dojops-favicon.png",
-        width: 128,
-        height: 128,
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
         alt: "DojOps Documentation",
       },
     ],
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "DojOps Documentation",
     description: "Guides, tutorials, and API reference for DojOps — the AI automation engine.",
-    images: ["/dojops-favicon.png"],
+    images: ["/og-image.png"],
   },
   alternates: {
     canonical: "https://doc.dojops.ai",
