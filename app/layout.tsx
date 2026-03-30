@@ -14,9 +14,6 @@ export const metadata: Metadata = {
   },
   description:
     "DojOps documentation. Generate, validate, and apply infrastructure and CI/CD configs with AI. Guides for 38 DevOps skills, 32 agents, and 7 LLM providers.",
-  icons: {
-    icon: [{ url: "/dojops-favicon.png", sizes: "64x64", type: "image/png" }],
-  },
   openGraph: {
     title: "DojOps Documentation",
     description: "Guides, tutorials, and API reference for DojOps — the AI automation engine.",
