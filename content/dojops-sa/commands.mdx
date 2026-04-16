@@ -41,6 +41,89 @@ dojops-sa start --once
 dojops-sa start --interval 120000 --limit 3
 ```
 
+## svc
+
+Manage `dojops-sa` as a systemd service so it keeps polling in the background without a terminal session. Linux only.
+
+Two modes are supported.
+
+The default is user mode: the unit is written to `~/.config/systemd/user/dojops-sa.service` and every subcommand runs via `systemctl --user`. No sudo is needed, the agent runs as your user, and it reads state from `~/.dojops-super-agent/` out of the box. User services stop when you log out, unless you enable linger with `sudo loginctl enable-linger $USER`.
+
+Passing `--system` switches to system mode: the unit is written to `/etc/systemd/system/dojops-sa.service` with `User=` and `Environment=HOME=` pinned to your user, so state still lives in your home directory. The service starts on boot, and install/remove need sudo.
+
+Typical first run:
+
+```bash
+dojops-sa svc install
+dojops-sa svc enable
+dojops-sa svc start
+```
+
+The `install` step resolves the `dojops-sa` binary with `which dojops-sa`, so install it globally first (`npm i -g @dojops/super-agent`) before registering the service. Re-running `install` rewrites the unit and reloads the daemon, which is safe after an upgrade.
+
+### svc install
+
+Write the unit file and reload the systemd daemon.
+
+```bash
+dojops-sa svc install [--system]
+```
+
+### svc enable
+
+Enable auto-start. User mode starts on next login; system mode starts on next boot.
+
+```bash
+dojops-sa svc enable [--system]
+```
+
+### svc disable
+
+Disable auto-start. Leaves the unit file in place so you can re-enable it later.
+
+```bash
+dojops-sa svc disable [--system]
+```
+
+### svc start
+
+Start the service immediately.
+
+```bash
+dojops-sa svc start [--system]
+```
+
+### svc stop
+
+Stop the running service.
+
+```bash
+dojops-sa svc stop [--system]
+```
+
+### svc status
+
+Show current systemd status for the service, including recent journal lines.
+
+```bash
+dojops-sa svc status [--system]
+```
+
+Logs go to the journal with identifier `dojops-sa`. Tail them with:
+
+```bash
+journalctl --user -u dojops-sa -f          # user mode
+sudo journalctl -u dojops-sa -f            # system mode
+```
+
+### svc remove
+
+Stop, disable, and delete the unit file, then reload the daemon. Safe to run even if the service is not currently installed.
+
+```bash
+dojops-sa svc remove [--system]
+```
+
 ## status
 
 Show tracked tickets, their current state, and agent status.

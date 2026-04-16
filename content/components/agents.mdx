@@ -304,13 +304,14 @@ All agents include a `NO_FOLLOWUP_INSTRUCTION` suffix ensuring single-shot respo
 
 ## Specialized Analyzers
 
-In addition to the 32 routed agents, DojOps provides three specialized analyzers that are invoked directly (not via `AgentRouter`):
+In addition to the 32 routed agents, DojOps provides four specialized analyzers that are invoked directly (not via `AgentRouter`):
 
-| Analyzer       | Class               | Input                | Output Schema             | CLI Command           |
-| -------------- | ------------------- | -------------------- | ------------------------- | --------------------- |
-| CI Debugger    | `CIDebugger`        | CI log content       | `CIDiagnosisSchema`       | `dojops debug ci`     |
-| Infra Diff     | `InfraDiffAnalyzer` | Diff content         | `InfraDiffAnalysisSchema` | `dojops analyze diff` |
-| DevOps Checker | `DevOpsChecker`     | context.json + files | `CheckReportSchema`       | `dojops check`        |
+| Analyzer       | Class               | Input                              | Output Schema             | Invocation                      |
+| -------------- | ------------------- | ---------------------------------- | ------------------------- | ------------------------------- |
+| CI Debugger    | `CIDebugger`        | CI log content                     | `CIDiagnosisSchema`       | `dojops debug ci`               |
+| Infra Diff     | `InfraDiffAnalyzer` | Diff content                       | `InfraDiffAnalysisSchema` | `dojops analyze diff`           |
+| DevOps Checker | `DevOpsChecker`     | context.json + files               | `CheckReportSchema`       | `dojops check`                  |
+| Repo Profiler  | `RepoProfiler`      | heuristic scan + directory listing | `RepoProfileSchema`       | internal (run by `dojops init`) |
 
 ### DevOps Checker
 
@@ -324,3 +325,13 @@ The `DevOpsChecker` (`packages/core/src/agents/devops-checker.ts`) analyzes DevO
 dojops check                  # Display formatted report
 dojops check --output json    # Machine-readable JSON output
 ```
+
+### Repo Profiler
+
+The `RepoProfiler` (`packages/core/src/agents/repo-profiler.ts`) runs during `dojops init` after the heuristic scanner. It reads the scanner's partial context plus a directory listing with key-file snippets and returns a structured profile: primary language, package manager, project type, build tool, test framework, frameworks, and flags for CI, Docker, IaC, and monorepo layouts.
+
+Heuristic detection remains authoritative. The profiler only fills fields the scanner left as null (missing lockfile, ambiguous project type, undetected frameworks). The profiler is instructed to return null rather than guess when evidence is weak, and every response carries a `confidence` score and a one-sentence `rationale`.
+
+This is what stops `dojops init` from assigning the wrong toolchain to a repo — for example, generating a Makefile-driven build for an npm project, or a Node Dockerfile for a Go service — when the scanner alone cannot tell.
+
+The profiler has no direct CLI entry point; it runs automatically as part of `dojops init`.
